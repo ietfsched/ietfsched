@@ -1,0 +1,4 @@
+cd /home/isa/personnal-sources/ietfsched/
+
+ant clean debug
+

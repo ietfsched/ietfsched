@@ -14,22 +14,22 @@
   limitations under the License.
   -->
 <view
-    class="com.google.android.apps.iosched.ui.widget.ObservableScrollView"
+    class="org.dalmasso.ietfsched.ui.widget.ObservableScrollView"
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:iosched="http://schemas.android.com/apk/res/com.google.android.apps.iosched"
+    xmlns:iosched="http://schemas.android.com/apk/res/org.dalmasso.ietfsched"
     android:id="@+id/blocks_scroll"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:fadingEdge="vertical">
     <view
-        class="com.google.android.apps.iosched.ui.widget.BlocksLayout"
+        class="org.dalmasso.ietfsched.ui.widget.BlocksLayout"
         android:id="@+id/blocks"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:layerType="software"
         iosched:columns="3">
         <view
-            class="com.google.android.apps.iosched.ui.widget.TimeRulerView"
+            class="org.dalmasso.ietfsched.ui.widget.TimeRulerView"
             android:id="@id/blocks_ruler"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"

@@ -24,8 +24,8 @@
         <item name="android:windowContentOverlay">@null</item>
 
         <!-- custom attributes -->
-        <item name="textHeaderMaxLines">@integer/text_header_max_lines</item>
-        <item name="trackAbstractMaxLines">@integer/track_abstract_max_lines</item>
+        <item name="textHeaderMaxLines">3</item>
+        <item name="trackAbstractMaxLines">2</item>
 
         <!-- for programmatic instantiation -->
         <item name="actionbarCompatButtonStyle">@style/ActionBarCompatButton</item>
@@ -72,7 +72,7 @@
         <item name="android:clickable">false</item>
         <item name="android:scaleType">center</item>
         <item name="android:contentDescription">@string/description_logo</item>
-        <item name="android:src">@drawable/actionbar_compat_logo</item>
+<!--        <item name="android:src">@drawable/actionbar_compat_logo</item> -->
     </style>
 
     <style name="ActionBarCompatText">

@@ -18,11 +18,12 @@
     android:layout_height="?android:attr/listPreferredItemHeight"
     style="@style/SimpleListItem">
 
-    <com.google.android.apps.iosched.ui.widget.BezelImageView android:id="@android:id/icon1"
+ <!--  <org.dalmasso.ietfsched.ui.widget.BezelImageView android:id="@android:id/icon1"
         android:layout_alignParentRight="true"
         android:layout_margin="@dimen/track_icon_padding"
         android:layout_width="@dimen/track_icon_width"
         android:layout_height="fill_parent" />
+-->		
 
     <TextView android:id="@android:id/text1"
         style="@android:style/TextAppearance.Large"
