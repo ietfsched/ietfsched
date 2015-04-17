@@ -1,5 +1,6 @@
 <!--
   Copyright 2011 Google Inc.
+  Copyright 2011 Isabelle Dalmasso.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -16,34 +17,31 @@
 
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.google.android.apps.iosched"
-    android:versionCode="16"
-    android:versionName="0.16"
+    package="org.dalmasso.ietfsched"
+    android:versionCode="21"
+    android:versionName="0.1.21"
     android:installLocation="auto">
 
     <uses-sdk
         android:minSdkVersion="7"
-        android:targetSdkVersion="11" />
+        android:targetSdkVersion="19" />
 
     <permission
-        android:name="com.google.android.apps.iosched.permission.WRITE_SCHEDULE"
+        android:name="org.dalmasso.ietfsched.permission.WRITE_SCHEDULE"
         android:protectionLevel="normal"
         android:label="@string/permission_write"
         android:description="@string/permission_write" />
 
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
     <uses-permission android:name="android.permission.USE_CREDENTIALS" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+	<uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:label="@string/app_name"
         android:icon="@drawable/ic_launcher"
-        android:logo="@drawable/title_logo"
         android:theme="@style/Theme.IOSched"
-        android:hardwareAccelerated="true">
-
+        android:hardwareAccelerated="false">
+<!--        android:hardwareAccelerated="true">  // Cause problems showing Schedule for Android 4.1.x-->
         <!-- Activities for both phones and tablets -->
 
         <activity
@@ -57,28 +55,13 @@
         </activity>
 
         <activity
-            android:name=".ui.BulletinActivity"
-            android:label="@string/title_bulletin" />
-
-        <activity
-            android:name=".ui.TagStreamActivity"
-            android:label="@string/title_tagstream" />
-
-        <activity
             android:name=".ui.StarredActivity"
             android:label="@string/title_starred" />
-
+			
         <activity
-            android:name=".ui.SearchActivity"
-            android:label="@string/title_search"
-            android:launchMode="singleTop">
-            <intent-filter>
-                <action android:name="android.intent.action.SEARCH" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-            <meta-data android:name="android.app.searchable" android:resource="@xml/searchable" />
-        </activity>
-
+            android:name=".ui.WellNoteActivity"
+            android:label="@string/title_well_note" />
+			
         <!-- Phone-only activities -->
 
         <activity
@@ -91,7 +74,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="vnd.android.cursor.dir/vnd.iosched.track" />
+                <data android:mimeType="vnd.android.cursor.dir/vnd.ietfsched.track" />
             </intent-filter>
         </activity>
 
@@ -102,7 +85,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.TAB" />
-                <data android:mimeType="vnd.android.cursor.dir/vnd.iosched.session" />
+                <data android:mimeType="vnd.android.cursor.dir/vnd.ietfsched.session" />
             </intent-filter>
         </activity>
 
@@ -110,74 +93,32 @@
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="vnd.android.cursor.item/vnd.iosched.session" />
+                <data android:mimeType="vnd.android.cursor.item/vnd.ietfsched.session" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name=".ui.phone.VendorsActivity"
-            android:label="@string/title_vendors">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.TAB" />
-                <data android:mimeType="vnd.android.cursor.dir/vnd.iosched.vendor" />
-            </intent-filter>
-        </activity>
-
-        <activity android:name=".ui.phone.VendorDetailActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="vnd.android.cursor.item/vnd.iosched.vendor" />
-            </intent-filter>
-        </activity>
-
-        <activity
-            android:name=".ui.phone.MapActivity"
-            android:label="@string/title_map"
-            android:configChanges="orientation|keyboardHidden" />
 
         <!-- Tablet-only activities -->
 
         <activity
             android:name=".ui.tablet.SessionsMultiPaneActivity"
             android:label="@string/title_sessions" />
-        <activity
-            android:name=".ui.tablet.VendorsMultiPaneActivity"
-            android:label="@string/title_vendors" />
+			
         <activity
             android:name=".ui.tablet.ScheduleMultiPaneActivity"
             android:label="@string/title_schedule" />
-        <activity
-            android:name=".ui.tablet.MapMultiPaneActivity"
-            android:label="@string/title_map"
-            android:configChanges="orientation|keyboardHidden" />
+			
         <activity
             android:name=".ui.tablet.NowPlayingMultiPaneActivity"
             android:label="@string/title_now_playing" />
 
-        <!-- Used for install referrer tracking -->
-        <receiver
-            android:name="com.google.android.apps.analytics.AnalyticsReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="com.android.vending.INSTALL_REFERRER" />
-            </intent-filter>
-        </receiver>
-        
         <!-- Other manifest items -->
-
-        <meta-data
-            android:name="android.app.default_searchable"
-            android:value=".ui.SearchActivity" />
 
         <service android:name=".service.SyncService" />
 
         <provider
             android:name=".provider.ScheduleProvider"
-            android:authorities="com.google.android.apps.iosched"
-            android:writePermission="com.google.android.apps.iosched.permission.WRITE_SCHEDULE" />
+            android:authorities="org.dalmasso.ietfsched"
+            android:writePermission="org.dalmasso.ietfsched.permission.WRITE_SCHEDULE" />
 
     </application>
 </manifest>

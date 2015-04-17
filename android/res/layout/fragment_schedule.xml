@@ -42,7 +42,7 @@
             android:focusable="true" />
     </FrameLayout>
 
-    <view class="com.google.android.apps.iosched.ui.widget.Workspace"
+    <view class="org.dalmasso.ietfsched.ui.widget.Workspace"
         android:id="@+id/workspace"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent" />

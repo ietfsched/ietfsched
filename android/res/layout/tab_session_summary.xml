@@ -35,7 +35,7 @@
             android:id="@+id/session_tags_button"
             android:layout_marginTop="@dimen/body_padding_medium" />
 
-        <LinearLayout android:id="@+id/session_speakers_block"
+<!--        <LinearLayout android:id="@+id/session_speakers_block"
             android:orientation="vertical"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
@@ -60,6 +60,7 @@
                 android:layout_height="wrap_content"
                 style="@style/TextBody" />
         </LinearLayout>
+-->		
 
         <TextView android:id="@android:id/empty"
             style="@android:style/TextAppearance.Medium"
