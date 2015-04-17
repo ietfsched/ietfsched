@@ -1,0 +1,11 @@
+bin/
+gen/
+libs/android-support-v4.jar
+local.properties
+proguard-project.txt
+project.properties
+tests.old/ant.properties
+tests.old/local.properties
+tests.old/proguard-project.txt
+tests.old/project.properties
+
