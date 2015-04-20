@@ -9,7 +9,7 @@ This project is the Android app for the IETF meeting. The app supports devices r
 
 <h2>Source</h2>
 
-The source code in this repository reflects the app as of IETF 91.
+The source code in this repository reflects the app as of IETF 92.
 
 <h2>Features</h2>
 
