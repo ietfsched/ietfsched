@@ -58,13 +58,13 @@ public class UIUtils {
      * Time zone to use when formatting all session times. To always use the
      * phone local time, use {@link TimeZone#getDefault()}.
      */
-    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("Asia/Tokyo");
+    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("America/Buenos_Aires");
 
     public static final long CONFERENCE_START_MILLIS = ParserUtils.parseTime(
 //            "2011-07-24T08:00:00.000-04:00"); old form
-            "2015-11-01T09:00:00.000");
+            "2016-04-03T09:00:00.000");
     public static final long CONFERENCE_END_MILLIS = ParserUtils.parseTime(
-            "2015-11-06T17:00:00.000");
+            "2015-04-08T17:00:00.000");
 
     /** Flags used with {@link DateUtils#formatDateRange}. */
     private static final int TIME_FLAGS = DateUtils.FORMAT_SHOW_TIME
