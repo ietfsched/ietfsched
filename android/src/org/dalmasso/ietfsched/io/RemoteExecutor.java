@@ -55,7 +55,7 @@ public class RemoteExecutor {
     }
 
 
-	public int executeHead(String url) throws Exception {
+	public String executeHead(String url) throws Exception {
 		final HttpUriRequest request = new HttpHead(url);
 		final HttpResponse resp = mHttpClient.execute(request);
 		final int status = resp.getStatusLine().getStatusCode();
@@ -63,18 +63,22 @@ public class RemoteExecutor {
 			Log.d(TAG, "Response Code " + status);
             throw new IOException("Unexpected server response " + resp.getStatusLine() + " for " + request.getRequestLine());
 		}
-		Header h = resp.getFirstHeader("Content-Length");
+//		Header h = resp.getFirstHeader("Content-Length");
+		Header h = resp.getFirstHeader("Etag");
 		if (h != null) {
 			try {
-				int length = Integer.parseInt(h.getValue());
-				return length;
+//				int length = Integer.parseInt(h.getValue());
+//				Log.d(TAG, "Content-Length " + length);
+				String etag = h.getValue();
+				Log.d(TAG, "Etag " + h.getValue());
+				return etag;
 			}
 			catch (Exception e) {
 				e.printStackTrace();
-				return -1;
+				return null;
 			}	
 		}
-		return -1;
+		return null;
 	}
 
     /**

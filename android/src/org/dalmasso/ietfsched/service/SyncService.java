@@ -21,8 +21,7 @@ package org.dalmasso.ietfsched.service;
 import org.dalmasso.ietfsched.io.LocalExecutor;
 import org.dalmasso.ietfsched.io.RemoteExecutor;
 import org.dalmasso.ietfsched.provider.ScheduleProvider;
-import org.dalmasso.ietfsched.provider.ScheduleContract;
-
+//import org.dalmasso.ietfsched.provider.ScheduleContract;
 import org.apache.http.Header;
 import org.apache.http.HeaderElement;
 import org.apache.http.HttpEntity;
@@ -49,7 +48,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Resources;
-import android.database.Cursor;
+//import android.database.Cursor;
 import android.os.Bundle;
 import android.os.ResultReceiver;
 import android.text.format.DateUtils;
@@ -60,7 +59,7 @@ import java.io.InputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.TimeZone;
 
-import org.apache.http.client.HttpClient;
+//import org.apache.http.client.HttpClient;
 
 /**
  * Background {@link Service} that synchronizes data living in
@@ -69,7 +68,7 @@ import org.apache.http.client.HttpClient;
  */
 public class SyncService extends IntentService {
     private static final String TAG = "SyncService";
-    private static final boolean debbug = false;
+    private static final boolean debbug = true;
 
     public static final String EXTRA_STATUS_RECEIVER = "org.dalmasso.ietfsched.extra.STATUS_RECEIVER";
 
@@ -82,12 +81,12 @@ public class SyncService extends IntentService {
     /** Root worksheet feed for online data source */
     // TODO: insert your sessions/speakers/vendors spreadsheet doc URL here.
 //    private static final String WORKSHEETS_URL = "INSERT_SPREADSHEET_URL_HERE";
-	private static final String BASE_URL = "https://datatracker.ietf.org/meeting/95/";
+	private static final String BASE_URL = "https://datatracker.ietf.org/meeting/96/";
     private static final String HEADER_ACCEPT_ENCODING = "Accept-Encoding";
     private static final String ENCODING_GZIP = "gzip";
 
     private static final int VERSION_NONE = 0;
-    private static final int VERSION_CURRENT = 41;
+    private static final int VERSION_CURRENT = 45;
 
     private LocalExecutor mLocalExecutor;
     private RemoteExecutor mRemoteExecutor;
@@ -121,25 +120,28 @@ public class SyncService extends IntentService {
         final Context context = this;
         final SharedPreferences prefs = getSharedPreferences(Prefs.IETFSCHED_SYNC, Context.MODE_PRIVATE);
         final int localVersion = prefs.getInt(Prefs.LOCAL_VERSION, VERSION_NONE);
-		final int lastLength = prefs.getInt(Prefs.LAST_LENGTH, VERSION_NONE);	
+//		final int lastLength = prefs.getInt(Prefs.LAST_LENGTH, VERSION_NONE);
+		final String lastEtag = prefs.getString(Prefs.LAST_ETAG, "");
 //		final long startLocal = System.currentTimeMillis();
 	
-		boolean localParse = localVersion < VERSION_CURRENT;
+		//boolean localParse = localVersion < VERSION_CURRENT;
+		boolean localParse = false;
 		Log.d(TAG, "found localVersion=" + localVersion + " and VERSION_CURRENT=" + VERSION_CURRENT);
 		boolean remoteParse = true;
-		int remoteLength = -1;
+//		int remoteLength = -1;
+		String remoteEtag = "";
 	
 		try {
-			String htmlURL = BASE_URL + "agenda.html";
+			String htmlURL = BASE_URL + "agenda.csv";
 			if (debbug) Log.d(TAG, 	"HEAD " + htmlURL);
-			remoteLength = mRemoteExecutor.executeHead(htmlURL);
-			if (debbug) Log.d(TAG, 	"HEAD "  + htmlURL + " " + remoteLength);
-			if (remoteLength == -1) {
+			remoteEtag = mRemoteExecutor.executeHead(htmlURL);
+			if (debbug) Log.d(TAG, 	"HEAD "  + htmlURL + " " + remoteEtag);
+			if (remoteEtag == null) {
 				Log.d(TAG, "Error connection, cannot retrieve any information from" + htmlURL);
 				remoteParse = false;
 			}
 			else {
-				remoteParse = remoteLength != lastLength;
+				remoteParse = !remoteEtag.equals(lastEtag);
 				}
 		}
 		catch (Exception e) {
@@ -165,7 +167,7 @@ public class SyncService extends IntentService {
 				if (debbug) Log.d(TAG, csvURL);
 				InputStream agenda = mRemoteExecutor.executeGet(csvURL);
 				mLocalExecutor.execute(agenda);
-				prefs.edit().putInt(Prefs.LAST_LENGTH, remoteLength).commit();
+				prefs.edit().putString(Prefs.LAST_ETAG, remoteEtag).commit();
 				prefs.edit().putInt(Prefs.LOCAL_VERSION, VERSION_CURRENT).commit();
 				localParse = false;
 				Log.d(TAG, "remote sync finished");
@@ -322,7 +324,8 @@ public class SyncService extends IntentService {
 
 
     private interface Prefs {
-        String IETFSCHED_SYNC = "ietfsched_sync";
+        String LAST_ETAG = "local_etag";
+		String IETFSCHED_SYNC = "ietfsched_sync";
         String LOCAL_VERSION = "local_version";
 		String LAST_LENGTH = "last_length";
 		//String LAST_SYNC_TIME = "last_stime";
