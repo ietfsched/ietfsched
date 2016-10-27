@@ -1,0 +1,6 @@
+# Generated files
+.idea
+*.iml
+local.properties
+build
+.gradle
