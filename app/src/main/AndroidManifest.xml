@@ -118,7 +118,7 @@
         <provider
             android:name="org.ietf.ietfsched.provider.ScheduleProvider"
             android:authorities="org.ietf.ietfsched"
-            android:writePermission="org.dalmasso.ietfsched.permission.WRITE_SCHEDULE" />
+            android:writePermission="org.ietf.ietfsched.permission.WRITE_SCHEDULE" />
 
     </application>
 </manifest>
