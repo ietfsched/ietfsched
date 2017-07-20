@@ -68,7 +68,7 @@ import java.util.TimeZone;
  */
 public class SyncService extends IntentService {
     private static final String TAG = "SyncService";
-    private static final boolean debbug = true;
+    private static final boolean debbug = false;
 
     public static final String EXTRA_STATUS_RECEIVER = "org.ietf.ietfsched.extra.STATUS_RECEIVER";
 
@@ -257,15 +257,7 @@ public class SyncService extends IntentService {
         client.addResponseInterceptor(new HttpResponseInterceptor() {
             public void process(HttpResponse response, HttpContext context) {
                 // Inflate any responses compressed with gzip
-			
-/*				Log.d(TAG, "Headers for response");
-				Header[] headers = response.getAllHeaders();
-				for (Header h : headers) {
-					Log.d(TAG, h.getName() + " " + h.getValue());
-				}
-*/			
-
-                final HttpEntity entity = response.getEntity();
+			    final HttpEntity entity = response.getEntity();
                 final Header encoding = entity != null ? entity.getContentEncoding() : null;
                 if (encoding != null) {
                     for (HeaderElement element : encoding.getElements()) {
@@ -328,6 +320,6 @@ public class SyncService extends IntentService {
 		String IETFSCHED_SYNC = "ietfsched_sync";
         String LOCAL_VERSION = "local_version";
 		String LAST_LENGTH = "last_length";
-		//String LAST_SYNC_TIME = "last_stime";
+		String LAST_SYNC_TIME = "last_stime";
     }
 }
