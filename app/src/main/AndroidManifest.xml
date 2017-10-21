@@ -18,8 +18,8 @@
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.ietf.ietfsched"
-    android:versionCode="27"
-    android:versionName="0.1.27"
+    android:versionCode="28"
+    android:versionName="0.1.28"
     android:installLocation="auto">
 
     <uses-sdk
