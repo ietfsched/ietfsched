@@ -201,24 +201,6 @@ public class SyncService extends IntentService {
 				}
 			}
 		}
-
-/*		Log.d(TAG, "Check DB");
-		try {
-			android.net.Uri contentURI = android.net.Uri.parse("content://org.ietf.ietfsched/sessions_tracks");
-			final ContentResolver resolver = getContentResolver();
-			Cursor cursor = resolver.query(contentURI, null, null, null, null);
-			int columns = cursor.getColumnCount();
-		
-			while (cursor.moveToNext()) {
-				Log.d(TAG, "Cursor position " + cursor.getPosition() + " " + cursor.getString(1) + "/" + cursor.getString(2));
-				}
-			}
-		catch (Exception e) {
-			e.printStackTrace();
-		}
-*/	
-	
-	
     }
 
 
