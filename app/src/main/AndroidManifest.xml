@@ -46,7 +46,7 @@
 
         <activity
             android:name="org.ietf.ietfsched.ui.HomeActivity"
-            android:theme="@style/Theme.IOSched.Home"
+            android:theme="@style/Theme"
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
