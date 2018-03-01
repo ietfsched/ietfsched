@@ -81,13 +81,13 @@ public class ScheduleFragment extends Fragment implements
 	private static final long[] START_DAYS = new long[] {
 /*		ParserUtils.parseTime("2012-03-24T07:00:00.000+01:00"), (old form)
  *      Saturday through Friday */
-		ParserUtils.parseTime("2017-11-11T07:00:00.000"),
-		ParserUtils.parseTime("2017-11-12T07:00:00.000"),
-		ParserUtils.parseTime("2017-11-13T07:00:00.000"),
-		ParserUtils.parseTime("2017-11-14T07:00:00.000"),
-		ParserUtils.parseTime("2017-11-15T07:00:00.000"),
-		ParserUtils.parseTime("2017-11-16T07:00:00.000"),
-        ParserUtils.parseTime("2017-11-17T07:00:00.000")
+		ParserUtils.parseTime("2018-03-17T07:00:00.000"),
+		ParserUtils.parseTime("2018-03-18T07:00:00.000"),
+		ParserUtils.parseTime("2018-03-19T07:00:00.000"),
+		ParserUtils.parseTime("2018-03-20T07:00:00.000"),
+		ParserUtils.parseTime("2018-03-21T07:00:00.000"),
+		ParserUtils.parseTime("2018-03-22T07:00:00.000"),
+        ParserUtils.parseTime("2018-03-23T07:00:00.000")
 		};
 
 	
