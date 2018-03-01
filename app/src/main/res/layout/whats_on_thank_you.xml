@@ -14,5 +14,6 @@
   limitations under the License.
   -->
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     style="@style/WhatsOnStaticItem"
     android:text="@string/whats_on_thank_you_title" />
