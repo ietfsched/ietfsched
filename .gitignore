@@ -4,3 +4,7 @@
 local.properties
 build
 .gradle
+app/app-release.apk
+app/release/
+gradle/
+
