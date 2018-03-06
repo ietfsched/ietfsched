@@ -80,14 +80,17 @@ public class ScheduleFragment extends Fragment implements
 		
 	private static final long[] START_DAYS = new long[] {
 /*		ParserUtils.parseTime("2012-03-24T07:00:00.000+01:00"), (old form)
- *      Saturday through Friday */
-		ParserUtils.parseTime("2018-03-17T07:00:00.000"),
-		ParserUtils.parseTime("2018-03-18T07:00:00.000"),
-		ParserUtils.parseTime("2018-03-19T07:00:00.000"),
-		ParserUtils.parseTime("2018-03-20T07:00:00.000"),
-		ParserUtils.parseTime("2018-03-21T07:00:00.000"),
-		ParserUtils.parseTime("2018-03-22T07:00:00.000"),
-        ParserUtils.parseTime("2018-03-23T07:00:00.000")
+ *      Saturday through Friday
+  *      The timespec is: YYYY-MM-DDTHH:MM:SS.sss[-+]hh:mm
+  *                                              [-+]hh:mm timezone offset
+  *                                              */
+		ParserUtils.parseTime("2018-03-17T07:00:00.000+00:00"),
+		ParserUtils.parseTime("2018-03-18T07:00:00.000+00:00"),
+		ParserUtils.parseTime("2018-03-19T07:00:00.000+00:00"),
+		ParserUtils.parseTime("2018-03-20T07:00:00.000+00:00"),
+		ParserUtils.parseTime("2018-03-21T07:00:00.000+00:00"),
+		ParserUtils.parseTime("2018-03-22T07:00:00.000+00:00"),
+        ParserUtils.parseTime("2018-03-23T07:00:00.000+00:00")
 		};
 
 	
