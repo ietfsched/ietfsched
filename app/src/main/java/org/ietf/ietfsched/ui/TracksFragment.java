@@ -82,7 +82,7 @@ public class TracksFragment extends ListFragment implements NotifyingAsyncQueryH
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
-        ViewGroup root = (ViewGroup) inflater.inflate(R.layout.fragment_list_with_spinner, null);
+        ViewGroup root = (ViewGroup) inflater.inflate(R.layout.fragment_list_with_spinner, container, false);
 
         // For some reason, if we omit this, NoSaveStateFrameLayout thinks we are
         // FILL_PARENT / WRAP_CONTENT, making the progress bar stick to the top of the activity.

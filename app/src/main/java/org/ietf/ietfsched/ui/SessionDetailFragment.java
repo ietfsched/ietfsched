@@ -159,7 +159,7 @@ public class SessionDetailFragment extends Fragment implements
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
 
-        mRootView = (ViewGroup) inflater.inflate(R.layout.fragment_session_detail, null);
+        mRootView = (ViewGroup) inflater.inflate(R.layout.fragment_session_detail, container, false);
         mTabHost = (TabHost) mRootView.findViewById(android.R.id.tabhost);
         mTabHost.setup();
 

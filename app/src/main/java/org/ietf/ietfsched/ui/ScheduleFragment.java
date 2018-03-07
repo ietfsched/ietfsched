@@ -82,13 +82,13 @@ public class ScheduleFragment extends Fragment implements
 /*		ParseerUtils defines the time format:
  *      df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:00.000", Locale.US);
  */
-		ParserUtils.parseTime("2018-03-17T07:00:00.000"),
-		ParserUtils.parseTime("2018-03-18T07:00:00.000"),
-		ParserUtils.parseTime("2018-03-19T07:00:00.000"),
-		ParserUtils.parseTime("2018-03-20T07:00:00.000"),
-		ParserUtils.parseTime("2018-03-21T07:00:00.000"),
-		ParserUtils.parseTime("2018-03-22T07:00:00.000"),
-        ParserUtils.parseTime("2018-03-23T07:00:00.000")
+		ParserUtils.parseTime("2018-03-17T07:07:00.000"),
+		ParserUtils.parseTime("2018-03-18T07:07:00.000"),
+		ParserUtils.parseTime("2018-03-19T07:07:00.000"),
+		ParserUtils.parseTime("2018-03-20T07:07:00.000"),
+		ParserUtils.parseTime("2018-03-21T07:07:00.000"),
+		ParserUtils.parseTime("2018-03-22T07:07:00.000"),
+        ParserUtils.parseTime("2018-03-23T07:07:00.000")
 		};
 
 	
@@ -126,7 +126,7 @@ public class ScheduleFragment extends Fragment implements
         private long timeEnd = -1;
     }
 
-    private List<Day> mDays = new ArrayList<Day>();
+    private List<Day> mDays = new ArrayList<>();
 
     private static HashMap<String, Integer> buildTypeColumnMap() {
         final HashMap<String, Integer> map = Maps.newHashMap();
@@ -147,7 +147,7 @@ public class ScheduleFragment extends Fragment implements
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
-        ViewGroup root = (ViewGroup) inflater.inflate(R.layout.fragment_schedule, null);
+        ViewGroup root = (ViewGroup) inflater.inflate(R.layout.fragment_schedule, container, false);
 
         mWorkspace = (Workspace) root.findViewById(R.id.workspace);
 
