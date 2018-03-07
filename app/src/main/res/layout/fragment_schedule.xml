@@ -42,8 +42,9 @@
             android:focusable="true" />
     </FrameLayout>
 
-    <view class="org.ietf.ietfsched.ui.widget.Workspace"
+    <view
         android:id="@+id/workspace"
+        class="org.ietf.ietfsched.ui.widget.Workspace"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent" />
 

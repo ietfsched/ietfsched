@@ -60,7 +60,8 @@ import java.util.List;
 import java.util.TimeZone;
 
 /**
- * Shows a horizontally-pageable calendar of conference days. Horizontaly paging is achieved using
+ * Shows a horizontally-pageable calendar of conference days. Horizontal paging is achieved using
+ * {@link Workspace}, and the primary UI classes for rendering the calendar are
  * {@link Workspace}, and the primary UI classes for rendering the calendar are
  * {@link org.ietf.ietfsched.ui.widget.TimeRulerView},
  * {@link BlocksLayout}, and {@link BlockView}.
@@ -82,13 +83,13 @@ public class ScheduleFragment extends Fragment implements
 /*		ParseerUtils defines the time format:
  *      df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:00.000", Locale.US);
  */
-		ParserUtils.parseTime("2018-03-17T07:07:00.000"),
-		ParserUtils.parseTime("2018-03-18T07:07:00.000"),
-		ParserUtils.parseTime("2018-03-19T07:07:00.000"),
-		ParserUtils.parseTime("2018-03-20T07:07:00.000"),
-		ParserUtils.parseTime("2018-03-21T07:07:00.000"),
-		ParserUtils.parseTime("2018-03-22T07:07:00.000"),
-        ParserUtils.parseTime("2018-03-23T07:07:00.000")
+		ParserUtils.parseTime("2018-03-17T07:00:00.000"),
+		ParserUtils.parseTime("2018-03-18T07:00:00.000"),
+		ParserUtils.parseTime("2018-03-19T07:00:00.000"),
+		ParserUtils.parseTime("2018-03-20T07:00:00.000"),
+		ParserUtils.parseTime("2018-03-21T07:00:00.000"),
+		ParserUtils.parseTime("2018-03-22T07:00:00.000"),
+        ParserUtils.parseTime("2018-03-23T07:00:00.000")
 		};
 
 	
