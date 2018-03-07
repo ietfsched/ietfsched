@@ -53,7 +53,7 @@
                 android:id="@+id/breadcrumbs"
                 android:layout_width="fill_parent"
                 android:layout_height="@dimen/detail_breadcrumb_height"
-                android:gravity="center_vertical|left" />
+                android:gravity="center_vertical|left"/>
 
             <FrameLayout
                 android:id="@+id/fragment_container_schedule_detail"

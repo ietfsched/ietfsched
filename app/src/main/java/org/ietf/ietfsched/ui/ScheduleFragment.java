@@ -72,7 +72,7 @@ public class ScheduleFragment extends Fragment implements
         View.OnClickListener {
 
     private static final String TAG = "ScheduleFragment";
-    private static final boolean debbug = false;
+    private static final boolean debbug = true;
 
     /**
      * Flags used with {@link android.text.format.DateUtils#formatDateRange}.
