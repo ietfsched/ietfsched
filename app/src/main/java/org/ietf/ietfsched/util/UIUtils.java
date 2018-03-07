@@ -62,9 +62,9 @@ public class UIUtils {
 
     public static final long CONFERENCE_START_MILLIS = ParserUtils.parseTime(
 //            "2011-07-24T08:00:00.000-04:00"); old form
-            "2018-03-17T09:00:00.000");
+            "2018-03-17T09:07:00.000");
     public static final long CONFERENCE_END_MILLIS = ParserUtils.parseTime(
-            "2018-03-23T17:00:00.000");
+            "2018-03-23T17:16:00.000");
 
     /** Flags used with {@link DateUtils#formatDateRange}. */
     private static final int TIME_FLAGS = DateUtils.FORMAT_SHOW_TIME
