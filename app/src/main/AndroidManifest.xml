@@ -18,7 +18,7 @@
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.ietf.ietfsched"
-    android:versionCode="34"
+    android:versionCode="35"
     android:versionName="0.1.35"
     android:installLocation="auto">
 
