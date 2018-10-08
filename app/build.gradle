@@ -3,13 +3,11 @@ apply plugin: 'com.android.application'
 android {
     compileSdkVersion 21
     buildToolsVersion '26.0.2'
-
     defaultConfig {
         applicationId "org.ietf.ietfsched"
-        minSdkVersion 7
-        targetSdkVersion 21
+        minSdkVersion 27
+        targetSdkVersion 27
     }
-
     buildTypes {
         release {
             minifyEnabled false
@@ -17,12 +15,13 @@ android {
         }
     }
     lintOptions {
-          checkReleaseBuilds false
-          // Or, if you prefer, you can continue to check for errors in release builds,
-          // but continue the build even when errors are found:
-          //abortOnError false
-      }
-
+        checkReleaseBuilds false
+        // Or, if you prefer, you can continue to check for errors in release builds,
+        // but continue the build even when errors are found:
+        //abortOnError false
+    }
+    productFlavors {
+    }
 }
 
 dependencies {
