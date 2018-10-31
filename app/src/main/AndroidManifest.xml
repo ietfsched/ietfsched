@@ -21,7 +21,6 @@
     android:versionCode="36"
     android:versionName="0.1.36"
     android:installLocation="auto">
-    
     <permission
         android:name="org.ietf.ietfsched.permission.WRITE_SCHEDULE"
         android:protectionLevel="normal"
