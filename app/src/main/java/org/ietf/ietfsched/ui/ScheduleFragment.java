@@ -83,13 +83,13 @@ public class ScheduleFragment extends Fragment implements
 /*		ParseerUtils defines the time format:
  *      df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:00.000", Locale.US);
  */
-		ParserUtils.parseTime("2018-11-03T04:00:00.000"),
-		ParserUtils.parseTime("2018-11-04T04:00:00.000"),
-		ParserUtils.parseTime("2018-11-05T04:00:00.000"),
-		ParserUtils.parseTime("2018-11-06T04:00:00.000"),
-		ParserUtils.parseTime("2018-11-07T04:00:00.000"),
-		ParserUtils.parseTime("2018-11-08T04:00:00.000"),
-        ParserUtils.parseTime("2018-11-09T04:00:00.000")
+		ParserUtils.parseTime("2019-03-23T04:00:00.000"),
+		ParserUtils.parseTime("2019-03-24T04:00:00.000"),
+		ParserUtils.parseTime("2019-03-25T04:00:00.000"),
+		ParserUtils.parseTime("2019-03-26T04:00:00.000"),
+		ParserUtils.parseTime("2019-03-27T04:00:00.000"),
+		ParserUtils.parseTime("2019-03-28T04:00:00.000"),
+        ParserUtils.parseTime("2019-03-29T04:00:00.000")
 		};
 
 	
