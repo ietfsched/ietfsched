@@ -96,8 +96,7 @@ public class BezelImageView extends ImageView {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        int sc = canvas.saveLayer(mBoundsF, mCopyPaint,
-                Canvas.HAS_ALPHA_LAYER_SAVE_FLAG | Canvas.FULL_COLOR_LAYER_SAVE_FLAG);
+        int sc = canvas.saveLayer(mBoundsF, mCopyPaint);
         mMaskDrawable.draw(canvas);
         canvas.saveLayer(mBoundsF, mMaskedPaint, 0);
         super.onDraw(canvas);
