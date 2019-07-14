@@ -52,7 +52,6 @@
     <string name="btn_sessions">Sessions</string>
     <string name="btn_starred">Starred</string>
     <string name="btn_vendors">Sandbox</string>
-<!--    <string name="btn_announcements">Bulletin</string> -->
 	<string name="btn_announcements">Note Well</string>
 
     <string name="toast_sync_error">Sync error: <xliff:g id="error">%1$s</xliff:g></string>
@@ -109,8 +108,8 @@
 
     <plurals name="whats_on_countdown_title">
         <item quantity="zero"><xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF 105</item>
-        <item quantity="one"><xliff:g id="number_of_days">%1$s</xliff:g> day, <xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF 104</item>
-        <item quantity="other"><xliff:g id="number_of_days">%1$s</xliff:g> days, <xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF 104</item>
+        <item quantity="one"><xliff:g id="number_of_days">%1$s</xliff:g> day, <xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF 105</item>
+        <item quantity="other"><xliff:g id="number_of_days">%1$s</xliff:g> days, <xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF 105</item>
     </plurals>
 
     <string name="whats_on_stream_title">Realtime\nStream</string>

@@ -18,8 +18,8 @@
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.ietf.ietfsched"
-    android:versionCode="40"
-    android:versionName="0.1.40"
+    android:versionCode="41"
+    android:versionName="0.1.41"
     android:installLocation="auto">
     <permission
         android:name="org.ietf.ietfsched.permission.WRITE_SCHEDULE"
@@ -66,7 +66,7 @@
         <activity
             android:name="org.ietf.ietfsched.ui.phone.TracksActivity"
             android:label="@string/title_tracks">
-            <intent-filter>
+            <intent-filter android:scheme="http">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="vnd.android.cursor.dir/vnd.ietfsched.track" />
@@ -76,7 +76,7 @@
         <activity
             android:name="org.ietf.ietfsched.ui.phone.SessionsActivity"
             android:label="@string/title_sessions">
-            <intent-filter>
+            <intent-filter android:scheme="http">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.TAB" />
@@ -85,14 +85,14 @@
         </activity>
 
         <activity android:name="org.ietf.ietfsched.ui.phone.SessionDetailActivity">
-            <intent-filter>
+            <intent-filter android:scheme="http">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="vnd.android.cursor.item/vnd.ietfsched.session" />
             </intent-filter>
         </activity>
 
-        <!-- Tablet-only activities -->
+        <!-- Tablet-only activities
 
         <activity
             android:name="org.ietf.ietfsched.ui.tablet.SessionsMultiPaneActivity"
@@ -105,7 +105,7 @@
         <activity
             android:name=".ui.tablet.NowPlayingMultiPaneActivity"
             android:label="@string/title_now_playing" />
-
+        -->
         <!-- Other manifest items -->
 
         <service android:name="org.ietf.ietfsched.service.SyncService" />
