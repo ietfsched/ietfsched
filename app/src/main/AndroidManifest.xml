@@ -17,9 +17,10 @@
 
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="org.ietf.ietfsched"
-    android:versionCode="42"
-    android:versionName="0.1.42"
+    android:versionCode="43"
+    android:versionName="0.1.43"
     android:installLocation="auto">
     <permission
         android:name="org.ietf.ietfsched.permission.WRITE_SCHEDULE"
@@ -38,6 +39,8 @@
         android:allowBackup="true"
         android:hardwareAccelerated="false">
         <!-- Activities for both phones and tablets -->
+        <!-- Required addition for APIv28/android 9.0 -->
+        <uses-library android:name="org.apache.http.legacy" android:required="false" />
 
         <activity
             android:name="org.ietf.ietfsched.ui.HomeActivity"
@@ -66,7 +69,7 @@
         <activity
             android:name="org.ietf.ietfsched.ui.phone.TracksActivity"
             android:label="@string/title_tracks">
-            <intent-filter >
+            <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="vnd.android.cursor.dir/vnd.ietfsched.track" />
@@ -76,7 +79,7 @@
         <activity
             android:name="org.ietf.ietfsched.ui.phone.SessionsActivity"
             android:label="@string/title_sessions">
-            <intent-filter >
+            <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.TAB" />
@@ -85,7 +88,7 @@
         </activity>
 
         <activity android:name="org.ietf.ietfsched.ui.phone.SessionDetailActivity">
-            <intent-filter >
+            <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="vnd.android.cursor.item/vnd.ietfsched.session" />
