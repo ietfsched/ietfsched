@@ -18,8 +18,8 @@
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.ietf.ietfsched"
-    android:versionCode="41"
-    android:versionName="0.1.41"
+    android:versionCode="42"
+    android:versionName="0.1.42"
     android:installLocation="auto">
     <permission
         android:name="org.ietf.ietfsched.permission.WRITE_SCHEDULE"
@@ -66,7 +66,7 @@
         <activity
             android:name="org.ietf.ietfsched.ui.phone.TracksActivity"
             android:label="@string/title_tracks">
-            <intent-filter android:scheme="http">
+            <intent-filter >
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="vnd.android.cursor.dir/vnd.ietfsched.track" />
@@ -76,7 +76,7 @@
         <activity
             android:name="org.ietf.ietfsched.ui.phone.SessionsActivity"
             android:label="@string/title_sessions">
-            <intent-filter android:scheme="http">
+            <intent-filter >
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.TAB" />
@@ -85,7 +85,7 @@
         </activity>
 
         <activity android:name="org.ietf.ietfsched.ui.phone.SessionDetailActivity">
-            <intent-filter android:scheme="http">
+            <intent-filter >
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="vnd.android.cursor.item/vnd.ietfsched.session" />
