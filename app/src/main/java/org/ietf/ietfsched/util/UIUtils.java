@@ -57,13 +57,14 @@ public class UIUtils {
     /**
      * Time zone to use when formatting all session times. To always use the
      * phone local time, use {@link TimeZone#getDefault()}.
+     *   https://garygregory.wordpress.com/2013/06/18/what-are-the-java-timezone-ids/
      */
-    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("Europe/Amsterdam");
+    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("Asia/Singapore");
 
     public static final long CONFERENCE_START_MILLIS = ParserUtils.parseTime(
-            "2019-07-20T09:07:00.000");
+            "2019-11-16T09:07:00.000");
     public static final long CONFERENCE_END_MILLIS = ParserUtils.parseTime(
-            "2019-07-26T17:16:00.000");
+            "2019-11-22T17:16:00.000");
 
     /** Flags used with {@link DateUtils#formatDateRange}. */
     private static final int TIME_FLAGS = DateUtils.FORMAT_SHOW_TIME
