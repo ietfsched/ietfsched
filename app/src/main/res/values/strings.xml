@@ -15,8 +15,8 @@
   limitations under the License.
   -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="app_name">IETF 106</string>
-    <string name="description_logo">IETF 106</string>
+    <string name="app_name">IETF 107</string>
+    <string name="description_logo">IETF 107</string>
     <string name="description_home">Home</string>
     <string name="description_search">Search</string>
     <string name="description_map">Map</string>
@@ -107,16 +107,16 @@
     <string name="dialog_moderator_market">Visit Market</string>
 
     <plurals name="whats_on_countdown_title">
-        <item quantity="zero"><xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF 106</item>
-        <item quantity="one"><xliff:g id="number_of_days">%1$s</xliff:g> day, <xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF 106</item>
-        <item quantity="other"><xliff:g id="number_of_days">%1$s</xliff:g> days, <xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF 106</item>
+        <item quantity="zero"><xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF 107</item>
+        <item quantity="one"><xliff:g id="number_of_days">%1$s</xliff:g> day, <xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF 107</item>
+        <item quantity="other"><xliff:g id="number_of_days">%1$s</xliff:g> days, <xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF 107</item>
     </plurals>
 
     <string name="whats_on_stream_title">Realtime\nStream</string>
     <string name="whats_on_now_playing_title">Now Playing</string>
-	<string name="whats_on_thank_you_title">See you at IETF 107</string>
+	<string name="whats_on_thank_you_title">See you at IETF 108</string>
     <string name="permission_write">Modify IETF schedule data</string>
-    <string name="toast_now_not_visible">Press this button during IETF 106 to show the current time.</string>
+    <string name="toast_now_not_visible">Press this button during IETF 107 to show the current time.</string>
 
 
     <!-- Notes integration -->

@@ -80,8 +80,8 @@ public class SyncService extends IntentService {
 
     /** Root worksheet feed for online data source */
     // TODO: insert your sessions/speakers/vendors spreadsheet doc URL here.
-//    private static final String WORKSHEETS_URL = "INSERT_SPREADSHEET_URL_HERE";
-	private static final String BASE_URL = "https://datatracker.ietf.org/meeting/106/";
+    //       private static final String WORKSHEETS_URL = "INSERT_SPREADSHEET_URL_HERE";
+	private static final String BASE_URL = "https://datatracker.ietf.org/meeting/107/";
     private static final String HEADER_ACCEPT_ENCODING = "Accept-Encoding";
     private static final String ENCODING_GZIP = "gzip";
 
