@@ -59,6 +59,8 @@ import java.io.InputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.TimeZone;
 
+import javax.net.ssl.HttpsURLConnection;
+
 //import org.apache.http.client.HttpClient;
 
 /**
@@ -79,8 +81,6 @@ public class SyncService extends IntentService {
     private static final int SECOND_IN_MILLIS = (int) DateUtils.SECOND_IN_MILLIS;
 
     /** Root worksheet feed for online data source */
-    // TODO: insert your sessions/speakers/vendors spreadsheet doc URL here.
-    //       private static final String WORKSHEETS_URL = "INSERT_SPREADSHEET_URL_HERE";
 	private static final String BASE_URL = "https://datatracker.ietf.org/meeting/107/";
     private static final String HEADER_ACCEPT_ENCODING = "Accept-Encoding";
     private static final String ENCODING_GZIP = "gzip";
@@ -100,9 +100,8 @@ public class SyncService extends IntentService {
         super.onCreate();
         final ContentResolver resolver = getContentResolver();
         mLocalExecutor = new LocalExecutor(getResources(), resolver);
-	
-        final HttpClient httpClient = getHttpClient(this);	
-		mRemoteExecutor = new RemoteExecutor(httpClient);
+
+        mRemoteExecutor = new RemoteExecutor();
 		if (debbug) {
 			Log.d(TAG, "SyncService OnCreate" + this.hashCode());
 			String[] tz = TimeZone.getAvailableIDs();

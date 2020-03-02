@@ -35,6 +35,10 @@ import android.content.ContentResolver;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.List;
 
 /**
  * Executes an {@link HttpUriRequest} and passes the result as an
@@ -44,36 +48,38 @@ public class RemoteExecutor {
 
 	private static final String TAG = "RemoteExecutor HTTP";
 
-    private final HttpClient mHttpClient;
-
-    public RemoteExecutor(HttpClient httpClient) {
-        mHttpClient = httpClient;
-    }
+    public RemoteExecutor() { }
 
 
-	public String executeHead(String url) throws Exception {
-		final HttpUriRequest request = new HttpHead(url);
-		final HttpResponse resp = mHttpClient.execute(request);
-		final int status = resp.getStatusLine().getStatusCode();
-        if (status != HttpStatus.SC_OK) {
-			Log.d(TAG, "Response Code " + status);
-            throw new IOException("Unexpected server response " + resp.getStatusLine() + " for " + request.getRequestLine());
-		}
-//		Header h = resp.getFirstHeader("Content-Length");
-		Header h = resp.getFirstHeader("Etag");
-		if (h != null) {
-			try {
-//				int length = Integer.parseInt(h.getValue());
-//				Log.d(TAG, "Content-Length " + length);
-				String etag = h.getValue();
-				Log.d(TAG, "Etag " + h.getValue());
-				return etag;
+	public String executeHead(String urlString) throws Exception {
+    	URL url;
+    	HttpURLConnection urlConnection = null;
+    	try {
+    		url = new URL(urlString);
+    		urlConnection = (HttpURLConnection) url.openConnection();
+
+    		int status = urlConnection.getResponseCode();
+    		if (status == HttpURLConnection.HTTP_OK) {
+    			String header = urlConnection.getHeaderFields().get("Etag").get(0);
+
+    			if (header != null) {
+    				try {
+    					Log.d(TAG, "Etag " + header);
+    					return header;
+					} catch (Exception e) {
+    					e.printStackTrace();
+    					return null;
+					}
+				}
 			}
-			catch (Exception e) {
-				e.printStackTrace();
-				return null;
-			}	
+		} catch (Exception e) {
+    		e.printStackTrace();
+		} finally {
+    		if (urlConnection != null){
+    			url.Connection.disconnect();
+			}
 		}
+		
 		return null;
 	}
 
