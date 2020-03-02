@@ -33,12 +33,15 @@ import org.apache.http.client.methods.HttpUriRequest;
 
 import android.content.ContentResolver;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
+
+import javax.net.ssl.HttpsURLConnection;
 
 /**
  * Executes an {@link HttpUriRequest} and passes the result as an
@@ -56,10 +59,10 @@ public class RemoteExecutor {
     	HttpURLConnection urlConnection = null;
     	try {
     		url = new URL(urlString);
-    		urlConnection = (HttpURLConnection) url.openConnection();
+    		urlConnection = (HttpsURLConnection) url.openConnection();
 
     		int status = urlConnection.getResponseCode();
-    		if (status == HttpURLConnection.HTTP_OK) {
+    		if (status == HttpsURLConnection.HTTP_OK) {
     			String header = urlConnection.getHeaderFields().get("Etag").get(0);
 
     			if (header != null) {
@@ -76,10 +79,10 @@ public class RemoteExecutor {
     		e.printStackTrace();
 		} finally {
     		if (urlConnection != null){
-    			url.Connection.disconnect();
+    			urlConnection.disconnect();
 			}
 		}
-		
+
 		return null;
 	}
 
@@ -87,18 +90,26 @@ public class RemoteExecutor {
      * Execute a {@link HttpGet} request, passing a valid response through
      * {@link XmlHandler#parseAndApply(XmlPullParser, ContentResolver)}.
      */
-    public InputStream executeGet(String url) throws Exception {
+    public InputStream executeGet(String urlString) throws Exception {
 		// Last-Modified Thu, 01 Sep 2011 16:11:33 GMT
 		//ETag "aa4a6d-41d1-4abe37f915740"-gzip
-	
-        HttpUriRequest request = new HttpGet(url);
-		HttpResponse resp = mHttpClient.execute(request);
-        int status = resp.getStatusLine().getStatusCode();
-			
-        if (status != HttpStatus.SC_OK) {
-			Log.d(TAG, "Response Code " + status);
-			throw new IOException("Unexpected server response " + resp.getStatusLine() + " for " + request.getRequestLine());
-		}
-		return resp.getEntity().getContent();
+        URL url;
+        HttpURLConnection urlConnection = null;
+        try {
+            url = new URL(urlString);
+            urlConnection = (HttpsURLConnection) url.openConnection();
+
+            int status = urlConnection.getResponseCode();
+            if (status == HttpsURLConnection.HTTP_OK) {
+                return urlConnection.getInputStream();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (urlConnection != null){
+                urlConnection.disconnect();
+            }
+        }
+     return null;
     }
 }

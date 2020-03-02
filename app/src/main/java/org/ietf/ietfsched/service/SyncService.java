@@ -98,6 +98,7 @@ public class SyncService extends IntentService {
     @Override
     public void onCreate() {
         super.onCreate();
+        super.onCreate();
         final ContentResolver resolver = getContentResolver();
         mLocalExecutor = new LocalExecutor(getResources(), resolver);
 
@@ -123,8 +124,6 @@ public class SyncService extends IntentService {
 		final String lastEtag = prefs.getString(Prefs.LAST_ETAG, "");
 //		final long startLocal = System.currentTimeMillis();
 	
-		//boolean localParse = localVersion < VERSION_CURRENT;
-		boolean localParse = false;
 		Log.d(TAG, "found localVersion=" + localVersion + " and VERSION_CURRENT=" + VERSION_CURRENT);
 		boolean remoteParse = true;
 //		int remoteLength = -1;
@@ -148,18 +147,6 @@ public class SyncService extends IntentService {
 			e.printStackTrace();
 		}
 
-// HACK FOR TESTS PURPOSES. TO REMOVE 
-//		Log.w(TAG, "For tests purposes, only the local parsing is activated");
-//		remoteParse = false;
-//		localParse = true;
-// HACK FIN.	
-	
-		if (!remoteParse && !localParse) {
-			Log.d(TAG, "Already synchronized");
-			if (receiver != null) receiver.send(STATUS_FINISHED, Bundle.EMPTY);
-			return;
-			}
-	
 		if (remoteParse) {
 			String csvURL = BASE_URL + "agenda.csv";
 			try {
@@ -168,33 +155,13 @@ public class SyncService extends IntentService {
 				mLocalExecutor.execute(agenda);
 				prefs.edit().putString(Prefs.LAST_ETAG, remoteEtag).commit();
 				prefs.edit().putInt(Prefs.LOCAL_VERSION, VERSION_CURRENT).commit();
-				localParse = false;
 				Log.d(TAG, "remote sync finished");
 				if (receiver != null) receiver.send(STATUS_FINISHED, Bundle.EMPTY);
 			}
 			catch (Exception e) {
 				Log.e(TAG, "Error HTTP request " + csvURL , e);
-				if (!localParse) {
-					final Bundle bundle = new Bundle();
-					bundle.putString(Intent.EXTRA_TEXT, "Connection error. No updates.");
-					if (receiver != null) {
-						receiver.send(STATUS_ERROR, bundle);
-					}
-				}
-			}
-		}
-		
-		if (localParse) {
-			try {
-				mLocalExecutor.execute(context, "agenda-83.csv");
-				Log.d(TAG, "local sync finished");
-				prefs.edit().putInt(Prefs.LOCAL_VERSION, VERSION_CURRENT).commit();
-				if (receiver != null) receiver.send(STATUS_FINISHED, Bundle.EMPTY);
-			}
-			catch (Exception e) {
-				e.printStackTrace();
 				final Bundle bundle = new Bundle();
-				bundle.putString(Intent.EXTRA_TEXT, e.toString());
+				bundle.putString(Intent.EXTRA_TEXT, "iFOP Connection error. No updates.");
 				if (receiver != null) {
 					receiver.send(STATUS_ERROR, bundle);
 				}

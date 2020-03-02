@@ -16,6 +16,8 @@
 
 package org.ietf.ietfsched.io;
 
+import android.util.Log;
+
 import java.util.*;
 import java.text.*;
 
@@ -35,7 +37,7 @@ public class Meeting {
 	String hrefDetail = " "; 
 	String location = "N/A"; // room
 	String group = " "; // APP
-	String area = " "; // appeara
+	String area = " "; // apparea
 	String typeSession = ""; // Morning Session I
 	String key = ""; // unique identifier
 
@@ -47,19 +49,23 @@ public class Meeting {
 	public Meeting(String lineCsv) throws Exception {
 		String[] splitted = lineCsv.split("\",\"");
 		day = splitted[0].substring(1, splitted[0].length());
+		if (day.matches("^.*Date$")) {
+			Log.w("HEADER", "Found file Header");
+			return;
+		}
 		startHour = convert(day, splitted[1]);
 		endHour = convert(day, splitted[2]);
 		typeSession = splitted[3];
 		String tLocation = splitted[4].trim();
 		if (tLocation.length() > 0) {
 			location = tLocation;
-			}
+		}
 		group = splitted[5];
 		area = splitted[6];
 		title = splitted[8];
 		key = splitted[9];
 		hrefDetail = splitted[10];
-		}
+	}
 		
 	private static String convert(String date, String hour) throws Exception {
 		Date d = previousFormat.parse(String.format("%s %s", date, hour));

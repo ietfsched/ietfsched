@@ -36,9 +36,11 @@ import android.util.Log;
 import android.content.Context;
 import android.content.res.Resources;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.DataInputStream;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashSet;
 
@@ -292,12 +294,13 @@ public class LocalExecutor {
 
 	private ArrayList<Meeting> decode(final InputStream is) throws IOException {
 		final ArrayList<Meeting> meetings = new ArrayList<Meeting>(); 
-		DataInputStream reader = new DataInputStream(is);
+		BufferedReader reader = new BufferedReader(new InputStreamReader(is));
 		boolean ready = true;
 		String line = null;
 		while (ready) {
 			try {   
 				line = reader.readLine();
+				Log.w("FUCK", "Line: " +line);
 				if (line != null && line.length() != 0) {
 					Meeting m = new Meeting(line);
 					meetings.add(m);
