@@ -47,24 +47,32 @@ public class Meeting {
 		}
 	
 	public Meeting(String lineCsv) throws Exception {
-		String[] splitted = lineCsv.split("\",\"");
-		day = splitted[0].substring(1, splitted[0].length());
-		if (day.matches("^.*Date$")) {
-			Log.w("HEADER", "Found file Header");
-			return;
+		try {
+			String[] splitted = lineCsv.split("\",\"");
+			// Each line element is now: b'things thangs'
+			// remove the single quotes AND the leading b.
+			for (int i = 0; i<= splitted.length; i++){
+				Log.w("Prior regex", "Prior to regex: "+splitted[i]);
+				// String tmp = splitted[i].replaceAll("^b'(.*)'", "$1");
+				splitted[i] = splitted[i].substring(1,splitted[i].length() - 1);
+				Log.w("Post regex", "Post to regex: "+splitted[i]);
+			}
+			day = splitted[0].substring(1, splitted[0].length());
+			startHour = convert(day, splitted[1]);
+			endHour = convert(day, splitted[2]);
+			typeSession = splitted[3];
+			String tLocation = splitted[4].trim();
+			if (tLocation.length() > 0) {
+				location = tLocation;
+			}
+			group = splitted[5];
+			area = splitted[6];
+			title = splitted[8];
+			key = splitted[9];
+			hrefDetail = splitted[10];
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
-		startHour = convert(day, splitted[1]);
-		endHour = convert(day, splitted[2]);
-		typeSession = splitted[3];
-		String tLocation = splitted[4].trim();
-		if (tLocation.length() > 0) {
-			location = tLocation;
-		}
-		group = splitted[5];
-		area = splitted[6];
-		title = splitted[8];
-		key = splitted[9];
-		hrefDetail = splitted[10];
 	}
 		
 	private static String convert(String date, String hour) throws Exception {

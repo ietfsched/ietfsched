@@ -120,147 +120,41 @@ public class SyncService extends IntentService {
         final Context context = this;
         final SharedPreferences prefs = getSharedPreferences(Prefs.IETFSCHED_SYNC, Context.MODE_PRIVATE);
         final int localVersion = prefs.getInt(Prefs.LOCAL_VERSION, VERSION_NONE);
-//		final int lastLength = prefs.getInt(Prefs.LAST_LENGTH, VERSION_NONE);
 		final String lastEtag = prefs.getString(Prefs.LAST_ETAG, "");
-//		final long startLocal = System.currentTimeMillis();
-	
+
 		Log.d(TAG, "found localVersion=" + localVersion + " and VERSION_CURRENT=" + VERSION_CURRENT);
-		boolean remoteParse = true;
-//		int remoteLength = -1;
 		String remoteEtag = "";
 	
 		try {
 			String htmlURL = BASE_URL + "agenda.csv";
-			if (debbug) Log.d(TAG, 	"HEAD " + htmlURL);
+			Log.d(TAG, 	"HEAD " + htmlURL);
 			remoteEtag = mRemoteExecutor.executeHead(htmlURL);
-			if (debbug) Log.d(TAG, 	"HEAD "  + htmlURL + " " + remoteEtag);
-			if (remoteEtag == null) {
-				Log.d(TAG, "Error connection, cannot retrieve any information from" + htmlURL);
-				remoteParse = false;
-			}
-			else {
-				remoteParse = !remoteEtag.equals(lastEtag);
-				}
+			Log.d(TAG, 	"HEAD "  + htmlURL + " " + remoteEtag);
 		}
 		catch (Exception e) {
-			remoteParse = false;
 			e.printStackTrace();
 		}
 
-		if (remoteParse) {
-			String csvURL = BASE_URL + "agenda.csv";
-			try {
-				if (debbug) Log.d(TAG, csvURL);
-				InputStream agenda = mRemoteExecutor.executeGet(csvURL);
-				mLocalExecutor.execute(agenda);
-				prefs.edit().putString(Prefs.LAST_ETAG, remoteEtag).commit();
-				prefs.edit().putInt(Prefs.LOCAL_VERSION, VERSION_CURRENT).commit();
-				Log.d(TAG, "remote sync finished");
-				if (receiver != null) receiver.send(STATUS_FINISHED, Bundle.EMPTY);
-			}
-			catch (Exception e) {
-				Log.e(TAG, "Error HTTP request " + csvURL , e);
-				final Bundle bundle = new Bundle();
-				bundle.putString(Intent.EXTRA_TEXT, "iFOP Connection error. No updates.");
-				if (receiver != null) {
-					receiver.send(STATUS_ERROR, bundle);
-				}
+		String csvURL = BASE_URL + "agenda.csv";
+		try {
+			if (debbug) Log.d(TAG, csvURL);
+			InputStream agenda = mRemoteExecutor.executeGet(csvURL);
+			mLocalExecutor.execute(agenda);
+			Log.w("BeforeRemoveExec", "Before remote executor - inputsream achieved");
+			prefs.edit().putString(Prefs.LAST_ETAG, remoteEtag).commit();
+			prefs.edit().putInt(Prefs.LOCAL_VERSION, VERSION_CURRENT).commit();
+			Log.d(TAG, "remote sync finished");
+			if (receiver != null) receiver.send(STATUS_FINISHED, Bundle.EMPTY);
+		}
+		catch (Exception e) {
+			Log.e(TAG, "Error HTTP request " + csvURL , e);
+			final Bundle bundle = new Bundle();
+			bundle.putString(Intent.EXTRA_TEXT, "iFOP Connection error. No updates.");
+			if (receiver != null) {
+				receiver.send(STATUS_ERROR, bundle);
 			}
 		}
     }
-
-
-   /**
-     * Generate and return a {@link HttpClient} configured for general use,
-     * including setting an application-specific user-agent string.
-     */
-	public static HttpClient getHttpClient(Context context) {
-        final HttpParams params = new BasicHttpParams();
-
-        // Use generous timeouts for slow mobile networks
-        HttpConnectionParams.setConnectionTimeout(params, 20 * SECOND_IN_MILLIS);
-        HttpConnectionParams.setSoTimeout(params, 20 * SECOND_IN_MILLIS);
-
-        HttpConnectionParams.setSocketBufferSize(params, 8192);
-        HttpProtocolParams.setUserAgent(params, buildUserAgent(context));
-
-        final DefaultHttpClient client = new DefaultHttpClient(params);
-
-        client.addRequestInterceptor(new HttpRequestInterceptor() {
-            public void process(HttpRequest request, HttpContext context) {
-                // Add header to accept gzip content
-                if (!request.containsHeader(HEADER_ACCEPT_ENCODING)) {
-                    request.addHeader(HEADER_ACCEPT_ENCODING, ENCODING_GZIP);
-                }
-/*				Log.d(TAG, "Headers for request");
-				Header[] headers = request.getAllHeaders();
-				for (Header h : headers) {
-					Log.d(TAG, h.getName() + " " + h.getValue());
-				}
-*/			
-
-            }
-        });
-
-        client.addResponseInterceptor(new HttpResponseInterceptor() {
-            public void process(HttpResponse response, HttpContext context) {
-                // Inflate any responses compressed with gzip
-			    final HttpEntity entity = response.getEntity();
-                final Header encoding = entity != null ? entity.getContentEncoding() : null;
-                if (encoding != null) {
-                    for (HeaderElement element : encoding.getElements()) {
-                        if (element.getName().equalsIgnoreCase(ENCODING_GZIP)) {
-                            response.setEntity(new InflatingEntity(response.getEntity()));
-                            break;
-                        }
-                    }
-                }
-            }
-        });
-
-        return client;
-	}
-	
-	
-  /**
-     * Build and return a user-agent string that can identify this application
-     * to remote servers. Contains the package name and version code.
-     */
-    private static String buildUserAgent(Context context) {
-        try {
-            final PackageManager manager = context.getPackageManager();
-            final PackageInfo info = manager.getPackageInfo(context.getPackageName(), 0);
-
-            // Some APIs require "(gzip)" in the user-agent string.
-            return info.packageName + "/" + info.versionName
-                    + " (" + info.versionCode + ") (gzip)";
-        }
-	catch (NameNotFoundException e) {
-            return null;
-        }
-    }
-
-   /**
-     * Simple {@link HttpEntityWrapper} that inflates the wrapped
-     * {@link HttpEntity} by passing it through {@link GZIPInputStream}.
-     */
-    private static class InflatingEntity extends HttpEntityWrapper {
-        public InflatingEntity(HttpEntity wrapped) {
-            super(wrapped);
-        }
-
-        @Override
-        public InputStream getContent() throws IOException {
-            return new GZIPInputStream(wrappedEntity.getContent());
-        }
-
-        @Override
-        public long getContentLength() {
-            return -1;
-        }
-    }
-
-	
 
 
     private interface Prefs {

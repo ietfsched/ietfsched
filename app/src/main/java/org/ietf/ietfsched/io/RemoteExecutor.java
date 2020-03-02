@@ -82,6 +82,7 @@ public class RemoteExecutor {
     			urlConnection.disconnect();
 			}
 		}
+		urlConnection.disconnect();
 
 		return null;
 	}
@@ -110,6 +111,7 @@ public class RemoteExecutor {
                 urlConnection.disconnect();
             }
         }
-     return null;
+		urlConnection.disconnect();
+		return null;
     }
 }
