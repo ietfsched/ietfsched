@@ -17,26 +17,9 @@
 
 package org.ietf.ietfsched.service;
 
-//import org.ietf.ietfsched.R;
 import org.ietf.ietfsched.io.LocalExecutor;
 import org.ietf.ietfsched.io.RemoteExecutor;
 import org.ietf.ietfsched.provider.ScheduleProvider;
-//import org.ietf.ietfsched.provider.ScheduleContract;
-import org.apache.http.Header;
-import org.apache.http.HeaderElement;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpRequestInterceptor;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpResponseInterceptor;
-import org.apache.http.client.HttpClient;
-import org.apache.http.entity.HttpEntityWrapper;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
-import org.apache.http.params.HttpProtocolParams;
-import org.apache.http.protocol.HttpContext;
 
 import android.app.IntentService;
 import android.app.Service;
@@ -44,24 +27,14 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Resources;
-//import android.database.Cursor;
 import android.os.Bundle;
 import android.os.ResultReceiver;
 import android.text.format.DateUtils;
 import android.util.Log;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.util.zip.GZIPInputStream;
 import java.util.TimeZone;
-
-import javax.net.ssl.HttpsURLConnection;
-
-//import org.apache.http.client.HttpClient;
 
 /**
  * Background {@link Service} that synchronizes data living in

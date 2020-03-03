@@ -26,7 +26,7 @@ import org.ietf.ietfsched.util.UIUtils;
 
 public class Meeting {
 	
-	final static SimpleDateFormat previousFormat = new SimpleDateFormat("yyyy-MM-d HHmm"); // 2011-07-23 0900 
+	final static SimpleDateFormat previousFormat = new SimpleDateFormat("yyyy-MM-dd HHmm"); // 2011-07-23 0900
 		// Hack: timezone format (Z) = +0800 where the ietfsched application expects +08:00. 
 	final static SimpleDateFormat afterFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:00.000", Locale.US);
 	
@@ -48,16 +48,20 @@ public class Meeting {
 	
 	public Meeting(String lineCsv) throws Exception {
 		try {
-			String[] splitted = lineCsv.split("\",\"");
+			String[] splitted = lineCsv.split(",");
+			Log.w("SplitCSV", "Split to" + splitted.toString() + " and length: " +splitted.length);
 			// Each line element is now: b'things thangs'
 			// remove the single quotes AND the leading b.
-			for (int i = 0; i<= splitted.length; i++){
-				Log.w("Prior regex", "Prior to regex: "+splitted[i]);
-				// String tmp = splitted[i].replaceAll("^b'(.*)'", "$1");
-				splitted[i] = splitted[i].substring(1,splitted[i].length() - 1);
-				Log.w("Post regex", "Post to regex: "+splitted[i]);
+			for (int i = 0; i < splitted.length; i++){
+				// Sometimes there is no content in an element, skip reparsing if so.
+				if (splitted[i].contains("b'")) {
+					Log.w("Prior regex", "Prior to regex: " + splitted[i]);
+					splitted[i] = splitted[i].replaceAll("^\"b['\"](.*)['\"]\"", "$1");
+					// splitted[i] = splitted[i].substring(2, splitted[i].length() - 1);
+					Log.w("Post regex", "Post to regex: " + splitted[i]);
+				}
 			}
-			day = splitted[0].substring(1, splitted[0].length());
+			day = splitted[0];
 			startHour = convert(day, splitted[1]);
 			endHour = convert(day, splitted[2]);
 			typeSession = splitted[3];
@@ -76,7 +80,9 @@ public class Meeting {
 	}
 		
 	private static String convert(String date, String hour) throws Exception {
+	    Log.w("Convert", "Date/Hour: "+ date + "/"+hour);
 		Date d = previousFormat.parse(String.format("%s %s", date, hour));
+		Log.w("D", "FOO"+d.toString()+"FOO");
 		return afterFormat.format(d);
 	}
 		

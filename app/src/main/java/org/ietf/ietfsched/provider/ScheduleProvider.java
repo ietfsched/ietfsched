@@ -253,7 +253,7 @@ public class ScheduleProvider extends ContentProvider {
     /** {@inheritDoc} */
     @Override
     public Uri insert(Uri uri, ContentValues values) {
-        if (LOGV) Log.v(TAG, "insert(uri=" + uri + ", values=" + values.toString() + ")");
+        Log.w(TAG, "insert(uri=" + uri + ", values=" + values.toString() + ")");
         final SQLiteDatabase db = mOpenHelper.getWritableDatabase();
 	
         final int match = sUriMatcher.match(uri);
@@ -280,6 +280,10 @@ public class ScheduleProvider extends ContentProvider {
                 return Sessions.buildSessionUri(values.getAsString(Sessions.SESSION_ID));
             }
 			case SESSIONS_ID_TRACKS: {
+                db.insertOrThrow(Tables.SESSIONS_TRACKS, null, values);
+                getContext().getContentResolver().notifyChange(uri, null);
+                return Tracks.buildTrackUri(values.getAsString(SessionsTracks.TRACK_ID));
+            }case SESSIONS_ID: {
                 db.insertOrThrow(Tables.SESSIONS_TRACKS, null, values);
                 getContext().getContentResolver().notifyChange(uri, null);
                 return Tracks.buildTrackUri(values.getAsString(SessionsTracks.TRACK_ID));

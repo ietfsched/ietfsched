@@ -18,9 +18,7 @@ package org.ietf.ietfsched.ui;
 
 import org.ietf.ietfsched.R;
 import org.ietf.ietfsched.provider.ScheduleContract.Sessions;
-//import org.ietf.ietfsched.provider.ScheduleContract.Vendors;
 import org.ietf.ietfsched.ui.phone.SessionDetailActivity;
-//import org.ietf.ietfsched.ui.phone.VendorDetailActivity;
 
 import android.content.Intent;
 import android.os.Bundle;

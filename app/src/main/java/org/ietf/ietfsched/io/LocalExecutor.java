@@ -29,7 +29,6 @@ import org.ietf.ietfsched.util.Lists;
 import android.content.ContentProviderOperation;
 import android.content.ContentProviderResult;
 import android.content.ContentResolver;
-//import android.content.ContentValues;
 import android.database.Cursor;
 import android.net.Uri;
 import android.util.Log;
@@ -38,7 +37,6 @@ import android.content.res.Resources;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.DataInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -297,7 +295,13 @@ public class LocalExecutor {
 		BufferedReader reader = new BufferedReader(new InputStreamReader(is));
 		boolean ready = true;
 		String line = null;
+		int c = 0;
 		while (ready) {
+			c++;
+			if (c == 1) {
+			   continue;
+			}
+			Log.w("C", "C: "+c);
 			try {   
 				line = reader.readLine();
 				Log.w("FUCK", "Line: " +line);
@@ -306,10 +310,12 @@ public class LocalExecutor {
 					meetings.add(m);
 				}
 				else {
+				    Log.w("Fucker", "FALSE: "+line);
 					ready = false;
 				}	
 			}
 			catch (IOException e1) {
+				e1.printStackTrace();
 				ready = false;
 				}
 			catch (Exception e) {
@@ -320,6 +326,7 @@ public class LocalExecutor {
 			reader.close();
 			}
 		catch (Exception e) {
+			e.printStackTrace();
 			}
 		return meetings;	
 		}

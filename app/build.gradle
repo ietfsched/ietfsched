@@ -24,6 +24,11 @@ android {
     // Most likely this will fail soon:
     //   replace the deprecated apache HttpClient with the new HttpURLConnection.
     useLibrary 'org.apache.http.legacy'
+    compileOptions {
+        sourceCompatibility = 1.8
+        targetCompatibility = 1.8
+    }
+    buildToolsVersion = '29.0.3'
 }
 
 dependencies {

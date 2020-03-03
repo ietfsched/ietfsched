@@ -18,8 +18,6 @@ package org.ietf.ietfsched.util;
 
 //import org.ietf.ietfsched.io.XmlHandler;
 import org.ietf.ietfsched.provider.ScheduleContract.Blocks;
-//import org.ietf.ietfsched.provider.ScheduleContract.SyncColumns;
-//import org.ietf.ietfsched.provider.ScheduleContract.Tracks;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -28,6 +26,7 @@ import android.content.ContentProvider;
 import android.content.ContentProviderOperation;
 import android.content.ContentResolver;
 import android.net.Uri;
+import android.util.Log;
 
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
@@ -121,6 +120,7 @@ public class ParserUtils {
 */
 
     public static long parseTime(String time) {
+        Log.w("parseTime", "Time: " +time);
 		try {
 		return df.parse(time).getTime();
 		}

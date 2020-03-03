@@ -18,7 +18,6 @@ package org.ietf.ietfsched.ui;
 import org.ietf.ietfsched.R;
 import org.ietf.ietfsched.provider.ScheduleContract;
 import org.ietf.ietfsched.util.ActivityHelper;
-//import org.ietf.ietfsched.util.AnalyticsUtils;
 import org.ietf.ietfsched.util.NotifyingAsyncQueryHandler;
 import org.ietf.ietfsched.util.UIUtils;
 

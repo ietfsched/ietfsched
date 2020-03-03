@@ -17,9 +17,6 @@
 package org.ietf.ietfsched.ui;
 
 import org.ietf.ietfsched.R;
-//import org.ietf.ietfsched.provider.ScheduleContract;
-//import org.ietf.ietfsched.ui.tablet.NowPlayingMultiPaneActivity;
-//import org.ietf.ietfsched.util.AnalyticsUtils;
 import org.ietf.ietfsched.util.UIUtils;
 
 import android.app.Activity;

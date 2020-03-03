@@ -18,9 +18,7 @@ package org.ietf.ietfsched.ui;
 
 import org.ietf.ietfsched.R;
 import org.ietf.ietfsched.service.SyncService;
-//import org.ietf.ietfsched.util.AnalyticsUtils;
 import org.ietf.ietfsched.util.DetachableResultReceiver;
-//import org.ietf.ietfsched.util.EulaHelper;
 
 import android.app.Activity;
 import android.content.Intent;

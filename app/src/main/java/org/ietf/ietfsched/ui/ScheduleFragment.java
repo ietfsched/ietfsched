@@ -22,7 +22,6 @@ import org.ietf.ietfsched.ui.widget.BlockView;
 import org.ietf.ietfsched.ui.widget.BlocksLayout;
 import org.ietf.ietfsched.ui.widget.ObservableScrollView;
 import org.ietf.ietfsched.ui.widget.Workspace;
-// import org.ietf.ietfsched.util.AnalyticsUtils;
 import org.ietf.ietfsched.util.Maps;
 import org.ietf.ietfsched.util.MotionEventUtils;
 import org.ietf.ietfsched.util.NotifyingAsyncQueryHandler;

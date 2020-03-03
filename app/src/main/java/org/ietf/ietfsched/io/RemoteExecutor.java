@@ -16,30 +16,11 @@
 
 package org.ietf.ietfsched.io;
 
-//import com.google.android.apps.iosched.io.XmlHandler.HandlerException;
-//import com.google.android.apps.iosched.util.ParserUtils;
-
 import android.util.Log;
 
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpHead;
-import org.apache.http.client.methods.HttpUriRequest;
-//import org.xmlpull.v1.XmlPullParser;
-//import org.xmlpull.v1.XmlPullParserException;
-
-import android.content.ContentResolver;
-
-import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.List;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -62,6 +43,7 @@ public class RemoteExecutor {
     		urlConnection = (HttpsURLConnection) url.openConnection();
 
     		int status = urlConnection.getResponseCode();
+    		Log.w("HTTPSTATUS", "Statuscode: " + status);
     		if (status == HttpsURLConnection.HTTP_OK) {
     			String header = urlConnection.getHeaderFields().get("Etag").get(0);
 
@@ -87,31 +69,32 @@ public class RemoteExecutor {
 		return null;
 	}
 
-    /**
-     * Execute a {@link HttpGet} request, passing a valid response through
-     * {@link XmlHandler#parseAndApply(XmlPullParser, ContentResolver)}.
-     */
-    public InputStream executeGet(String urlString) throws Exception {
+	/**
+	 * Execute a {@link HttpGet} request, passing a valid response through
+	 * {@link XmlHandler#parseAndApply(XmlPullParser, ContentResolver)}.
+	 */
+	public InputStream executeGet(String urlString) throws Exception {
 		// Last-Modified Thu, 01 Sep 2011 16:11:33 GMT
 		//ETag "aa4a6d-41d1-4abe37f915740"-gzip
-        URL url;
-        HttpURLConnection urlConnection = null;
-        try {
-            url = new URL(urlString);
-            urlConnection = (HttpsURLConnection) url.openConnection();
+		URL url;
+		HttpURLConnection urlConnection = null;
+		try {
+			url = new URL(urlString);
+			urlConnection = (HttpsURLConnection) url.openConnection();
 
-            int status = urlConnection.getResponseCode();
-            if (status == HttpsURLConnection.HTTP_OK) {
-                return urlConnection.getInputStream();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            if (urlConnection != null){
-                urlConnection.disconnect();
-            }
-        }
+			int status = urlConnection.getResponseCode();
+			Log.w("HTTPSTATUS", "Statuscode: " + status);
+			if (status == HttpsURLConnection.HTTP_OK) {
+				return urlConnection.getInputStream();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			if (urlConnection != null) {
+				urlConnection.disconnect();
+			}
+		}
 		urlConnection.disconnect();
 		return null;
-    }
+	}
 }
