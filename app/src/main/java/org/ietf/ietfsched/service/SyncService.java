@@ -33,7 +33,6 @@ import android.os.ResultReceiver;
 import android.text.format.DateUtils;
 import android.util.Log;
 
-import java.io.InputStream;
 import java.util.TimeZone;
 
 /**
@@ -88,7 +87,6 @@ public class SyncService extends IntentService {
     @Override
     protected void onHandleIntent(Intent intent) {
         final ResultReceiver receiver = intent.getParcelableExtra(EXTRA_STATUS_RECEIVER);
-        if (debbug) Log.d(TAG, "Receiver is = " + receiver);
         if (receiver != null) receiver.send(STATUS_RUNNING, Bundle.EMPTY);
         final Context context = this;
         final SharedPreferences prefs = getSharedPreferences(Prefs.IETFSCHED_SYNC, Context.MODE_PRIVATE);
@@ -111,18 +109,17 @@ public class SyncService extends IntentService {
 		String csvURL = BASE_URL + "agenda.csv";
 		try {
 			if (debbug) Log.d(TAG, csvURL);
-			InputStream agenda = mRemoteExecutor.executeGet(csvURL);
+			String[] agenda = mRemoteExecutor.executeGet(csvURL);
 			mLocalExecutor.execute(agenda);
-			Log.w("BeforeRemoveExec", "Before remote executor - inputsream achieved");
-			prefs.edit().putString(Prefs.LAST_ETAG, remoteEtag).commit();
-			prefs.edit().putInt(Prefs.LOCAL_VERSION, VERSION_CURRENT).commit();
+			prefs.edit().putString(Prefs.LAST_ETAG, remoteEtag).apply();
+			prefs.edit().putInt(Prefs.LOCAL_VERSION, VERSION_CURRENT).apply();
 			Log.d(TAG, "remote sync finished");
 			if (receiver != null) receiver.send(STATUS_FINISHED, Bundle.EMPTY);
 		}
 		catch (Exception e) {
 			Log.e(TAG, "Error HTTP request " + csvURL , e);
 			final Bundle bundle = new Bundle();
-			bundle.putString(Intent.EXTRA_TEXT, "iFOP Connection error. No updates.");
+			bundle.putString(Intent.EXTRA_TEXT, "Connection error. No updates.");
 			if (receiver != null) {
 				receiver.send(STATUS_ERROR, bundle);
 			}

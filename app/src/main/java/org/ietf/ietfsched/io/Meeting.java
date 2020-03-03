@@ -16,7 +16,6 @@
 
 package org.ietf.ietfsched.io;
 
-import android.util.Log;
 
 import java.util.*;
 import java.text.*;
@@ -24,70 +23,55 @@ import java.text.*;
 import org.ietf.ietfsched.util.UIUtils;
 
 
-public class Meeting {
-	
-	final static SimpleDateFormat previousFormat = new SimpleDateFormat("yyyy-MM-dd HHmm"); // 2011-07-23 0900
-		// Hack: timezone format (Z) = +0800 where the ietfsched application expects +08:00. 
-	final static SimpleDateFormat afterFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:00.000", Locale.US);
-	
-	String day = " "; // Saturday, March, 12
-	String startHour = " "; //2010-05-19T10:45:00.000-07:00
-	String endHour = " "; // 2010-05-19T11:45:00.000-07:00
-	String title = " ";
-	String hrefDetail = " "; 
+class Meeting {
+
+	private final static SimpleDateFormat previousFormat = new SimpleDateFormat("yyyy-MM-dd HHmm"); // 2011-07-23 0900
+	// Hack: timezone format (Z) = +0800 where the ietfsched application expects +08:00.
+	private final static SimpleDateFormat afterFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:00.000", Locale.US);
+
+	private String day; // Saturday, March, 12
+	String startHour; //2010-05-19T10:45:00.000-07:00
+	String endHour; // 2010-05-19T11:45:00.000-07:00
+	String title;
+	String hrefDetail;
 	String location = "N/A"; // room
-	String group = " "; // APP
-	String area = " "; // apparea
-	String typeSession = ""; // Morning Session I
-	String key = ""; // unique identifier
+	String group; // APP
+	String area; // apparea
+	String typeSession; // Morning Session I
+	String key; // unique identifier
 
 	static {
-		previousFormat.setTimeZone(UIUtils.CONFERENCE_TIME_ZONE); 
+		previousFormat.setTimeZone(UIUtils.CONFERENCE_TIME_ZONE);
 		afterFormat.setTimeZone(UIUtils.CONFERENCE_TIME_ZONE);
-		}
-	
-	public Meeting(String lineCsv) throws Exception {
-		try {
-			String[] splitted = lineCsv.split(",");
-			Log.w("SplitCSV", "Split to" + splitted.toString() + " and length: " +splitted.length);
-			// Each line element is now: b'things thangs'
-			// remove the single quotes AND the leading b.
-			for (int i = 0; i < splitted.length; i++){
-				// Sometimes there is no content in an element, skip reparsing if so.
-				if (splitted[i].contains("b'")) {
-					Log.w("Prior regex", "Prior to regex: " + splitted[i]);
-					splitted[i] = splitted[i].replaceAll("^\"b['\"](.*)['\"]\"", "$1");
-					// splitted[i] = splitted[i].substring(2, splitted[i].length() - 1);
-					Log.w("Post regex", "Post to regex: " + splitted[i]);
-				}
-			}
-			day = splitted[0];
-			startHour = convert(day, splitted[1]);
-			endHour = convert(day, splitted[2]);
-			typeSession = splitted[3];
-			String tLocation = splitted[4].trim();
-			if (tLocation.length() > 0) {
-				location = tLocation;
-			}
-			group = splitted[5];
-			area = splitted[6];
-			title = splitted[8];
-			key = splitted[9];
-			hrefDetail = splitted[10];
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 	}
-		
+
+	Meeting(String lineCsv) throws Exception {
+		String[] splitted = lineCsv.split(",");
+		// Each line element is now: b'things thangs'
+		// remove the single quotes AND the leading b.
+		for (int i = 0; i < splitted.length; i++) {
+			// Sometimes there is no content in an element, skip reparsing if so.
+			if (splitted[i].contains("b'")) {
+				splitted[i] = splitted[i].replaceAll("^\"b['\"](.*)['\"]\"", "$1");
+			}
+		}
+		day = splitted[0];
+		startHour = convert(day, splitted[1]);
+		endHour = convert(day, splitted[2]);
+		typeSession = splitted[3];
+		String tLocation = splitted[4].trim();
+		if (tLocation.length() > 0) {
+			location = tLocation;
+		}
+		group = splitted[5];
+		area = splitted[6];
+		title = splitted[8];
+		key = splitted[9];
+		hrefDetail = splitted[10];
+	}
+
 	private static String convert(String date, String hour) throws Exception {
-	    Log.w("Convert", "Date/Hour: "+ date + "/"+hour);
 		Date d = previousFormat.parse(String.format("%s %s", date, hour));
-		Log.w("D", "FOO"+d.toString()+"FOO");
 		return afterFormat.format(d);
 	}
-		
-	public String toString() {
-		return String.format("[%s] [%s] [%s] [%s] [%s] [%s] [%s] [%s] [%s] [%s]", day, startHour, endHour, title, hrefDetail, location, group, area, typeSession, key);
-		}
-	}
-	
+}

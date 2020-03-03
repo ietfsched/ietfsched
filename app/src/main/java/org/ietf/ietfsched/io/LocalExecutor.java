@@ -32,27 +32,19 @@ import android.content.ContentResolver;
 import android.database.Cursor;
 import android.net.Uri;
 import android.util.Log;
-import android.content.Context;
 import android.content.res.Resources;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashSet;
 
-/**
- * Opens a local {@link Resources#getXml(int)} and passes the resulting
- * {@link XmlPullParser} to the given {@link XmlHandler}.
- */
 public class LocalExecutor {
 	private static final String TAG = "LocalExecutor";
 	private static final boolean debbug = false;
     private Resources mRes;
     private ContentResolver mResolver;
 	private final String mAuthority = ScheduleContract.CONTENT_AUTHORITY;
-	private final HashSet<String> blockRefs = new HashSet<String>();
+	private final HashSet<String> blockRefs = new HashSet<>();
 
 
     public LocalExecutor(Resources res, ContentResolver resolver) {
@@ -60,26 +52,11 @@ public class LocalExecutor {
         mResolver = resolver;
     }
 
-	public void execute(Context context, String assetName) {
-		try {
-			Log.d(TAG, "Parsing file: " + assetName);
-			final InputStream input = context.getAssets().open(assetName);
-			if (input != null) {
-				ArrayList<Meeting> meetings = decode(input);
-				executeBuild(meetings);
-			}
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-		}
-	blockRefs.clear();
-	}
-
-	public void execute(InputStream stream) throws Exception {
-		if (debbug) Log.d(TAG, "Parsing inputStream");
+	public void execute(String[] stream) throws Exception {
+		Log.d(TAG, "Parsing input page data");
 		if (stream != null) {
 			ArrayList<Meeting> meetings = decode(stream);
-			if (meetings == null || meetings.size() == 0) {
+			if (meetings.size() == 0) {
 				throw new IOException("Cannot decode inputStream. Not an agenda ? ");
 			}
 			executeBuild(meetings);
@@ -153,10 +130,10 @@ public class LocalExecutor {
 			blockRefs.add(key);
 		}
 	
-		String title = null;
-		long startTime = -1;
-		long endTime = -1;
-		String blockType = null;
+		String title;
+		long startTime;
+		long endTime;
+		String blockType;
 	
 		startTime = ParserUtils.parseTime(m.startHour);
 		endTime = ParserUtils.parseTime(m.endHour);
@@ -191,12 +168,12 @@ public class LocalExecutor {
 		final ContentProviderOperation.Builder builder = ContentProviderOperation.newInsert(Sessions.CONTENT_URI);
         builder.withValue(Sessions.UPDATED, versionBuild);
 
-        long startTime = -1;
-        long endTime = -1;
-        String title = null;
-        String sessionId = null;
-        String trackId = null;
-		String roomId = null;
+        long startTime;
+        long endTime;
+        String title;
+        String sessionId;
+        String trackId;
+		String roomId;
 
 		try {	
 			startTime = ParserUtils.parseTime(m.startHour);
@@ -285,65 +262,42 @@ public class LocalExecutor {
 		String where = Sessions.UPDATED + " <> ?";
 		String args[] = new String[] {"" + versionBuild };
 		builder.withSelection(where, args);
-		ContentProviderOperation cp = builder.build();
-		return cp;
+		return builder.build();
 	}
 
 
-	private ArrayList<Meeting> decode(final InputStream is) throws IOException {
-		final ArrayList<Meeting> meetings = new ArrayList<Meeting>(); 
-		BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-		boolean ready = true;
+	private ArrayList<Meeting> decode(final String[] is) throws IOException {
+		final ArrayList<Meeting> meetings = new ArrayList<>();
 		String line = null;
-		int c = 0;
-		while (ready) {
-			c++;
+		for (int c = 0; c < is.length; c++) {
 			if (c == 1) {
 			   continue;
 			}
-			Log.w("C", "C: "+c);
-			try {   
-				line = reader.readLine();
-				Log.w("FUCK", "Line: " +line);
+			try {
+				line = is[c];
 				if (line != null && line.length() != 0) {
 					Meeting m = new Meeting(line);
 					meetings.add(m);
 				}
 				else {
-				    Log.w("Fucker", "FALSE: "+line);
-					ready = false;
-				}	
-			}
-			catch (IOException e1) {
-				e1.printStackTrace();
-				ready = false;
+				    Log.w("DECODE", "decode/parse failure: "+line);
 				}
-			catch (Exception e) {
+			} catch (Exception e) {
 				Log.w(TAG, "Error parsing line csv file, involves:[[" + line + "]]"); 
-				}
 			}
-		try {
-			reader.close();
-			}
-		catch (Exception e) {
-			e.printStackTrace();
-			}
-		return meetings;	
 		}
+		return meetings;
+	}
             
-	public static int querySessionStarred(Uri uri, ContentResolver resolver) {
+	private static int querySessionStarred(Uri uri, ContentResolver resolver) {
         final String[] projection = { Sessions.SESSION_STARRED };
-        final Cursor cursor = resolver.query(uri, projection, null, null, null);
-        try {
-            if (cursor.moveToFirst()) {
-                return cursor.getInt(0);
-			} 
-			else {
-                return -1;
+		try (Cursor cursor = resolver.query(uri, projection, null, null, null)) {
+			assert cursor != null;
+			if (cursor.moveToFirst()) {
+				return cursor.getInt(0);
+			} else {
+				return -1;
 			}
-		}
-		finally {
-            cursor.close();
 		}
 	}
 }

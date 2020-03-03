@@ -24,10 +24,8 @@ import org.ietf.ietfsched.provider.ScheduleContract.Speakers;
 import org.ietf.ietfsched.provider.ScheduleContract.Tracks;
 import org.ietf.ietfsched.provider.ScheduleContract.Vendors;
 import org.ietf.ietfsched.provider.ScheduleDatabase.SessionsSearchColumns;
-//import org.ietf.ietfsched.provider.ScheduleDatabase.SessionsSpeakers;
 import org.ietf.ietfsched.provider.ScheduleDatabase.SessionsTracks;
 import org.ietf.ietfsched.provider.ScheduleDatabase.Tables;
-//import org.ietf.ietfsched.provider.ScheduleDatabase.VendorsSearchColumns;
 import org.ietf.ietfsched.service.SyncService;
 import org.ietf.ietfsched.util.SelectionBuilder;
 
@@ -47,10 +45,13 @@ import android.os.ParcelFileDescriptor;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import androidx.annotation.RecentlyNonNull;
+
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Provider that stores {@link ScheduleContract} data. Data is usually inserted
@@ -226,11 +227,6 @@ public class ScheduleProvider extends ContentProvider {
 
         final int match = sUriMatcher.match(uri);
         switch (match) {
-            default: {
-                // Most cases are handled with simple SelectionBuilder
-                final SelectionBuilder builder = buildExpandedSelection(uri, match);
-                return builder.where(selection, selectionArgs).query(db, projection, sortOrder);
-            }
             case SEARCH_SUGGEST: {
                 final SelectionBuilder builder = new SelectionBuilder();
 
@@ -247,6 +243,11 @@ public class ScheduleProvider extends ContentProvider {
                 final String limit = uri.getQueryParameter(SearchManager.SUGGEST_PARAMETER_LIMIT);
                 return builder.query(db, projection, null, null, SearchSuggest.DEFAULT_SORT, limit);
             }
+            default: {
+                // Most cases are handled with simple SelectionBuilder
+                final SelectionBuilder builder = buildExpandedSelection(uri, match);
+                return builder.where(selection, selectionArgs).query(db, projection, sortOrder);
+            }
         }
     }
 
@@ -260,32 +261,32 @@ public class ScheduleProvider extends ContentProvider {
         switch (match) {
             case BLOCKS: {
                 long row = db.insertOrThrow(Tables.BLOCKS, null, values);
-                getContext().getContentResolver().notifyChange(uri, null);
+                Objects.requireNonNull(getContext()).getContentResolver().notifyChange(uri, null);
 				Uri blockid = Blocks.buildBlockUri(values.getAsString(Blocks.BLOCK_ID));
                 return Blocks.buildBlockUri(values.getAsString(Blocks.BLOCK_ID));
             }
             case TRACKS: {
                 db.insertOrThrow(Tables.TRACKS, null, values);
-                getContext().getContentResolver().notifyChange(uri, null);
+                Objects.requireNonNull(getContext()).getContentResolver().notifyChange(uri, null);
                 return Tracks.buildTrackUri(values.getAsString(Tracks.TRACK_ID));
             }
             case ROOMS: {
                 db.insertOrThrow(Tables.ROOMS, null, values);
-                getContext().getContentResolver().notifyChange(uri, null);
+                Objects.requireNonNull(getContext()).getContentResolver().notifyChange(uri, null);
                 return Rooms.buildRoomUri(values.getAsString(Rooms.ROOM_ID));
             }
             case SESSIONS: {
                 db.insertOrThrow(Tables.SESSIONS, null, values);
-                getContext().getContentResolver().notifyChange(uri, null);
+                Objects.requireNonNull(getContext()).getContentResolver().notifyChange(uri, null);
                 return Sessions.buildSessionUri(values.getAsString(Sessions.SESSION_ID));
             }
 			case SESSIONS_ID_TRACKS: {
                 db.insertOrThrow(Tables.SESSIONS_TRACKS, null, values);
-                getContext().getContentResolver().notifyChange(uri, null);
+                Objects.requireNonNull(getContext()).getContentResolver().notifyChange(uri, null);
                 return Tracks.buildTrackUri(values.getAsString(SessionsTracks.TRACK_ID));
             }case SESSIONS_ID: {
                 db.insertOrThrow(Tables.SESSIONS_TRACKS, null, values);
-                getContext().getContentResolver().notifyChange(uri, null);
+                Objects.requireNonNull(getContext()).getContentResolver().notifyChange(uri, null);
                 return Tracks.buildTrackUri(values.getAsString(SessionsTracks.TRACK_ID));
             }
             default: {
@@ -301,7 +302,7 @@ public class ScheduleProvider extends ContentProvider {
         final SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         final SelectionBuilder builder = buildSimpleSelection(uri);
         int retVal = builder.where(selection, selectionArgs).update(db, values);
-        getContext().getContentResolver().notifyChange(uri, null);
+        Objects.requireNonNull(getContext()).getContentResolver().notifyChange(uri, null);
         return retVal;
     }
 
@@ -312,7 +313,7 @@ public class ScheduleProvider extends ContentProvider {
         final SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         final SelectionBuilder builder = buildSimpleSelection(uri);
         int retVal = builder.where(selection, selectionArgs).delete(db);
-        getContext().getContentResolver().notifyChange(uri, null);
+        Objects.requireNonNull(getContext()).getContentResolver().notifyChange(uri, null);
         return retVal;
     }
 
@@ -321,6 +322,7 @@ public class ScheduleProvider extends ContentProvider {
      * a {@link SQLiteDatabase} transaction. All changes will be rolled back if
      * any single one fails.
      */
+    @RecentlyNonNull
     @Override
     public ContentProviderResult[] applyBatch(ArrayList<ContentProviderOperation> operations)
             throws OperationApplicationException {
@@ -524,12 +526,10 @@ public class ScheduleProvider extends ContentProvider {
     }
 
     @Override
-    public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException {
+    public ParcelFileDescriptor openFile(@RecentlyNonNull Uri uri, @RecentlyNonNull String mode) throws FileNotFoundException {
         final int match = sUriMatcher.match(uri);
-        switch (match) {
-            default: {
-                throw new UnsupportedOperationException("Unknown uri: " + uri);
-            }
+        if (match) {
+            throw new UnsupportedOperationException("Unknown uri: " + uri);
         }
     }
 

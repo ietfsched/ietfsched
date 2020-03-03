@@ -17,10 +17,6 @@
 package org.ietf.ietfsched.util;
 
 import org.ietf.ietfsched.R;
-//import org.ietf.ietfsched.provider.ScheduleContract.Blocks;
-//import org.ietf.ietfsched.provider.ScheduleContract.Rooms;
-//import org.ietf.ietfsched.ui.phone.MapActivity;
-//import org.ietf.ietfsched.ui.tablet.MapMultiPaneActivity;
 
 import android.content.Context;
 import android.content.Intent;
@@ -32,7 +28,6 @@ import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
-//import android.net.Uri;
 import android.os.Build;
 import android.preference.PreferenceManager;
 import android.text.Html;
@@ -42,12 +37,9 @@ import android.text.TextUtils;
 import android.text.format.DateUtils;
 import android.text.method.LinkMovementMethod;
 import android.text.style.StyleSpan;
-//import android.util.Log;
 import android.widget.TextView;
 
-//import java.util.Formatter;
 import java.util.List;
-//import java.util.Locale;
 import java.util.TimeZone;
 
 /**
@@ -75,10 +67,6 @@ public class UIUtils {
 
     private static StyleSpan sBoldSpan = new StyleSpan(Typeface.BOLD);
 
-    /**
-     * Format and return the given {@link Blocks} and {@link Rooms} values using
-     * {@link #CONFERENCE_TIME_ZONE}.
-     */
     public static String formatSessionSubtitle(long blockStart, long blockEnd,
             String roomName, Context context) {
         TimeZone.setDefault(CONFERENCE_TIME_ZONE);
@@ -104,7 +92,7 @@ public class UIUtils {
             return;
         }
         if (text.contains("<") && text.contains(">")) {
-            view.setText(Html.fromHtml(text));
+            view.setText(Html.fromHtml(text, Html.FROM_HTML_MODE_LEGACY));
             view.setMovementMethod(LinkMovementMethod.getInstance());
         } else {
             view.setText(text);
@@ -123,8 +111,8 @@ public class UIUtils {
         }
 
         final Resources res = title.getResources();
-        title.setTextColor(res.getColor(colorId));
-        subtitle.setTextColor(res.getColor(subColorId));
+        title.setTextColor(res.getColor(colorId, null));
+        subtitle.setTextColor(res.getColor(subColorId, null));
     }
 
     /**
@@ -135,7 +123,7 @@ public class UIUtils {
         final SpannableStringBuilder builder = new SpannableStringBuilder(snippet);
 
         // Walk through string, inserting bold snippet spans
-        int startIndex = -1, endIndex = -1, delta = 0;
+        int startIndex, endIndex, delta;
         while ((startIndex = snippet.indexOf('{', endIndex)) != -1) {
             endIndex = snippet.indexOf('}', startIndex);
 
@@ -160,41 +148,26 @@ public class UIUtils {
 
     public static void setLastUsedTrackID(Context context, String trackID) {
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
-        sp.edit().putString("last_track_id", trackID).commit();
+        sp.edit().putString("last_track_id", trackID).apply();
     }
 
     private static final int BRIGHTNESS_THRESHOLD = 130;
 
-    /**
-     * Calculate whether a color is light or dark, based on a commonly known
-     * brightness formula.
-     *
-     * @see {@literal http://en.wikipedia.org/wiki/HSV_color_space%23Lightness}
-     */
     public static boolean isColorDark(int color) {
         return ((30 * Color.red(color) +
                 59 * Color.green(color) +
                 11 * Color.blue(color)) / 100) <= BRIGHTNESS_THRESHOLD;
     }
 
-    public static boolean isHoneycomb() {
-        // Can use static final constants like HONEYCOMB, declared in later versions
-        // of the OS since they are inlined at compile time. This is guaranteed behavior.
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB;
-    }
-
     public static boolean isHoneycombTablet(Context context) {
         // Can use static final constants like HONEYCOMB, declared in later versions
         // of the OS since they are inlined at compile time. This is guaranteed behavior.
-        return isHoneycomb() && (context.getResources().getConfiguration().screenLayout
+        return (context.getResources().getConfiguration().screenLayout
                 & Configuration.SCREENLAYOUT_SIZE_MASK)
                 == Configuration.SCREENLAYOUT_SIZE_XLARGE;
     }
 
     public static long getCurrentTime(final Context context) {
-        //SharedPreferences prefs = context.getSharedPreferences("mock_data", 0);
-        //prefs.edit().commit();
-        //return prefs.getLong("mock_current_time", System.currentTimeMillis());
         return System.currentTimeMillis();
     }
 
@@ -208,12 +181,6 @@ public class UIUtils {
     }
 
     public static Class getMapActivityClass(Context context) {
-/*        if (UIUtils.isHoneycombTablet(context)) {
-            return MapMultiPaneActivity.class;
-        }
-
-        return MapActivity.class;
-*/
 		return null;
     }
 }

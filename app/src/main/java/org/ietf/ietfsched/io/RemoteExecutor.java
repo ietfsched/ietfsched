@@ -18,15 +18,18 @@ package org.ietf.ietfsched.io;
 
 import android.util.Log;
 
-import java.io.InputStream;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Objects;
 
 import javax.net.ssl.HttpsURLConnection;
 
 /**
- * Executes an {@link HttpUriRequest} and passes the result as an
- * {@link XmlPullParser} to the given {@link XmlHandler}.
+ * Extract either a HEAD (executeHead) or full page (executeGet).
  */
 public class RemoteExecutor {
 
@@ -43,9 +46,8 @@ public class RemoteExecutor {
     		urlConnection = (HttpsURLConnection) url.openConnection();
 
     		int status = urlConnection.getResponseCode();
-    		Log.w("HTTPSTATUS", "Statuscode: " + status);
     		if (status == HttpsURLConnection.HTTP_OK) {
-    			String header = urlConnection.getHeaderFields().get("Etag").get(0);
+    			String header = Objects.requireNonNull(urlConnection.getHeaderFields().get("Etag")).get(0);
 
     			if (header != null) {
     				try {
@@ -57,25 +59,19 @@ public class RemoteExecutor {
 					}
 				}
 			}
-		} catch (Exception e) {
-    		e.printStackTrace();
 		} finally {
     		if (urlConnection != null){
     			urlConnection.disconnect();
 			}
 		}
-		urlConnection.disconnect();
+    	if (urlConnection != null) {
+			urlConnection.disconnect();
+		}
 
 		return null;
 	}
 
-	/**
-	 * Execute a {@link HttpGet} request, passing a valid response through
-	 * {@link XmlHandler#parseAndApply(XmlPullParser, ContentResolver)}.
-	 */
-	public InputStream executeGet(String urlString) throws Exception {
-		// Last-Modified Thu, 01 Sep 2011 16:11:33 GMT
-		//ETag "aa4a6d-41d1-4abe37f915740"-gzip
+	public String[] executeGet(String urlString) throws Exception {
 		URL url;
 		HttpURLConnection urlConnection = null;
 		try {
@@ -83,18 +79,32 @@ public class RemoteExecutor {
 			urlConnection = (HttpsURLConnection) url.openConnection();
 
 			int status = urlConnection.getResponseCode();
-			Log.w("HTTPSTATUS", "Statuscode: " + status);
 			if (status == HttpsURLConnection.HTTP_OK) {
-				return urlConnection.getInputStream();
+			    ArrayList<String> result = new ArrayList<>();
+			    BufferedReader reader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+			    String line;
+			    while ((line = reader.readLine()) != null) {
+					try {
+						// Skip the initial header line.
+						if (line.startsWith("\"b'Date")) {
+							continue;
+						}
+						result.add(line.trim());
+					} catch (Exception e) {
+						e.printStackTrace();
+						break;
+					}
+				}
+			    if (urlConnection != null) {
+					urlConnection.disconnect();
+				}
+				return result.toArray(new String[0]);
 			}
-		} catch (Exception e) {
-			e.printStackTrace();
 		} finally {
 			if (urlConnection != null) {
 				urlConnection.disconnect();
 			}
 		}
-		urlConnection.disconnect();
 		return null;
 	}
 }

@@ -121,7 +121,7 @@ public class ScheduleDatabase extends SQLiteOpenHelper {
                 + ")";
 	}
 
-    public ScheduleDatabase(Context context) {
+    ScheduleDatabase(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
 
@@ -191,7 +191,6 @@ public class ScheduleDatabase extends SQLiteOpenHelper {
 					"; END;"); 
 
         createSessionsSearch(db);
-//        createVendorsSearch(db);
 
         db.execSQL("CREATE TABLE " + Tables.SEARCH_SUGGEST + " ("
                 + BaseColumns._ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -245,15 +244,13 @@ public class ScheduleDatabase extends SQLiteOpenHelper {
         // updates, starting at the current version and falling through to all
         // future upgrade cases. Only use "break;" when you want to drop and
         // recreate the entire database.
-        int version = oldVersion;
-
-        switch (version) {
+        switch (oldVersion) {
             case VER_LAUNCH:
             case VER_SESSION_FEEDBACK_URL:
 		}
 
-        Log.d(TAG, "after upgrade logic, at version " + version);
-        if (version != DATABASE_VERSION) {
+        Log.d(TAG, "after upgrade logic, at version " + oldVersion);
+        if (oldVersion != DATABASE_VERSION) {
             Log.w(TAG, "Destroying old data during upgrade");
 
             db.execSQL("DROP TABLE IF EXISTS " + Tables.BLOCKS);
@@ -271,16 +268,4 @@ public class ScheduleDatabase extends SQLiteOpenHelper {
             onCreate(db);
         }
     }
-
-/* foreign keys are supported only since 2.2. 
-
-	@Override
-	public void onOpen(SQLiteDatabase db) {
-		Log.d(TAG, "Database OnOpen");
-		super.onOpen(db);
-		if (!db.isReadOnly()) {
-			db.execSQL("PRAGMA foreign_keys=ON;"); 
-			}
-		}
-*/
 }
