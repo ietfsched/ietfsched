@@ -123,7 +123,9 @@ public class UIUtils {
         final SpannableStringBuilder builder = new SpannableStringBuilder(snippet);
 
         // Walk through string, inserting bold snippet spans
-        int startIndex, endIndex, delta;
+        int startIndex;
+        int endIndex = -1;
+        int delta = -1;
         while ((startIndex = snippet.indexOf('{', endIndex)) != -1) {
             endIndex = snippet.indexOf('}', startIndex);
 

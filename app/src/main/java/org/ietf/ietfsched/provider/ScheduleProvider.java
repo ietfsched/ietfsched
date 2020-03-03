@@ -45,8 +45,6 @@ import android.os.ParcelFileDescriptor;
 import android.provider.BaseColumns;
 import android.util.Log;
 
-import androidx.annotation.RecentlyNonNull;
-
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -322,7 +320,6 @@ public class ScheduleProvider extends ContentProvider {
      * a {@link SQLiteDatabase} transaction. All changes will be rolled back if
      * any single one fails.
      */
-    @RecentlyNonNull
     @Override
     public ContentProviderResult[] applyBatch(ArrayList<ContentProviderOperation> operations)
             throws OperationApplicationException {
@@ -526,11 +523,9 @@ public class ScheduleProvider extends ContentProvider {
     }
 
     @Override
-    public ParcelFileDescriptor openFile(@RecentlyNonNull Uri uri, @RecentlyNonNull String mode) throws FileNotFoundException {
+    public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException {
         final int match = sUriMatcher.match(uri);
-        if (match) {
-            throw new UnsupportedOperationException("Unknown uri: " + uri);
-        }
+        throw new UnsupportedOperationException("Unknown uri: " + uri);
     }
 
     private interface Subquery {
