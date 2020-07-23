@@ -54,9 +54,9 @@ public class UIUtils {
     public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("Etc/GMT+2");
 
     public static final long CONFERENCE_START_MILLIS = ParserUtils.parseTime(
-            "2020-03-21T09:07:00.000");
+            "2020-07-18T09:07:00.000");
     public static final long CONFERENCE_END_MILLIS = ParserUtils.parseTime(
-            "2020-03-27T17:16:00.000");
+            "2020-07-31T17:16:00.000");
 
     /** Flags used with {@link DateUtils#formatDateRange}. */
     private static final int TIME_FLAGS = DateUtils.FORMAT_SHOW_TIME
