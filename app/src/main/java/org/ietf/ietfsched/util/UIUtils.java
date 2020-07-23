@@ -51,7 +51,7 @@ public class UIUtils {
      * phone local time, use {@link TimeZone#getDefault()}.
      *   https://garygregory.wordpress.com/2013/06/18/what-are-the-java-timezone-ids/
      */
-    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("Etc/GMT-8");
+    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("Etc/GMT+2");
 
     public static final long CONFERENCE_START_MILLIS = ParserUtils.parseTime(
             "2020-03-21T09:07:00.000");

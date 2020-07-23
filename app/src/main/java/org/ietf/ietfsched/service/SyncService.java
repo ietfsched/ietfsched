@@ -1,4 +1,4 @@
-/*
+9*
  * Copyright 2011 Google Inc.
  * Copyright 2011 Isabelle Dalmasso.  
  *
@@ -53,7 +53,7 @@ public class SyncService extends IntentService {
     private static final int SECOND_IN_MILLIS = (int) DateUtils.SECOND_IN_MILLIS;
 
     /** Root worksheet feed for online data source */
-	private static final String BASE_URL = "https://datatracker.ietf.org/meeting/107/";
+	private static final String BASE_URL = "https://datatracker.ietf.org/meeting/108/";
     private static final String HEADER_ACCEPT_ENCODING = "Accept-Encoding";
     private static final String ENCODING_GZIP = "gzip";
 
