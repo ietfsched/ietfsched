@@ -88,14 +88,14 @@ public class ScheduleFragment extends Fragment implements
 		ParserUtils.parseTime("2020-07-21T04:00:00.000"),
 		ParserUtils.parseTime("2020-07-22T04:00:00.000"),
 		ParserUtils.parseTime("2020-07-23T04:00:00.000"),
-        ParserUtils.parseTime("2020-07-24T04:00:00.000")
-        ParserUtils.parseTime("2020-07-25T04:00:00.000")
-        ParserUtils.parseTime("2020-07-26T04:00:00.000")
-        ParserUtils.parseTime("2020-07-27T04:00:00.000")
-        ParserUtils.parseTime("2020-07-28T04:00:00.000")
-        ParserUtils.parseTime("2020-07-29T04:00:00.000")
-        ParserUtils.parseTime("2020-07-30T04:00:00.000")
-        ParserUtils.parseTime("2020-07-31T04:00:00.000")
+        ParserUtils.parseTime("2020-07-24T04:00:00.000"),
+        ParserUtils.parseTime("2020-07-25T04:00:00.000"),
+        ParserUtils.parseTime("2020-07-26T04:00:00.000"),
+        ParserUtils.parseTime("2020-07-27T04:00:00.000"),
+        ParserUtils.parseTime("2020-07-28T04:00:00.000"),
+        ParserUtils.parseTime("2020-07-29T04:00:00.000"),
+        ParserUtils.parseTime("2020-07-30T04:00:00.000"),
+        ParserUtils.parseTime("2020-07-31T04:00:00.000"),
 		};
 
 	

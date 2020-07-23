@@ -1,4 +1,4 @@
-9*
+/*
  * Copyright 2011 Google Inc.
  * Copyright 2011 Isabelle Dalmasso.  
  *
