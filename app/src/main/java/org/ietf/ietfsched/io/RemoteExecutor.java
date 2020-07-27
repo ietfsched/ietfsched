@@ -89,6 +89,9 @@ public class RemoteExecutor {
 						if (line.startsWith("\"b'Date")) {
 							continue;
 						}
+						// Remove the b' start for fields. This is a byproduct of
+						// py3 conversion of the web side stack.
+						line = line.replaceAll("b'", "'");
 						result.add(line.trim());
 					} catch (Exception e) {
 						e.printStackTrace();
