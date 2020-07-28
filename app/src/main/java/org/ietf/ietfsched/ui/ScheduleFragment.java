@@ -140,6 +140,7 @@ public class ScheduleFragment extends Fragment implements
         map.put(ParserUtils.BLOCK_TYPE_FOOD, 0);
         map.put(ParserUtils.BLOCK_TYPE_SESSION, 1);
         map.put(ParserUtils.BLOCK_TYPE_OFFICE_HOURS, 2);
+        map.put(ParserUtils.BLOCK_TYPE_NOC_HELPDESK, 3);
         return map;
     }
 
@@ -198,9 +199,6 @@ public class ScheduleFragment extends Fragment implements
 			setupDay(inflater, day);
 			}
 		
-//        setupDay(inflater, TUE_START);
-//        setupDay(inflater, WED_START);
-
         updateWorkspaceHeader(0);
         mWorkspace.setOnScrollListener(new Workspace.OnScrollListener() {
             public void onScroll(float screenFraction) {
