@@ -110,6 +110,7 @@ public class SyncService extends IntentService {
 		try {
 			if (debbug) Log.d(TAG, csvURL);
 			String[] agenda = mRemoteExecutor.executeGet(csvURL);
+			Log.d(TAG, String.format("remote sync started for URL: %s", csvURL));
 			mLocalExecutor.execute(agenda);
 			prefs.edit().putString(Prefs.LAST_ETAG, remoteEtag).apply();
 			prefs.edit().putInt(Prefs.LOCAL_VERSION, VERSION_CURRENT).apply();
