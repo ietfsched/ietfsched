@@ -147,6 +147,12 @@ public class LocalExecutor {
 			blockType = ParserUtils.BLOCK_TYPE_FOOD;
 			title = m.typeSession;
 		}
+		// NOC Helpdesk Hours must show up like office-hours.
+		// Otherwise these blocks overwrite the session blocks.
+		else if (m.typeSession.contains("NOC Help Desk Hours")) {
+			blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
+			title = m.typeSession;
+		}
 		else if (m.typeSession.contains("None")) {
 			blockType = ParserUtils.BLOCK_TYPE_SESSION;
 			title = "...";
@@ -283,7 +289,7 @@ public class LocalExecutor {
 				    Log.w("DECODE", "decode/parse failure: "+line);
 				}
 			} catch (Exception e) {
-				Log.w(TAG, "Error parsing line csv file, involves:[[" + line + "]]"); 
+				Log.w(TAG, "Error parsing line csv file, involves: ** " + line + " **");
 			}
 		}
 		return meetings;

@@ -91,7 +91,7 @@ public class RemoteExecutor {
 						}
 						// Remove the b' start for fields. This is a byproduct of
 						// py3 conversion of the web side stack.
-						line = line.replaceAll("b'", "'");
+						line = line.replaceAll("b['\"](.*?)['\"]", "$1");
 						result.add(line.trim());
 					} catch (Exception e) {
 						e.printStackTrace();

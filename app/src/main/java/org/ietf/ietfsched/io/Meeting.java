@@ -19,12 +19,13 @@ package org.ietf.ietfsched.io;
 
 import java.util.*;
 import java.text.*;
+import android.util.Log;
 
 import org.ietf.ietfsched.util.UIUtils;
 
 
 class Meeting {
-
+	private static final String TAG = "Meeting";
 	private final static SimpleDateFormat previousFormat = new SimpleDateFormat("yyyy-MM-dd HHmm"); // 2011-07-23 0900
 	// Hack: timezone format (Z) = +0800 where the ietfsched application expects +08:00.
 	private final static SimpleDateFormat afterFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:00.000", Locale.US);
@@ -47,27 +48,21 @@ class Meeting {
 
 	Meeting(String lineCsv) throws Exception {
 		String[] splitted = lineCsv.split(",");
-		// Each line element is now: b'things thangs'
-		// remove the single quotes AND the leading b.
-		for (int i = 0; i < splitted.length; i++) {
-			// Sometimes there is no content in an element, skip reparsing if so.
-			if (splitted[i].contains("b'")) {
-				splitted[i] = splitted[i].replaceAll("^\"b['\"](.*)['\"]\"", "$1");
-			}
-		}
-		day = splitted[0];
-		startHour = convert(day, splitted[1]);
-		endHour = convert(day, splitted[2]);
-		typeSession = splitted[3];
-		String tLocation = splitted[4].trim();
+		day = splitted[0].replaceAll("\"", "");
+		startHour = convert(day, splitted[1].replaceAll("\"", ""));
+		endHour = convert(day, splitted[2].replaceAll("\"", ""));
+		typeSession = splitted[3].replaceAll("\"", "");
+		String tLocation = splitted[4].trim().replaceAll("\"", "");
 		if (tLocation.length() > 0) {
 			location = tLocation;
 		}
-		group = splitted[5];
-		area = splitted[6];
-		title = splitted[8];
-		key = splitted[9];
-		hrefDetail = splitted[10];
+		group = splitted[5].replaceAll("\"", "");
+		area = splitted[6].replaceAll("\"", "");
+		title = splitted[8].replaceAll("\"", "");
+		key = splitted[9].replaceAll("\"", "");
+		hrefDetail = splitted[10].replaceAll("\"", "");
+		Log.d(TAG, String.format("Parsed Line: Day %s startHour: %s endHour: %s typeSession: %s",
+				day, startHour, endHour, typeSession));
 	}
 
 	private static String convert(String date, String hour) throws Exception {
