@@ -24,6 +24,7 @@ import android.content.Context;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.LayerDrawable;
+import android.support.v4.content.ContextCompat;
 import android.text.format.DateUtils;
 import android.widget.Button;
 
@@ -64,13 +65,13 @@ public class BlockView extends Button {
         int accentColor = -1;
         switch (mColumn) {
             case 0:
-                accentColor = getResources().getColor(R.color.block_column_1);
+                accentColor = ContextCompat.getColor(context, R.color.block_column_1);
                 break;
             case 1:
-                accentColor = getResources().getColor(R.color.block_column_2);
+                accentColor = ContextCompat.getColor(context, R.color.block_column_2);
                 break;
             case 2:
-                accentColor = getResources().getColor(R.color.block_column_3);
+                accentColor = ContextCompat.getColor(context, R.color.block_column_3);
                 break;
         }
 
