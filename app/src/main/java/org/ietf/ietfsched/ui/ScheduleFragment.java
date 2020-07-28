@@ -61,7 +61,6 @@ import java.util.TimeZone;
 /**
  * Shows a horizontally-pageable calendar of conference days. Horizontal paging is achieved using
  * {@link Workspace}, and the primary UI classes for rendering the calendar are
- * {@link Workspace}, and the primary UI classes for rendering the calendar are
  * {@link org.ietf.ietfsched.ui.widget.TimeRulerView},
  * {@link BlocksLayout}, and {@link BlockView}.
  */
@@ -104,11 +103,6 @@ public class ScheduleFragment extends Fragment implements
 
     private static final HashMap<String, Integer> sTypeColumnMap = buildTypeColumnMap();
 
-    // TODO: show blocks that don't fall into columns at the bottom
-
-//    public static final String EXTRA_TIME_START = "org.ietf.ietfsched.extra.TIME_START";
-//    public static final String EXTRA_TIME_END = "org.ietf.ietfsched.extra.TIME_END";
-
     private NotifyingAsyncQueryHandler mHandler;
 
     private Workspace mWorkspace;
@@ -140,7 +134,7 @@ public class ScheduleFragment extends Fragment implements
         map.put(ParserUtils.BLOCK_TYPE_FOOD, 0);
         map.put(ParserUtils.BLOCK_TYPE_SESSION, 1);
         map.put(ParserUtils.BLOCK_TYPE_OFFICE_HOURS, 2);
-        map.put(ParserUtils.BLOCK_TYPE_NOC_HELPDESK, 3);
+        map.put(ParserUtils.BLOCK_TYPE_NOC_HELPDESK, -1);
         return map;
     }
 
@@ -149,7 +143,6 @@ public class ScheduleFragment extends Fragment implements
         super.onCreate(savedInstanceState);
         mHandler = new NotifyingAsyncQueryHandler(getActivity().getContentResolver(), this);
         setHasOptionsMenu(true);
-//        AnalyticsUtils.getInstance(getActivity()).trackPageView("/Schedule");
     }
 
     @Override
@@ -245,7 +238,6 @@ public class ScheduleFragment extends Fragment implements
         day.nowView = day.rootView.findViewById(R.id.blocks_now);
 
         day.blocksView.setDrawingCacheEnabled(true);
-        day.blocksView.setAlwaysDrawnWithCacheEnabled(true);
 
         TimeZone.setDefault(UIUtils.CONFERENCE_TIME_ZONE);
         day.label = DateUtils.formatDateTime(getActivity(), startMillis, TIME_FLAGS);
@@ -302,7 +294,6 @@ public class ScheduleFragment extends Fragment implements
      * {@inheritDoc}
      */
     public void onQueryComplete(int token, Object cookie, Cursor cursor) {
-//		Log.d(TAG, "onQueryComplete cursor " + cursor + "activity " + getActivity() + "count rows " + cursor.getCount());
         if (getActivity() == null) {
             return;
         }
@@ -317,7 +308,7 @@ public class ScheduleFragment extends Fragment implements
                 final String type = cursor.getString(BlocksQuery.BLOCK_TYPE);
                 final Integer column = sTypeColumnMap.get(type);
                 // TODO: place random blocks at bottom of entire layout
-                if (column == null) {
+                if (column == null || column == -1)  {
                     continue;
                 }
 

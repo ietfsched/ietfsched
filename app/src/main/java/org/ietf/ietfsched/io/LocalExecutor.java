@@ -145,13 +145,19 @@ public class LocalExecutor {
 		}
 		else if (m.typeSession.contains("Break")) {
 			blockType = ParserUtils.BLOCK_TYPE_FOOD;
-			title = m.typeSession;
+			title = m.title;
 		}
 		// NOC Helpdesk Hours must show up like office-hours.
 		// Otherwise these blocks overwrite the session blocks.
-		else if (m.typeSession.contains("NOC Help Desk Hours")) {
+		else if (m.title.contains("NOC")) {
+			Log.d(TAG, "Found a NOC block");
 			blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
-			title = m.typeSession;
+			title = m.title;
+		}
+		else if (m.title.contains("IANA Office")) {
+			Log.d(TAG, "Found a IANA Office Hours block");
+			blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
+			title = m.title;
 		}
 		else if (m.typeSession.contains("None")) {
 			blockType = ParserUtils.BLOCK_TYPE_SESSION;

@@ -73,10 +73,13 @@ public class BlockView extends Button {
             case 2:
                 accentColor = ContextCompat.getColor(context, R.color.block_column_3);
                 break;
+            case 3:
+                accentColor = ContextCompat.getColor(context, R.color.block_column_4);
+                break;
         }
 
         LayerDrawable buttonDrawable = (LayerDrawable)
-                context.getResources().getDrawable(R.drawable.btn_block);
+                ContextCompat.getDrawable(context, R.drawable.btn_block);
         buttonDrawable.getDrawable(0).setColorFilter(accentColor, PorterDuff.Mode.SRC_ATOP);
         buttonDrawable.getDrawable(1).setAlpha(mContainsStarred ? 255 : 0);
 

@@ -61,8 +61,6 @@ class Meeting {
 		title = splitted[8].replaceAll("\"", "");
 		key = splitted[9].replaceAll("\"", "");
 		hrefDetail = splitted[10].replaceAll("\"", "");
-		Log.d(TAG, String.format("Parsed Line: Day %s startHour: %s endHour: %s typeSession: %s",
-				day, startHour, endHour, typeSession));
 	}
 
 	private static String convert(String date, String hour) throws Exception {
