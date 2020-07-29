@@ -19,8 +19,8 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="org.ietf.ietfsched"
-    android:versionCode="48"
-    android:versionName="0.1.48"
+    android:versionCode="49"
+    android:versionName="0.1.49"
     android:installLocation="auto">
     <permission
         android:name="org.ietf.ietfsched.permission.WRITE_SCHEDULE"
@@ -38,7 +38,6 @@
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/Theme.IOSched">
-        <!-- Activities for both phones and tablets -->
         <!-- Required addition for APIv28/android 9.0 -->
         <uses-library android:name="org.apache.http.legacy" android:required="false" />
 
@@ -95,20 +94,6 @@
             </intent-filter>
         </activity>
 
-        <!-- Tablet-only activities
-
-        <activity
-            android:name="org.ietf.ietfsched.ui.tablet.SessionsMultiPaneActivity"
-            android:label="@string/title_sessions" />
-			
-        <activity
-            android:name="org.ietf.ietfsched.ui.tablet.ScheduleMultiPaneActivity"
-            android:label="@string/title_schedule" />
-			
-        <activity
-            android:name=".ui.tablet.NowPlayingMultiPaneActivity"
-            android:label="@string/title_now_playing" />
-        -->
         <!-- Other manifest items -->
 
         <service android:name="org.ietf.ietfsched.service.SyncService" />

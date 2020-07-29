@@ -38,10 +38,12 @@ public class ParserUtils {
     public static final String BLOCK_TITLE_BREAKOUT_SESSIONS = "Breakout sessions";
     public static final String BLOCK_TITLE_REGISTRATION = String.format("%n%nR%nE%nG%nI%nS%nT%nR%nA%nT%nI%nO%nN");
 
+    // Block types are used to map a session to the column in the application Schedule View.
     public static final String BLOCK_TYPE_FOOD = "food";
     public static final String BLOCK_TYPE_SESSION = "session";
     public static final String BLOCK_TYPE_OFFICE_HOURS = "officehours";
     public static final String BLOCK_TYPE_NOC_HELPDESK = "nocHelpdesk";
+    public static final String BLOCK_TYPE_UNKNOWN = "unknown";
 
     /** Used to sanitize a string to be {@link Uri} safe. */
     private static final Pattern sSanitizePattern = Pattern.compile("[^a-z0-9-_]");

@@ -70,7 +70,7 @@ public class ScheduleFragment extends Fragment implements
         View.OnClickListener {
 
     private static final String TAG = "ScheduleFragment";
-    private static final boolean debbug = true;
+    private static final boolean debug = false;
 
     /**
      * Flags used with {@link android.text.format.DateUtils#formatDateRange}.
@@ -129,12 +129,15 @@ public class ScheduleFragment extends Fragment implements
 
     private List<Day> mDays = new ArrayList<>();
 
+    // Map a session type to the column in Schedule Display.
+    // Assignment to these types happens in LocalExecutor.java.
     private static HashMap<String, Integer> buildTypeColumnMap() {
         final HashMap<String, Integer> map = Maps.newHashMap();
         map.put(ParserUtils.BLOCK_TYPE_FOOD, 0);
         map.put(ParserUtils.BLOCK_TYPE_SESSION, 1);
         map.put(ParserUtils.BLOCK_TYPE_OFFICE_HOURS, 2);
-        map.put(ParserUtils.BLOCK_TYPE_NOC_HELPDESK, -1);
+        map.put(ParserUtils.BLOCK_TYPE_NOC_HELPDESK, 3);
+        map.put(ParserUtils.BLOCK_TYPE_UNKNOWN, 99); // Unknown should not appear.
         return map;
     }
 
@@ -219,14 +222,14 @@ public class ScheduleFragment extends Fragment implements
 
     private void setupDay(LayoutInflater inflater, long startMillis) {
         Day day = new Day();
-        if (debbug) Log.d(TAG, "Setup day");
+        if (debug) Log.d(TAG, "Setup day");
         // Setup data
         day.index = mDays.size();
         day.timeStart = startMillis;
         day.timeEnd = startMillis + DateUtils.DAY_IN_MILLIS;
         day.blocksUri = ScheduleContract.Blocks.buildBlocksBetweenDirUri(
                 day.timeStart, day.timeEnd);
-        if (debbug) Log.d(TAG, "day block uri " + day.blocksUri);
+        if (debug) Log.d(TAG, "day block uri " + day.blocksUri);
 
         // Setup views
         day.rootView = (ViewGroup) inflater.inflate(R.layout.blocks_content, null);
@@ -342,8 +345,6 @@ public class ScheduleFragment extends Fragment implements
     /** {@inheritDoc} */
     public void onClick(View view) {
         if (view instanceof BlockView) {
-//            AnalyticsUtils.getInstance(getActivity()).trackEvent(
-//                    "Schedule", "Session Click", title, 0);
             final String blockId = ((BlockView) view).getBlockId();
             final Uri sessionsUri = ScheduleContract.Blocks.buildSessionsUri(blockId);
 
@@ -420,7 +421,6 @@ public class ScheduleFragment extends Fragment implements
     private BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
- //           Log.d(TAG, "onReceive time update");
             updateNowView(false);
         }
     };

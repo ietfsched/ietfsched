@@ -252,7 +252,7 @@ public class ScheduleProvider extends ContentProvider {
     /** {@inheritDoc} */
     @Override
     public Uri insert(Uri uri, ContentValues values) {
-        Log.w(TAG, "insert(uri=" + uri + ", values=" + values.toString() + ")");
+        if (LOGV) Log.w(TAG, "insert(uri=" + uri + ", values=" + values.toString() + ")");
         final SQLiteDatabase db = mOpenHelper.getWritableDatabase();
 	
         final int match = sUriMatcher.match(uri);

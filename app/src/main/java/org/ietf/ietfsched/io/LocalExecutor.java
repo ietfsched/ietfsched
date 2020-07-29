@@ -40,7 +40,7 @@ import java.util.HashSet;
 
 public class LocalExecutor {
 	private static final String TAG = "LocalExecutor";
-	private static final boolean debbug = false;
+	private static final boolean debug = false;
     private Resources mRes;
     private ContentResolver mResolver;
 	private final String mAuthority = ScheduleContract.CONTENT_AUTHORITY;
@@ -76,7 +76,7 @@ public class LocalExecutor {
 			ArrayList<ContentProviderOperation> batchClean = purge(versionBuild);
 			Log.d(TAG, "Clean database ");
 			ContentProviderResult[] results = mResolver.applyBatch(mAuthority, batchClean);
-			if (debbug) {
+			if (debug) {
 				for (ContentProviderResult r : results) {
 					Log.d(TAG, "Result clean : " + r);
 				}	
@@ -138,34 +138,42 @@ public class LocalExecutor {
 		startTime = ParserUtils.parseTime(m.startHour);
 		endTime = ParserUtils.parseTime(m.endHour);
 		String blockId = Blocks.generateBlockId(startTime, endTime);
+		title = m.title;
+		blockType = ParserUtils.BLOCK_TYPE_UNKNOWN;
 
+		// Based on rough parsing of the agenda elements assign block TYPE.
 		if (m.typeSession.contains("Registration")) {
-			blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
 			title = ParserUtils.BLOCK_TITLE_REGISTRATION;
+			blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
 		}
-		else if (m.typeSession.contains("Break")) {
+		else if (m.typeSession.contains(("Session"))) {
+			title = m.typeSession.trim().length() == 0 ? m.area : m.typeSession;
+			blockType = ParserUtils.BLOCK_TYPE_SESSION;
+		}
+		else if (m.title.contains("Break")) {
 			blockType = ParserUtils.BLOCK_TYPE_FOOD;
-			title = m.title;
 		}
 		// NOC Helpdesk Hours must show up like office-hours.
 		// Otherwise these blocks overwrite the session blocks.
 		else if (m.title.contains("NOC")) {
-			Log.d(TAG, "Found a NOC block");
+			if (debug) Log.d(TAG, "Found a NOC block");
 			blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
-			title = m.title;
 		}
-		else if (m.title.contains("IANA Office")) {
-			Log.d(TAG, "Found a IANA Office Hours block");
+		else if (m.title.contains("Office Hours")) {
+			if (debug) Log.d(TAG, "Found a Office Hours block");
 			blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
-			title = m.title;
+		}
+		else if (m.title.contains("Plenary")){
+			// Plenary actions should get shown, Food at least keeps them showing.
+            // Also, there is generally food served at the plenary.
+		    blockType = ParserUtils.BLOCK_TYPE_FOOD;
 		}
 		else if (m.typeSession.contains("None")) {
-			blockType = ParserUtils.BLOCK_TYPE_SESSION;
 			title = "...";
+			blockType = ParserUtils.BLOCK_TYPE_SESSION;
 		}
 		else {
-			blockType = ParserUtils.BLOCK_TYPE_SESSION;
-			title = m.typeSession.trim().length() == 0 ? m.area : m.typeSession;
+		    Log.d(TAG, String.format("Unknown Agenda slot, type: %s, title: %s", m.typeSession, m.title));
 		}
 		
 		builder.withValue(Blocks.BLOCK_ID, blockId);
