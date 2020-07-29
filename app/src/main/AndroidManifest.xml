@@ -19,8 +19,8 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="org.ietf.ietfsched"
-    android:versionCode="49"
-    android:versionName="0.1.49"
+    android:versionCode="50"
+    android:versionName="0.1.50"
     android:installLocation="auto">
     <permission
         android:name="org.ietf.ietfsched.permission.WRITE_SCHEDULE"
