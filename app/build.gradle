@@ -4,7 +4,7 @@ android {
     compileSdkVersion 28
     defaultConfig {
         applicationId "org.ietf.ietfsched"
-        minSdkVersion 28
+        minSdkVersion 26
         targetSdkVersion 29
     }
     buildTypes {
