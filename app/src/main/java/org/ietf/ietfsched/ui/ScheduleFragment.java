@@ -41,6 +41,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.provider.BaseColumns;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.res.TypedArrayUtils;
 import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -75,27 +76,30 @@ public class ScheduleFragment extends Fragment implements
     /**
      * Flags used with {@link android.text.format.DateUtils#formatDateRange}.
      */
-    private static final int TIME_FLAGS = DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_SHOW_WEEKDAY | DateUtils.FORMAT_ABBREV_WEEKDAY;
-		
-	private static final long[] START_DAYS = new long[] {
-/*		ParseerUtils defines the time format:
- *      df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:00.000", Locale.US);
- */
-		ParserUtils.parseTime("2020-07-18T04:00:00.000"),
-		ParserUtils.parseTime("2020-07-19T04:00:00.000"),
-		ParserUtils.parseTime("2020-07-20T04:00:00.000"),
-		ParserUtils.parseTime("2020-07-21T04:00:00.000"),
-		ParserUtils.parseTime("2020-07-22T04:00:00.000"),
-		ParserUtils.parseTime("2020-07-23T04:00:00.000"),
-        ParserUtils.parseTime("2020-07-24T04:00:00.000"),
-        ParserUtils.parseTime("2020-07-25T04:00:00.000"),
-        ParserUtils.parseTime("2020-07-26T04:00:00.000"),
-        ParserUtils.parseTime("2020-07-27T04:00:00.000"),
-        ParserUtils.parseTime("2020-07-28T04:00:00.000"),
-        ParserUtils.parseTime("2020-07-29T04:00:00.000"),
-        ParserUtils.parseTime("2020-07-30T04:00:00.000"),
-        ParserUtils.parseTime("2020-07-31T04:00:00.000"),
-		};
+    private static final int TIME_FLAGS = DateUtils.FORMAT_SHOW_DATE |
+            DateUtils.FORMAT_SHOW_WEEKDAY |
+            DateUtils.FORMAT_ABBREV_WEEKDAY;
+
+    /*		ParseerUtils defines the time format:
+     *      df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:00.000", Locale.US);
+     *      NOTE: This covers the 1 week of IETF and the previous week as well.
+     */
+    private static ArrayList<Long> START_DAYS;
+    private static final String year = "2020";
+    private static final String[] dates = new String[]{
+            "10-31", "11-01", "11-02", "11-03", "11-04",
+            "11-05", "11-06", "11-07", "11-08", "11-09",
+            "11-10", "11-11", "11-12", "11-13",
+    };
+    // BKK: 03
+    private static final String tz = "03";
+
+    static {
+        for( int i = 0; i<=dates.length;i++) {
+            START_DAYS.add(ParserUtils.parseTime(
+                    String.format("%s-%sT%s:00:00.000", year, dates[i], tz)));
+        }
+    }
 
 	
 
