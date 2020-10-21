@@ -139,6 +139,7 @@ public class ScheduleFragment extends Fragment implements
         final HashMap<String, Integer> map = Maps.newHashMap();
         map.put(ParserUtils.BLOCK_TYPE_FOOD, 0);
         map.put(ParserUtils.BLOCK_TYPE_SESSION, 1);
+        map.put(ParserUtils.BLOCK_TYPE_HACKATHON, 1);
         map.put(ParserUtils.BLOCK_TYPE_OFFICE_HOURS, 2);
         map.put(ParserUtils.BLOCK_TYPE_NOC_HELPDESK, 3);
         map.put(ParserUtils.BLOCK_TYPE_UNKNOWN, 99); // Unknown should not appear.
