@@ -300,6 +300,7 @@ public class ScheduleFragment extends Fragment implements
 
     /**
      * {@inheritDoc}
+     * Populate a schedule page with session/break/etc details.
      */
     public void onQueryComplete(int token, Object cookie, Cursor cursor) {
         if (getActivity() == null) {
