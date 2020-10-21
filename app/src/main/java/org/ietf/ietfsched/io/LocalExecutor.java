@@ -131,8 +131,8 @@ public class LocalExecutor {
 		}
 	
 		String title;
-		long startTime;
-		long endTime;
+		Long startTime;
+		Long endTime;
 		String blockType;
 	
 		startTime = ParserUtils.parseTime(m.startHour);
@@ -156,11 +156,9 @@ public class LocalExecutor {
 		// NOC Helpdesk Hours must show up like office-hours.
 		// Otherwise these blocks overwrite the session blocks.
 		else if (m.title.contains("NOC")) {
-			if (debug) Log.d(TAG, "Found a NOC block");
 			blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
 		}
 		else if (m.title.contains("Office Hours")) {
-			if (debug) Log.d(TAG, "Found a Office Hours block");
 			blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
 		}
 		else if (m.title.contains("Plenary")){
@@ -168,14 +166,19 @@ public class LocalExecutor {
             // Also, there is generally food served at the plenary.
 		    blockType = ParserUtils.BLOCK_TYPE_FOOD;
 		}
+		else if (m.title.contains("Hackathon")){
+		    title = ParserUtils.BLOCK_TYPE_HACKATHON;
+		    blockType = ParserUtils.BLOCK_TYPE_HACKATHON;
+		}
 		else if (m.typeSession.contains("None")) {
 			title = "...";
 			blockType = ParserUtils.BLOCK_TYPE_SESSION;
 		}
 		else {
-		    Log.d(TAG, String.format("Unknown Agenda slot, type: %s, title: %s", m.typeSession, m.title));
+		    Log.d(TAG, String.format("Unknown Agenda slot(%s - %s), type: %s, title: %s",
+					startTime, endTime, m.typeSession, m.title));
 		}
-		
+
 		builder.withValue(Blocks.BLOCK_ID, blockId);
 		builder.withValue(Blocks.BLOCK_TITLE, title);
 		builder.withValue(Blocks.BLOCK_START, startTime);
@@ -188,8 +191,8 @@ public class LocalExecutor {
 		final ContentProviderOperation.Builder builder = ContentProviderOperation.newInsert(Sessions.CONTENT_URI);
         builder.withValue(Sessions.UPDATED, versionBuild);
 
-        long startTime;
-        long endTime;
+        Long startTime;
+        Long endTime;
         String title;
         String sessionId;
         String trackId;

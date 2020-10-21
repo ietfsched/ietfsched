@@ -84,18 +84,18 @@ public class ScheduleFragment extends Fragment implements
      *      df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:00.000", Locale.US);
      *      NOTE: This covers the 1 week of IETF and the previous week as well.
      */
-    private static ArrayList<Long> START_DAYS;
+    private static ArrayList<Long> START_DAYS = new ArrayList<Long>();
     private static final String year = "2020";
     private static final String[] dates = new String[]{
-            "10-31", "11-01", "11-02", "11-03", "11-04",
-            "11-05", "11-06", "11-07", "11-08", "11-09",
-            "11-10", "11-11", "11-12", "11-13",
+            "11-07", "11-08", "11-09", "11-10", "11-11",
+            "11-12", "11-13", "11-14", "11-15", "11-16",
+            "11-17", "11-18", "11-19", "11-20",
     };
     // BKK: 03
     private static final String tz = "03";
 
     static {
-        for( int i = 0; i<=dates.length;i++) {
+        for( int i = 0; i<dates.length;i++) {
             START_DAYS.add(ParserUtils.parseTime(
                     String.format("%s-%sT%s:00:00.000", year, dates[i], tz)));
         }

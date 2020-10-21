@@ -226,7 +226,7 @@ public class ScheduleContract {
          * Generate a {@link #BLOCK_ID} that will always match the requested
          * {@link Blocks} details.
          */
-        public static String generateBlockId(long startTime, long endTime) {
+        public static String generateBlockId(Long startTime, Long endTime) {
             startTime /= DateUtils.SECOND_IN_MILLIS;
             endTime /= DateUtils.SECOND_IN_MILLIS;
             return ParserUtils.sanitizeId(startTime + "-" + endTime);

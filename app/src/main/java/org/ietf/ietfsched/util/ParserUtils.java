@@ -43,6 +43,7 @@ public class ParserUtils {
     public static final String BLOCK_TYPE_SESSION = "session";
     public static final String BLOCK_TYPE_OFFICE_HOURS = "officehours";
     public static final String BLOCK_TYPE_NOC_HELPDESK = "nocHelpdesk";
+    public static final String BLOCK_TYPE_HACKATHON = "hackathon";
     public static final String BLOCK_TYPE_UNKNOWN = "unknown";
 
     /** Used to sanitize a string to be {@link Uri} safe. */
@@ -80,13 +81,13 @@ public class ParserUtils {
         return sSanitizePattern.matcher(input.toLowerCase()).replaceAll("");
     }
 
-    public static long parseTime(String time) {
+    public static Long parseTime(String time) {
 		try {
 		return df.parse(time).getTime();
 		}
 		catch (Exception e) {
 			e.printStackTrace();
-			return 0;
+			return 0L;
 		}
 	}
 }

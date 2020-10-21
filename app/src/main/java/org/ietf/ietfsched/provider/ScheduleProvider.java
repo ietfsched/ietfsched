@@ -278,11 +278,8 @@ public class ScheduleProvider extends ContentProvider {
                 Objects.requireNonNull(getContext()).getContentResolver().notifyChange(uri, null);
                 return Sessions.buildSessionUri(values.getAsString(Sessions.SESSION_ID));
             }
-			case SESSIONS_ID_TRACKS: {
-                db.insertOrThrow(Tables.SESSIONS_TRACKS, null, values);
-                Objects.requireNonNull(getContext()).getContentResolver().notifyChange(uri, null);
-                return Tracks.buildTrackUri(values.getAsString(SessionsTracks.TRACK_ID));
-            }case SESSIONS_ID: {
+			case SESSIONS_ID_TRACKS:
+            case SESSIONS_ID: {
                 db.insertOrThrow(Tables.SESSIONS_TRACKS, null, values);
                 Objects.requireNonNull(getContext()).getContentResolver().notifyChange(uri, null);
                 return Tracks.buildTrackUri(values.getAsString(SessionsTracks.TRACK_ID));
