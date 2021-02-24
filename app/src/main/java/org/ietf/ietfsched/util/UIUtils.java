@@ -52,7 +52,8 @@ public class UIUtils {
      *   https://garygregory.wordpress.com/2013/06/18/what-are-the-java-timezone-ids/
      */
     // BKK +7
-    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("Asia/Bangkok");
+    // UTC - ietf109
+    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("UTC");
 
     public static final Long CONFERENCE_START_MILLIS = ParserUtils.parseTime(
             "2020-11-07:07:00.000");

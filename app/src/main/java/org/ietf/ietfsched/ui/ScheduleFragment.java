@@ -85,14 +85,15 @@ public class ScheduleFragment extends Fragment implements
      *      NOTE: This covers the 1 week of IETF and the previous week as well.
      */
     private static ArrayList<Long> START_DAYS = new ArrayList<Long>();
-    private static final String year = "2020";
+    private static final String year = "2021";
     private static final String[] dates = new String[]{
-            "11-07", "11-08", "11-09", "11-10", "11-11",
-            "11-12", "11-13", "11-14", "11-15", "11-16",
-            "11-17", "11-18", "11-19", "11-20",
+            "03-01", "03-02", "03-03", "03-04", "03-05",
+            "03-06", "03-07", "03-08", "03-09", "03-10",
+            "03-11", "03-12", "03-13", "03-14",
     };
     // BKK: 03
-    private static final String tz = "03";
+    // UTC: 00
+    private static final String tz = "00";
 
     static {
         for( int i = 0; i<dates.length;i++) {
