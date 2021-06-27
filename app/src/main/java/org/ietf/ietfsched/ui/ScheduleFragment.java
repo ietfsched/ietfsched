@@ -87,9 +87,9 @@ public class ScheduleFragment extends Fragment implements
     private static ArrayList<Long> START_DAYS = new ArrayList<Long>();
     private static final String year = "2021";
     private static final String[] dates = new String[]{
-            "03-01", "03-02", "03-03", "03-04", "03-05",
-            "03-06", "03-07", "03-08", "03-09", "03-10",
-            "03-11", "03-12", "03-13", "03-14",
+            "07-18", "07-19", "07-20", "07-21", "07-22",
+            "07-23", "07-24", "07-25", "07-26", "07-27",
+            "07-28", "07-29", "07-30", "07-31",
     };
     // BKK: 03
     // UTC: 00

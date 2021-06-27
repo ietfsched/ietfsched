@@ -53,12 +53,13 @@ public class UIUtils {
      */
     // BKK +7
     // UTC - ietf109
-    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("UTC");
+    // SFO -7 - ietf111
+    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("PST");
 
     public static final Long CONFERENCE_START_MILLIS = ParserUtils.parseTime(
-            "2020-11-07:07:00.000");
+            "2020-07-18T07:07:00.000");
     public static final Long CONFERENCE_END_MILLIS = ParserUtils.parseTime(
-            "2020-11-20T07:17:00.000");
+            "2020-07-31T07:17:00.000");
 
     /** Flags used with {@link DateUtils#formatDateRange}. */
     private static final int TIME_FLAGS = DateUtils.FORMAT_SHOW_TIME
