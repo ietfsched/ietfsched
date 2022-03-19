@@ -7,4 +7,6 @@ build
 app/app-release.apk
 app/release/
 gradle/
-
+Wearable/
+third_party/
+gcm-server/
