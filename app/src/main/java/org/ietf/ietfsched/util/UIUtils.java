@@ -50,16 +50,17 @@ public class UIUtils {
      * Time zone to use when formatting all session times. To always use the
      * phone local time, use {@link TimeZone#getDefault()}.
      *   https://garygregory.wordpress.com/2013/06/18/what-are-the-java-timezone-ids/
+     * BKK +7
+     * UTC - ietf109
+     * VIE +1 ietf113
+     * SFO -7 - ietf111
      */
-    // BKK +7
-    // UTC - ietf109
-    // SFO -7 - ietf111
-    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("PST");
+    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("CET");
 
     public static final Long CONFERENCE_START_MILLIS = ParserUtils.parseTime(
-            "2020-07-18T07:07:00.000");
+            "2022-03-19T07:07:00.000");
     public static final Long CONFERENCE_END_MILLIS = ParserUtils.parseTime(
-            "2020-07-31T07:17:00.000");
+            "2022-04-01T07:17:00.000");
 
     /** Flags used with {@link DateUtils#formatDateRange}. */
     private static final int TIME_FLAGS = DateUtils.FORMAT_SHOW_TIME

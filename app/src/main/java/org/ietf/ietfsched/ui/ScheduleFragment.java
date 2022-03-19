@@ -85,15 +85,19 @@ public class ScheduleFragment extends Fragment implements
      *      NOTE: This covers the 1 week of IETF and the previous week as well.
      */
     private static ArrayList<Long> START_DAYS = new ArrayList<Long>();
-    private static final String year = "2021";
+    private static final String year = "2022";
+    /* 2wks of time is required here, Week prior to IETF and IETF week. */
     private static final String[] dates = new String[]{
-            "07-18", "07-19", "07-20", "07-21", "07-22",
-            "07-23", "07-24", "07-25", "07-26", "07-27",
-            "07-28", "07-29", "07-30", "07-31",
+            "03-19", "03-20", "03-21", "03-22", "03-23",
+            "03-24", "03-25", "03-26", "03-27", "03-28",
+            "03-29", "03-30", "03-31", "04-01",
     };
-    // BKK: 03
-    // UTC: 00
-    private static final String tz = "00";
+    /* Note: How does this work for negative timezones?
+     * BKK: 03
+     * UTC: 00
+     * VIE: 01
+     */
+    private static final String tz = "01";
 
     static {
         for( int i = 0; i<dates.length;i++) {
