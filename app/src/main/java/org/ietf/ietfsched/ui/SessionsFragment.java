@@ -50,7 +50,7 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
     public static final String EXTRA_SCHEDULE_TIME_STRING = "org.ietf.ietfsched.extra.SCHEDULE_TIME_STRING";
     private static final String STATE_CHECKED_POSITION = "checkedPosition";
     private static final String TAG = "SessionsFragment";
-    private static final boolean debbug = true;
+    private static final boolean debug = true;
 
     private Uri mTrackUri;
     private Cursor mCursor;
@@ -70,7 +70,7 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
 
     public void reloadFromArguments(Bundle arguments) {
         // Teardown from previous arguments
-        if (debbug) Log.d(TAG, "reloadFromArguments" + mCheckedPosition);
+        if (debug) Log.d(TAG, "reloadFromArguments" + mCheckedPosition);
         if (mCursor != null) {
             getActivity().stopManagingCursor(mCursor);
             mCursor = null;
@@ -121,13 +121,13 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        if (debbug) Log.d(TAG, "onActivityCreated");
+        if (debug) Log.d(TAG, "onActivityCreated");
         getListView().setChoiceMode(ListView.CHOICE_MODE_SINGLE);
 
         if (savedInstanceState != null) {
             mCheckedPosition = savedInstanceState.getInt(STATE_CHECKED_POSITION, -1);
         }
-        if (debbug) Log.d(TAG, "onActivityCreated mChekedPosition " + mCheckedPosition);
+        if (debug) Log.d(TAG, "onActivityCreated mChekedPosition " + mCheckedPosition);
 
         if (!mHasSetEmptyText) {
             // Could be a bug, but calling this twice makes it become visible when it shouldn't
@@ -139,7 +139,7 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
 
     /** {@inheritDoc} */
     public void onQueryComplete(int token, Object cookie, Cursor cursor) {
-    	if (debbug) Log.d(TAG, "onQueryComplete" + mCheckedPosition);
+    	if (debug) Log.d(TAG, "onQueryComplete" + mCheckedPosition);
         if (getActivity() == null) {
             return;
         }
@@ -149,7 +149,7 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
         } else if (token == TracksQuery._TOKEN) {
             onTrackQueryComplete(cursor);
         } else {
-        	if (debbug) Log.d("SessionsFragment/onQueryComplete", "Query complete, Not Actionable: " + token);
+        	if (debug) Log.d("SessionsFragment/onQueryComplete", "Query complete, Not Actionable: " + token);
             cursor.close();
         }
     }
@@ -159,7 +159,7 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
      */
     private void onSessionOrSearchQueryComplete(Cursor cursor) {
         mCursor = cursor;
-        if (debbug) Log.d(TAG, "OnSessionOrSearchQueryComplete mCheckedPosition" + mCheckedPosition);
+        if (debug) Log.d(TAG, "OnSessionOrSearchQueryComplete mCheckedPosition" + mCheckedPosition);
         getActivity().startManagingCursor(mCursor);
         mAdapter.changeCursor(mCursor);
         if (mCheckedPosition >= 0 && getView() != null) {
@@ -171,7 +171,7 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
      * Handle {@link TracksQuery} {@link Cursor}.
      */
     private void onTrackQueryComplete(Cursor cursor) {
-    	if (debbug) Log.d(TAG, "onTrackQueryComplete");
+    	if (debug) Log.d(TAG, "onTrackQueryComplete");
         try {
             if (!cursor.moveToFirst()) {
                 return;
@@ -192,7 +192,7 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
     @Override
     public void onResume() {	
         super.onResume();
-        if (debbug) Log.d(TAG, "OnResume called");
+        if (debug) Log.d(TAG, "OnResume called");
         mMessageQueueHandler.post(mRefreshSessionsRunnable);
         getActivity().getContentResolver().registerContentObserver(
                 ScheduleContract.Sessions.CONTENT_URI, true, mSessionChangesObserver);
@@ -204,7 +204,7 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
     @Override
     public void onPause() {
         super.onPause();
-        if (debbug) Log.d(TAG, "onPause" + mCheckedPosition);
+        if (debug) Log.d(TAG, "onPause" + mCheckedPosition);
         mMessageQueueHandler.removeCallbacks(mRefreshSessionsRunnable);
         getActivity().getContentResolver().unregisterContentObserver(mSessionChangesObserver);
     }
@@ -213,7 +213,7 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
     public void onSaveInstanceState(Bundle outState) {  	
         super.onSaveInstanceState(outState);
         outState.putInt(STATE_CHECKED_POSITION, mCheckedPosition);
-        if (debbug) Log.d(TAG, "onSaveInstanceState " + mCheckedPosition);
+        if (debug) Log.d(TAG, "onSaveInstanceState " + mCheckedPosition);
     }
 
     /** {@inheritDoc} */
@@ -231,11 +231,11 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
 
         getListView().setItemChecked(position, true);
         mCheckedPosition = position;
-        if (debbug) Log.d(TAG, "onListItemClick" + mCheckedPosition);
+        if (debug) Log.d(TAG, "onListItemClick" + mCheckedPosition);
     }
 
     public void clearCheckedPosition() {
-    	if (debbug) Log.d(TAG, "clearCheckedPosition" + mCheckedPosition);
+    	if (debug) Log.d(TAG, "clearCheckedPosition" + mCheckedPosition);
         if (mCheckedPosition >= 0) {
             getListView().setItemChecked(mCheckedPosition, false);
             mCheckedPosition = -1;
@@ -252,13 +252,13 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
         
         @Override
         public Object getItem(int position) {
-            if (debbug) Log.d(TAG, "getItem position " + position +  super.getItem(position));
+            if (debug) Log.d(TAG, "getItem position " + position +  super.getItem(position));
             return super.getItem(position);
         }
 
         @Override
         public long getItemId(int position) {
-            if (debbug) Log.d(TAG, " position : " + position);
+            if (debug) Log.d(TAG, " position : " + position);
             return super.getItemId(position);
         }        
     
@@ -305,13 +305,13 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
         
         @Override
         public Object getItem(int position) {
-            if (debbug) Log.d(TAG, "getItem position " + position +  super.getItem(position));
+            if (debug) Log.d(TAG, "getItem position " + position +  super.getItem(position));
             return super.getItem(position);
         }
 
         @Override
         public long getItemId(int position) {
-            if (debbug) Log.d(TAG, " position : " + position);
+            if (debug) Log.d(TAG, " position : " + position);
             return super.getItemId(position);
         }        
 
