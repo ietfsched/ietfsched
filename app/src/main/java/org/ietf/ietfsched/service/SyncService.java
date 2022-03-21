@@ -42,7 +42,7 @@ import java.util.TimeZone;
  */
 public class SyncService extends IntentService {
     private static final String TAG = "SyncService";
-    private static final boolean debbug = false;
+    private static final boolean debug = false;
 
     public static final String EXTRA_STATUS_RECEIVER = "org.ietf.ietfsched.extra.STATUS_RECEIVER";
 
@@ -76,7 +76,7 @@ public class SyncService extends IntentService {
         mLocalExecutor = new LocalExecutor(getResources(), resolver);
 
         mRemoteExecutor = new RemoteExecutor();
-		if (debbug) {
+		if (debug) {
 			Log.d(TAG, "SyncService OnCreate" + this.hashCode());
 			String[] tz = TimeZone.getAvailableIDs();
 			for (String id : tz) {
@@ -109,7 +109,7 @@ public class SyncService extends IntentService {
 
 		String csvURL = BASE_URL + "agenda.csv";
 		try {
-			if (debbug) Log.d(TAG, csvURL);
+			Log.d(TAG, csvURL);
 			String[] agenda = mRemoteExecutor.executeGet(csvURL);
 			Log.d(TAG, String.format("remote sync started for URL: %s", csvURL));
 			mLocalExecutor.execute(agenda);
