@@ -134,19 +134,22 @@ public class LocalExecutor {
 		Long startTime;
 		Long endTime;
 		String blockType;
-	
+		String sessionType;
+
+
 		startTime = ParserUtils.parseTime(m.startHour);
 		endTime = ParserUtils.parseTime(m.endHour);
 		String blockId = Blocks.generateBlockId(startTime, endTime);
 		title = m.title;
 		blockType = ParserUtils.BLOCK_TYPE_UNKNOWN;
+		sessionType = m.typeSession.toLowerCase();
 
 		// Based on rough parsing of the agenda elements assign block TYPE.
 		if (m.typeSession.contains("Registration")) {
 			title = ParserUtils.BLOCK_TITLE_REGISTRATION;
 			blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
 		}
-		else if (m.typeSession.contains(("Session"))) {
+		else if (sessionType.contains(("session"))) {
 			title = m.typeSession.trim().length() == 0 ? m.area : m.typeSession;
 			blockType = ParserUtils.BLOCK_TYPE_SESSION;
 		}
