@@ -83,7 +83,7 @@
     <string name="session_link_main">Agenda</string>
     <string name="session_link_moderator">Ask questions</string>
     <string name="session_link_youtube">YouTube video</string>
-    <string name="session_link_pdf">Slides (PDF)</string>
+    <string name="session_link_pdf">Presentation Slides</string>
     <string name="session_link_feedback">Feedback on this session</string>
     <string name="session_link_notes">Official notes</string>
 

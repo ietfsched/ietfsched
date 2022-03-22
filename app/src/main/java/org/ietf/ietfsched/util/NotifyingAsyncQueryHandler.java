@@ -125,7 +125,6 @@ public class NotifyingAsyncQueryHandler extends AsyncQueryHandler {
     /** {@inheritDoc} */
     @Override
     protected void onQueryComplete(int token, Object cookie, Cursor cursor) {
-//		Log.d(TAG, "OnQueryComplete");
         final AsyncQueryListener listener = mListener == null ? null : mListener.get();
         if (listener != null) {
             listener.onQueryComplete(token, cookie, cursor);

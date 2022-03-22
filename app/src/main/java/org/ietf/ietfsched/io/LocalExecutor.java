@@ -31,6 +31,7 @@ import android.content.ContentProviderResult;
 import android.content.ContentResolver;
 import android.database.Cursor;
 import android.net.Uri;
+import android.text.TextUtils;
 import android.util.Log;
 import android.content.res.Resources;
 
@@ -200,6 +201,7 @@ public class LocalExecutor {
         String sessionId;
         String trackId;
 		String roomId;
+		String pdfs;
 
 		try {	
 			startTime = ParserUtils.parseTime(m.startHour);
@@ -219,6 +221,7 @@ public class LocalExecutor {
 			builder.withValue(Sessions.SESSION_KEYWORDS, null);
 			builder.withValue(Sessions.BLOCK_ID, blockId);
 			builder.withValue(Sessions.ROOM_ID, roomId);
+			builder.withValue(Sessions.SESSION_PDF_URL, TextUtils.join("::", m.slides));
 			
 			final Uri sessionUri = Sessions.buildSessionUri(sessionId);
 			final int starred = querySessionStarred(sessionUri, mResolver);

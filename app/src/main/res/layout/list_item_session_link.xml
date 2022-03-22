@@ -20,9 +20,11 @@
     android:focusable="true"
     android:clickable="true"
     android:background="@android:drawable/list_selector_background">
-    <TextView android:id="@+id/link_text"
-        android:layout_gravity="left|center_vertical"
+
+    <TextView
+        android:id="@+id/link_text"
+        style="@style/ListItemTitle"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        style="@style/ListItemTitle" />
+        android:layout_gravity="left|center_vertical" />
 </FrameLayout>

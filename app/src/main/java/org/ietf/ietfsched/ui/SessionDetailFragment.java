@@ -147,6 +147,7 @@ public class SessionDetailFragment extends Fragment implements
 //        final Uri speakersUri = ScheduleContract.Sessions.buildSpeakersDirUri(mSessionId);
 
         mHandler = new NotifyingAsyncQueryHandler(getActivity().getContentResolver(), this);
+        Log.d(TAG, "mSessionUri: " + mSessionUri);
         mHandler.startQuery(SessionsQuery._TOKEN, mSessionUri, SessionsQuery.PROJECTION);
 //        mHandler.startQuery(TracksQuery._TOKEN, mTrackUri, TracksQuery.PROJECTION);
  //       mHandler.startQuery(SpeakersQuery._TOKEN, speakersUri, SpeakersQuery.PROJECTION);
@@ -232,14 +233,7 @@ public class SessionDetailFragment extends Fragment implements
 
         if (token == SessionsQuery._TOKEN) {
             onSessionQueryComplete(cursor);
-        } 
-/*		else if (token == TracksQuery._TOKEN) {
-            onTrackQueryComplete(cursor);
-        } else if (token == SpeakersQuery._TOKEN) {
-            onSpeakersQueryComplete(cursor);
-        } 
-*/	
-	else {
+        } else {
             cursor.close();
         }
     }
@@ -265,7 +259,7 @@ public class SessionDetailFragment extends Fragment implements
             mTitle.setText(mTitleString);
             mSubtitle.setText(subtitle);
 
-            mUrl = cursor.getString(SessionsQuery.URL);
+            mUrl = cursor.getString(SessionsQuery.SESSION_URL);
             if (TextUtils.isEmpty(mUrl)) {
                 mUrl = "";
             }
@@ -311,28 +305,13 @@ public class SessionDetailFragment extends Fragment implements
                 mAbstract.setVisibility(View.GONE);
             }
 
-/*            final View requirementsBlock = mRootView.findViewById(R.id.session_requirements_block);
-            final String sessionRequirements = cursor.getString(SessionsQuery.REQUIREMENTS);
-            if (!TextUtils.isEmpty(sessionRequirements)) {
-                UIUtils.setTextMaybeHtml(mRequirements, sessionRequirements);
-                requirementsBlock.setVisibility(View.VISIBLE);
-                mHasSummaryContent = true;
-            } else {
-                requirementsBlock.setVisibility(View.GONE);
-            }
-		
-*/		
-
             // Show empty message when all data is loaded, and nothing to show
-//            if (mSpeakersCursor && !mHasSummaryContent) {
 			if (!mHasSummaryContent) {
 					mRootView.findViewById(android.R.id.empty).setVisibility(View.VISIBLE);
             }
 			else {
 				mTabHost.setCurrentTabByTag(TAG_SUMMARY);
 			}
-
-//            AnalyticsUtils.getInstance(getActivity()).trackPageView("/Sessions/" + mTitleString);
 
             updateLinksTab(cursor);
             updateNotesTab();
@@ -401,10 +380,6 @@ public class SessionDetailFragment extends Fragment implements
         final ContentValues values = new ContentValues();
         values.put(ScheduleContract.Sessions.SESSION_STARRED, isChecked ? 1 : 0);
         mHandler.startUpdate(mSessionUri, values);
-
-        // Because change listener is set to null during initialization, these won't fire on
-        // pageview.
-//        AnalyticsUtils.getInstance(getActivity()).trackEvent("Sandbox", isChecked ? "Starred" : "Unstarred", mTitleString, 0);
     }
 
     /**
@@ -429,7 +404,6 @@ public class SessionDetailFragment extends Fragment implements
      * Value -> 0.
      */
     public void fireNotesEvent(int actionId) {
-//        AnalyticsUtils.getInstance(getActivity()).trackEvent("Session Details", getActivity().getString(actionId), mTitleString, 0);
     }
 
     /*
@@ -440,7 +414,6 @@ public class SessionDetailFragment extends Fragment implements
      * Value -> 0.
      */
     public void fireLinkEvent(int actionId) {
-//        AnalyticsUtils.getInstance(getActivity()).trackEvent("Link Details", getActivity().getString(actionId), mTitleString, 0);
     }
 
     private void updateNotesTab() {
@@ -609,14 +582,14 @@ public class SessionDetailFragment extends Fragment implements
 
         int BLOCK_START = 0;
         int BLOCK_END = 1;
-        int LEVEL = 2;
+        // int LEVEL = 2;
         int TITLE = 3;
         int ABSTRACT = 4;
-        int REQUIREMENTS = 5;
+        // int REQUIREMENTS = 5;
         int STARRED = 6;
         int HASHTAG = 7;
-        int SLUG = 8;
-        int URL = 9;
+        // int SLUG = 8;
+        int SESSION_URL = 9;
         int MODERATOR_URL = 10;
         int YOUTUBE_URL = 11;
         int PDF_URL = 12;
@@ -626,7 +599,7 @@ public class SessionDetailFragment extends Fragment implements
         int ROOM_NAME = 16;
 
         int[] LINKS_INDICES = {
-                URL,
+                SESSION_URL,
                 MODERATOR_URL,
                 YOUTUBE_URL,
                 PDF_URL,

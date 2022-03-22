@@ -63,7 +63,13 @@ class Meeting {
 		key = elements[9].replaceAll("\"", "");
 		hrefDetail = elements[10].replaceAll("\"", "");
 		if (elements[11].length() > 0) {
-		  slides = elements[11].split("|");
+		  slides = elements[11].replaceAll("\"",
+				  "").split("\\|");
+		}
+		Log.d(TAG, "Agenda URL: " + hrefDetail);
+		Log.d(TAG, "Slides URLs count: " + slides.length);
+		for (int i = 0; i < slides.length; i++) {
+			Log.d(TAG, "Slides URL[" + i+ "]: " + slides[i]);
 		}
 	}
 
