@@ -204,7 +204,7 @@ public class LocalExecutor {
 		try {	
 			startTime = ParserUtils.parseTime(m.startHour);
 			endTime = ParserUtils.parseTime(m.endHour);
-			title = String.format("%s%s%s%s%s", m.group, (m.group.length() == 0 ? "" : " "), m.area, (m.area.length() == 0 ? "" : " "),  m.title);
+			title = String.format("%s -%s%s - %s%s", m.area, (m.area.length() == 0 ? "" : " "), m.group, (m.group.length() == 0 ? "" : " "),  m.title);
 			roomId = Rooms.generateRoomId(m.location);
 			
 			sessionId = Sessions.generateSessionId(m.key);
@@ -252,10 +252,10 @@ public class LocalExecutor {
 	
 		ContentProviderOperation.Builder builder = ContentProviderOperation.newInsert(Tracks.CONTENT_URI);
         builder.withValue(Tracks.UPDATED, versionBuild);
-		builder.withValue(Tracks.TRACK_ID, Tracks.generateTrackId(m.group + m.area));
-		builder.withValue(Tracks.TRACK_NAME, m.group + "-" + m.area);
+		builder.withValue(Tracks.TRACK_ID, Tracks.generateTrackId(m.area + m.group));
+		builder.withValue(Tracks.TRACK_NAME, m.area + "-" + m.group);
 		builder.withValue(Tracks.TRACK_COLOR, 1);
-		builder.withValue(Tracks.TRACK_ABSTRACT, m.group + "-" + m.area);
+		builder.withValue(Tracks.TRACK_ABSTRACT, m.area + "-" + m.group);
 	
 		return builder.build();
 	}
@@ -268,7 +268,7 @@ public class LocalExecutor {
 		final Uri sessionsTracksUri = Sessions.buildTracksDirUri(sessionId);
 		ContentProviderOperation.Builder builder = ContentProviderOperation.newInsert(sessionsTracksUri);
 		builder.withValue(SessionsTracks.SESSION_ID, sessionId);
-		builder.withValue(SessionsTracks.TRACK_ID, Tracks.generateTrackId(m.group + m.area));
+		builder.withValue(SessionsTracks.TRACK_ID, Tracks.generateTrackId(m.area + m.group));
 		
 		return builder.build();
 	}

@@ -48,7 +48,6 @@ public class ActivityHelper {
      * be returned.
      */
     public static ActivityHelper createInstance(Activity activity) {
-//        return UIUtils.isHoneycomb() ? - this does not works since version 4+ and phone.   
 		return UIUtils.isHoneycombTablet(activity.getApplicationContext()) ?
                 new ActivityHelperHoneycomb(activity) :
                 new ActivityHelper(activity);

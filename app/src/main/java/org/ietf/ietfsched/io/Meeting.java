@@ -40,6 +40,7 @@ class Meeting {
 	String area; // apparea
 	String typeSession; // Morning Session I
 	String key; // unique identifier
+	String[] slides; // The list of slides urls.
 
 	static {
 		previousFormat.setTimeZone(UIUtils.CONFERENCE_TIME_ZONE);
@@ -47,24 +48,28 @@ class Meeting {
 	}
 
 	Meeting(String lineCsv) throws Exception {
-		String[] splitted = lineCsv.split(",");
-		day = splitted[0].replaceAll("\"", "");
-		startHour = convert(day, splitted[1].replaceAll("\"", ""));
-		endHour = convert(day, splitted[2].replaceAll("\"", ""));
-		typeSession = splitted[3].replaceAll("\"", "");
-		String tLocation = splitted[4].trim().replaceAll("\"", "");
+		String[] elements = lineCsv.split(",");
+		day = elements[0].replaceAll("\"", "");
+		startHour = convert(day, elements[1].replaceAll("\"", ""));
+		endHour = convert(day, elements[2].replaceAll("\"", ""));
+		typeSession = elements[3].replaceAll("\"", "");
+		String tLocation = elements[4].trim().replaceAll("\"", "");
 		if (tLocation.length() > 0) {
 			location = tLocation;
 		}
-		group = splitted[5].replaceAll("\"", "");
-		area = splitted[6].replaceAll("\"", "");
-		title = splitted[8].replaceAll("\"", "");
-		key = splitted[9].replaceAll("\"", "");
-		hrefDetail = splitted[10].replaceAll("\"", "");
+		area = elements[5].replaceAll("\"", "");
+		group = elements[6].replaceAll("\"", "");
+		title = elements[8].replaceAll("\"", "");
+		key = elements[9].replaceAll("\"", "");
+		hrefDetail = elements[10].replaceAll("\"", "");
+		if (elements[11].length() > 0) {
+		  slides = elements[11].split("|");
+		}
 	}
 
 	private static String convert(String date, String hour) throws Exception {
-		Date d = previousFormat.parse(String.format("%s %s", date, hour));
+		Date d;
+		d = previousFormat.parse(String.format("%s %s", date, hour));
 		return afterFormat.format(d);
 	}
 }

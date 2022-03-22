@@ -104,7 +104,6 @@ public class SessionDetailFragment extends Fragment implements
 
         final Intent intent = BaseActivity.fragmentArgumentsToIntent(getArguments());
         mSessionUri = intent.getData();
-//        mTrackUri = resolveTrackUri(intent);
 
         if (mSessionUri == null) {
             return;
@@ -361,86 +360,6 @@ public class SessionDetailFragment extends Fragment implements
         }
     }
 
-/*    private void onSpeakersQueryComplete(Cursor cursor) {
-        try {
-            mSpeakersCursor = true;
-            // TODO: remove any existing speakers from layout, since this cursor
-            // might be from a data change notification.
-            final ViewGroup speakersGroup = (ViewGroup)
-                    mRootView.findViewById(R.id.session_speakers_block);
-	
-            final LayoutInflater inflater = getActivity().getLayoutInflater();
-
-            boolean hasSpeakers = false;
-
-            while (cursor.moveToNext()) {
-                final String speakerName = cursor.getString(SpeakersQuery.SPEAKER_NAME);
-                if (TextUtils.isEmpty(speakerName)) {
-                    continue;
-                }
-
-                final String speakerImageUrl = cursor.getString(SpeakersQuery.SPEAKER_IMAGE_URL);
-                final String speakerCompany = cursor.getString(SpeakersQuery.SPEAKER_COMPANY);
-                final String speakerUrl = cursor.getString(SpeakersQuery.SPEAKER_URL);
-                final String speakerAbstract = cursor.getString(SpeakersQuery.SPEAKER_ABSTRACT);
-
-                String speakerHeader = speakerName;
-                if (!TextUtils.isEmpty(speakerCompany)) {
-                    speakerHeader += ", " + speakerCompany;
-                }
-
-                final View speakerView = inflater
-                        .inflate(R.layout.speaker_detail, speakersGroup, false);
-                final TextView speakerHeaderView = (TextView) speakerView
-                        .findViewById(R.id.speaker_header);
-                final ImageView speakerImgView = (ImageView) speakerView
-                        .findViewById(R.id.speaker_image);
-                final TextView speakerUrlView = (TextView) speakerView
-                        .findViewById(R.id.speaker_url);
-                final TextView speakerAbstractView = (TextView) speakerView
-                        .findViewById(R.id.speaker_abstract);
-
-                if (!TextUtils.isEmpty(speakerImageUrl)) {
-                    BitmapUtils.fetchImage(getActivity(), speakerImageUrl, null, null,
-                            new BitmapUtils.OnFetchCompleteListener() {
-                                public void onFetchComplete(Object cookie, Bitmap result) {
-                                    if (result != null) {
-                                        speakerImgView.setImageBitmap(result);
-                                    }
-                                }
-                            });
-				
-                }
-
-                speakerHeaderView.setText(speakerHeader);
-                UIUtils.setTextMaybeHtml(speakerAbstractView, speakerAbstract);
-
-                if (!TextUtils.isEmpty(speakerUrl)) {
-                    UIUtils.setTextMaybeHtml(speakerUrlView, speakerUrl);
-                    speakerUrlView.setVisibility(View.VISIBLE);
-                } else {
-                    speakerUrlView.setVisibility(View.GONE);
-                }
-
-                speakersGroup.addView(speakerView);
-                hasSpeakers = true;
-                mHasSummaryContent = true;
-            }
-
-            speakersGroup.setVisibility(hasSpeakers ? View.VISIBLE : View.GONE);
-			
-
-            // Show empty message when all data is loaded, and nothing to show
-            if (mSessionCursor && !mHasSummaryContent) {
-                mRootView.findViewById(android.R.id.empty).setVisibility(View.VISIBLE);
-            }
-        } finally {
-            if (null != cursor) {
-                cursor.close();
-            }
-        }
-    }
-*/	
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
@@ -606,9 +525,11 @@ public class SessionDetailFragment extends Fragment implements
         LayoutInflater inflater = getLayoutInflater(null);
 
         boolean hasLinks = false;
+        Log.d(TAG, "Links Indices: " + SessionsQuery.LINKS_INDICES.length);
         for (int i = 0; i < SessionsQuery.LINKS_INDICES.length; i++) {
             final String url = cursor.getString(SessionsQuery.LINKS_INDICES[i]);
             if (!TextUtils.isEmpty(url)) {
+                Log.d(TAG, "Links Indices loop, Url[" + i + "]: " + SessionsQuery.LINKS_INDICES[i] + " Title: " + SessionsQuery.LINKS_TITLES[i]);
                 hasLinks = true;
                 ViewGroup linkContainer = (ViewGroup)
                         inflater.inflate(R.layout.list_item_session_link, container, false);
@@ -619,7 +540,7 @@ public class SessionDetailFragment extends Fragment implements
                     public void onClick(View view) {
                         fireLinkEvent(SessionsQuery.LINKS_TITLES[linkTitleIndex]);
                     	Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
                         startActivity(intent);
                         
                     }
@@ -634,6 +555,8 @@ public class SessionDetailFragment extends Fragment implements
                                 ViewGroup.LayoutParams.WRAP_CONTENT));
                 separatorView.setBackgroundResource(android.R.drawable.divider_horizontal_bright);
                 container.addView(separatorView);
+            } else {
+                Log.d(TAG, "NOT URL - Links Indices loop, Url[" + i + "]: " + SessionsQuery.LINKS_INDICES[i] + " Title: " + SessionsQuery.LINKS_TITLES[i]);
             }
         }
 
