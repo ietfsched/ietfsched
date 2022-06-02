@@ -7,6 +7,13 @@ The actual technical work of the IETF is done in its working groups, which are o
 
 This project is the Android app for the IETF meeting. The app supports devices running Android 2.3+, and is optimized for phones and tablets of all shapes and sizes.
 
+[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
+     alt="Get it on F-Droid"
+     height="80">](https://f-droid.org/packages/org.ietf.ietfsched/)
+[<img src="https://play.google.com/intl/en_us/badges/images/generic/en-play-badge.png"
+     alt="Get it on Google Play"
+     height="80">](https://play.google.com/store/apps/details?id=org.ietf.ietfsched)
+
 <h2>Source</h2>
 
 The source code in this repository reflects the app as of IETF 92.
