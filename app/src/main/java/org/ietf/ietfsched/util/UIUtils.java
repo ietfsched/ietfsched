@@ -54,13 +54,14 @@ public class UIUtils {
      * UTC - ietf109
      * VIE +1 ietf113
      * SFO -7 - ietf111
+     *
      */
-    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("CET");
+    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("EST");
 
     public static final Long CONFERENCE_START_MILLIS = ParserUtils.parseTime(
-            "2022-03-19T07:07:00.000");
+            "2022-07-16T07:07:00.000");
     public static final Long CONFERENCE_END_MILLIS = ParserUtils.parseTime(
-            "2022-04-01T07:17:00.000");
+            "2022-07-29T07:17:00.000");
 
     /** Flags used with {@link DateUtils#formatDateRange}. */
     private static final int TIME_FLAGS = DateUtils.FORMAT_SHOW_TIME

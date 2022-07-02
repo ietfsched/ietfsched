@@ -88,16 +88,17 @@ public class ScheduleFragment extends Fragment implements
     private static final String year = "2022";
     /* 2wks of time is required here, Week prior to IETF and IETF week. */
     private static final String[] dates = new String[]{
-            "03-19", "03-20", "03-21", "03-22", "03-23",
-            "03-24", "03-25", "03-26", "03-27", "03-28",
-            "03-29", "03-30", "03-31", "04-01",
+            "07-16", "07-17", "07-18", "07-19", "07-20",
+            "07-21", "07-22", "07-23", "07-24", "07-25",
+            "07-26", "07-37", "07-28", "07-29",
     };
-    /* Note: How does this work for negative timezones?
-     * BKK: 03
-     * UTC: 00
-     * VIE: 01
+    /* Note: How does this work for negative timezones? (RFC822 timezone)
+     * BKK: 0300
+     * UTC: 0000
+     * VIE: 0100
+     * PHL: -0400
      */
-    private static final String tz = "01";
+    private static final String tz = "04";
 
     static {
         for( int i = 0; i<dates.length;i++) {
