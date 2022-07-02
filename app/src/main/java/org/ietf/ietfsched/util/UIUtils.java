@@ -54,9 +54,9 @@ public class UIUtils {
      * UTC - ietf109
      * VIE +1 ietf113
      * SFO -7 - ietf111
-     *
+     * PHL --4 EDT
      */
-    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("EST");
+    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("EDT");
 
     public static final Long CONFERENCE_START_MILLIS = ParserUtils.parseTime(
             "2022-07-16T07:07:00.000");

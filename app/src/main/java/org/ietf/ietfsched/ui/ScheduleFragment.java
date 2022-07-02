@@ -86,24 +86,31 @@ public class ScheduleFragment extends Fragment implements
      */
     private static ArrayList<Long> START_DAYS = new ArrayList<Long>();
     private static final String year = "2022";
-    /* 2wks of time is required here, Week prior to IETF and IETF week. */
-    private static final String[] dates = new String[]{
-            "07-16", "07-17", "07-18", "07-19", "07-20",
-            "07-21", "07-22", "07-23", "07-24", "07-25",
-            "07-26", "07-37", "07-28", "07-29",
+
+    /*
+     * 2wks of time is required here, Week prior to IETF and IETF week.
+     * Months are the month numbers over which the meeting will span.
+     * Days are the days of the month.
+     */
+    private static final Integer[] months = new Integer[]{ 7 };
+    private static final Integer[] days = new Integer[]{
+            16, 17, 18, 19, 20, 21, 22,
+            23, 24, 25, 26, 27, 28, 29,
     };
     /* Note: How does this work for negative timezones? (RFC822 timezone)
-     * BKK: 0300
-     * UTC: 0000
-     * VIE: 0100
-     * PHL: -0400
+     * BKK: 03
+     * UTC: 00
+     * VIE: 01
+     * PHL: 04
      */
     private static final String tz = "04";
 
     static {
-        for( int i = 0; i<dates.length;i++) {
-            START_DAYS.add(ParserUtils.parseTime(
-                    String.format("%s-%sT%s:00:00.000", year, dates[i], tz)));
+        for( int i = 0; i<months.length;i++) {
+            for (int j = 0; j<days.length; j++) {
+                START_DAYS.add(ParserUtils.parseTime(
+                        String.format("%s-%02d-%02dT%s:00:00.000", year, months[i], days[j], tz)));
+            }
         }
     }
 
