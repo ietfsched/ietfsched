@@ -92,18 +92,19 @@ public class ScheduleFragment extends Fragment implements
      * Months are the month numbers over which the meeting will span.
      * Days are the days of the month.
      */
-    private static final Integer[] months = new Integer[]{ 11 };
+    private static final Integer[] months = new Integer[]{ 3 };
     private static final Integer[] days = new Integer[]{
-            1, 2, 3, 4, 5, 6, 7,
-            8, 9, 10, 11, 12, 13, 14,
+            18, 19, 20, 21, 22, 23, 24,
+            25, 26, 27, 28, 29, 30, 31,
     };
     /* Note: How does this work for negative timezones? (RFC822 timezone)
      * BKK: 03
      * UTC: 00
      * VIE: 01
      * PHL: 04
+     * NET: 13
      */
-    private static final String tz = "00";
+    private static final String tz = "13";
 
     static {
         for( int i = 0; i<months.length;i++) {
