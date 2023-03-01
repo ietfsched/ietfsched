@@ -30,7 +30,7 @@
 
     <!-- Perhaps 'use_credentials' is not necessary, and not possible/real anymore.
     <uses-permission android:name="android.permission.USE_CREDENTIALS" />
-    _->
+    -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 	<uses-permission android:name="android.permission.INTERNET" />
 
