@@ -75,27 +75,6 @@ public class WhatsOnFragment extends Fragment {
         } else {
             setupDuring();
         }
-
-/*        if (!UIUtils.isHoneycombTablet(getActivity())) {
-            View separator = new View(getActivity());
-            separator.setLayoutParams(
-                    new ViewGroup.LayoutParams(1, ViewGroup.LayoutParams.FILL_PARENT));
-            separator.setBackgroundResource(R.drawable.whats_on_separator);
-            mRootView.addView(separator);
-
-            View view = getActivity().getLayoutInflater().inflate(
-                    R.layout.whats_on_stream, mRootView, false);
-            view.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View view) {
-                    AnalyticsUtils.getInstance(getActivity()).trackEvent(
-                            "Home Screen Dashboard", "Click", "Realtime Stream", 0);
-                    Intent intent = new Intent(getActivity(), TagStreamActivity.class);
-                    startActivity(intent);
-                }
-            });
-            mRootView.addView(view);
-        }
-*/	
     }
 	
 
@@ -119,17 +98,6 @@ public class WhatsOnFragment extends Fragment {
                 R.layout.whats_on_now_playing, mRootView, false);
         view.setOnClickListener(new View.OnClickListener() {
 				public void onClick(View view) {
-/*				
-                if (UIUtils.isHoneycombTablet(getActivity())) {
-                    startActivity(new Intent(getActivity(), NowPlayingMultiPaneActivity.class));
-                } else { 
-                    Intent intent = new Intent(Intent.ACTION_VIEW);
-                    intent.setData(ScheduleContract.Sessions
-                            .buildSessionsAtDirUri(System.currentTimeMillis()));
-                    intent.putExtra(Intent.EXTRA_TITLE, getString(R.string.title_now_playing));
-                    startActivity(intent);
-                }
-*/				
             }
         });
         mRootView.addView(view);
