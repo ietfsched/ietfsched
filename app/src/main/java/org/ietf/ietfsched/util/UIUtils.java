@@ -55,9 +55,9 @@ public class UIUtils {
      * VIE +1 ietf113
      * SFO -7 - ietf111
      * PHL -4 EDT
-     * NRT +9 JST
+     * NRT +9 JST GMT+9:00 - Use the GMT offset notation from now on.
      */
-    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("JST");
+    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("GMT-0:00");
 
     public static final Long CONFERENCE_START_MILLIS = ParserUtils.parseTime(
             "2023-03-17:07:00.000");

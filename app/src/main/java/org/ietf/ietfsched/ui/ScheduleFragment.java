@@ -85,7 +85,7 @@ public class ScheduleFragment extends Fragment implements
      *      NOTE: This covers the 1 week of IETF and the previous week as well.
      */
     private static ArrayList<Long> START_DAYS = new ArrayList<Long>();
-    private static final String year = "2022";
+    private static final String year = "2023";
 
     /*
      * 2wks of time is required here, Week prior to IETF and IETF week.
@@ -102,9 +102,9 @@ public class ScheduleFragment extends Fragment implements
      * UTC: 00
      * VIE: 01
      * PHL: 04
-     * NET: 13
+     * NRT: 13
      */
-    private static final String tz = "13";
+    private static final String tz = "00";
 
     static {
         for( int i = 0; i<months.length;i++) {

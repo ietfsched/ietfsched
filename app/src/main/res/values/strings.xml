@@ -114,7 +114,7 @@
 
     <string name="whats_on_stream_title">Realtime\nStream</string>
     <string name="whats_on_now_playing_title">Now Playing</string>
-	<string name="whats_on_thank_you_title">See you at IETF 117</string>
+	<string name="whats_on_thank_you_title">See you at IETF 116</string>
     <string name="permission_write">Modify IETF schedule data</string>
     <string name="toast_now_not_visible">Press this button during IETF 116 to show the current time.</string>
 
