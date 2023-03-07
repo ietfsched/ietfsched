@@ -22,7 +22,7 @@ import org.ietf.ietfsched.util.UIUtils;
 import android.app.Activity;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.v4.app.Fragment;
+import androidx.fragment.app.Fragment;
 import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -33,11 +33,11 @@ import android.widget.TextView;
  * A fragment used in {@link HomeActivity} that shows either a countdown, 'now playing' link to
  * current sessions, or 'thank you' text, at different times (before/during/after the conference).
  * It also shows a 'Realtime Search' button on phones, as a replacement for the
- * {@link TagStreamFragment} that is visible on tablets on the home screen.
+ * fragment that is visible on tablets on the home screen.
  */
 public class WhatsOnFragment extends Fragment {
 
-    private Handler mMessageHandler = new Handler();
+    private final ThreadLocal<Handler> mMessageHandler = ThreadLocal.withInitial(() -> new Handler());
 
     private TextView mCountdownTextView;
     private ViewGroup mRootView;
@@ -58,11 +58,11 @@ public class WhatsOnFragment extends Fragment {
     @Override
     public void onDetach() {
         super.onDetach();
-        mMessageHandler.removeCallbacks(mCountdownRunnable);
+        mMessageHandler.get().removeCallbacks(mCountdownRunnable);
     }
 
     private void refresh() {
-        mMessageHandler.removeCallbacks(mCountdownRunnable);
+        mMessageHandler.get().removeCallbacks(mCountdownRunnable);
         mRootView.removeAllViews();
 
         final long currentTimeMillis = UIUtils.getCurrentTime(getActivity());
@@ -83,7 +83,7 @@ public class WhatsOnFragment extends Fragment {
         mCountdownTextView = (TextView) getActivity().getLayoutInflater().inflate(
                 R.layout.whats_on_countdown, mRootView, false);
         mRootView.addView(mCountdownTextView);
-        mMessageHandler.post(mCountdownRunnable);
+        mMessageHandler.get().post(mCountdownRunnable);
     }
 
     private void setupAfter() {
@@ -116,7 +116,7 @@ public class WhatsOnFragment extends Fragment {
             if (conferenceStarted) {
                 // Conference started while in countdown mode, switch modes and
                 // bail on future countdown updates.
-                mMessageHandler.postDelayed(new Runnable() {
+                mMessageHandler.get().postDelayed(new Runnable() {
                     public void run() {
                         refresh();
                     }
@@ -132,7 +132,7 @@ public class WhatsOnFragment extends Fragment {
             mCountdownTextView.setText(str);
 
             // Repost ourselves to keep updating countdown
-            mMessageHandler.postDelayed(mCountdownRunnable, 1000);
+            mMessageHandler.get().postDelayed(mCountdownRunnable, 1000);
         }
     };
 }

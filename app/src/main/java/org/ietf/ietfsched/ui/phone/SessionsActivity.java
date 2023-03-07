@@ -20,7 +20,7 @@ import org.ietf.ietfsched.ui.BaseSinglePaneActivity;
 import org.ietf.ietfsched.ui.SessionsFragment;
 
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
+import androidx.fragment.app.Fragment;
 
 public class SessionsActivity extends BaseSinglePaneActivity {
     @Override

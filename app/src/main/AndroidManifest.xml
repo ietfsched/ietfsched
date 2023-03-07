@@ -30,8 +30,8 @@
 
     <!-- Perhaps 'use_credentials' is not necessary, and not possible/real anymore.
     <uses-permission android:name="android.permission.USE_CREDENTIALS" />
-    -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    -->
 	<uses-permission android:name="android.permission.INTERNET" />
 
     <application
@@ -46,6 +46,7 @@
         <activity
             android:name="org.ietf.ietfsched.ui.HomeActivity"
             android:label="@string/app_name"
+            android:exported="true"
             android:theme="@style/Theme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -55,20 +56,24 @@
 
         <activity
             android:name="org.ietf.ietfsched.ui.StarredActivity"
+            android:exported="true"
             android:label="@string/title_starred" />
 			
         <activity
             android:name="org.ietf.ietfsched.ui.WellNoteActivity"
+            android:exported="true"
             android:label="@string/title_well_note" />
 			
         <!-- Phone-only activities -->
 
         <activity
             android:name="org.ietf.ietfsched.ui.phone.ScheduleActivity"
+            android:exported="true"
             android:label="@string/title_schedule" />
 
         <activity
             android:name="org.ietf.ietfsched.ui.phone.TracksActivity"
+            android:exported="true"
             android:label="@string/title_tracks">
             <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
@@ -79,6 +84,7 @@
 
         <activity
             android:name="org.ietf.ietfsched.ui.phone.SessionsActivity"
+            android:exported="true"
             android:label="@string/title_sessions">
             <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
@@ -88,7 +94,8 @@
             </intent-filter>
         </activity>
 
-        <activity android:name="org.ietf.ietfsched.ui.phone.SessionDetailActivity">
+        <activity android:name="org.ietf.ietfsched.ui.phone.SessionDetailActivity"
+            android:exported="true">
             <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
