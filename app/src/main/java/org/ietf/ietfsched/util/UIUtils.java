@@ -59,11 +59,11 @@ public class UIUtils {
      */
     public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("GMT+09:00");
 
-    // Date/Time here is format: "yyyy-MM-dd HH:mm:00.000" - ParserUtils.java:59
+    // Date/Time here is format: "yyyy-MM-dd HH:mm:00TZ" - ParserUtils.java:59
     public static final Long CONFERENCE_START_MILLIS = ParserUtils.parseTime(
-            "2023-03-17 07:00");
+            String.format("2023-03-17 07:00:00%s", CONFERENCE_TIME_ZONE.getID()));
     public static final Long CONFERENCE_END_MILLIS = ParserUtils.parseTime(
-            "2023-03-31 22:00");
+            String.format("2023-03-31 22:00:00%s", CONFERENCE_TIME_ZONE.getID()));
 
     /** Flags used with {@link DateUtils#formatDateRange}. */
     private static final int TIME_FLAGS = DateUtils.FORMAT_SHOW_TIME

@@ -53,12 +53,14 @@ public class ParserUtils {
     /** Used to split a comma-separated string. */
     private static final Pattern sCommaPattern = Pattern.compile("\\s*,\\s*");
 
-	private static final SimpleDateFormat df;
+	public static final SimpleDateFormat df;
 
-	static {
-		df = new SimpleDateFormat("yyyy-MM-dd HH:mm:00", Locale.US);
-		df.setTimeZone(UIUtils.CONFERENCE_TIME_ZONE);
-	}
+    //                                            "2023-03-31 22:00:00GMT+0900"
+    static {
+        df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssz");
+        df.setTimeZone(UIUtils.CONFERENCE_TIME_ZONE);
+    }
+	// df.setTimeZone(UIUtils.CONFERENCE_TIME_ZONE);
 
     /**
      * Sanitize the given string to be {@link Uri} safe for building

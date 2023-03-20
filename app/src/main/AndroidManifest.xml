@@ -36,7 +36,7 @@
 
     <application
         android:allowBackup="true"
-        android:hardwareAccelerated="false"
+        android:hardwareAccelerated="true"
         android:icon="@drawable/ic_launcher"
         android:label="IETF 116"
         android:theme="@style/Theme.IOSched">
@@ -46,6 +46,7 @@
         <activity
             android:name="org.ietf.ietfsched.ui.HomeActivity"
             android:label="@string/app_name"
+            android:hardwareAccelerated="false"
             android:exported="true"
             android:theme="@style/Theme">
             <intent-filter>
@@ -56,11 +57,13 @@
 
         <activity
             android:name="org.ietf.ietfsched.ui.StarredActivity"
+            android:hardwareAccelerated="false"
             android:exported="true"
             android:label="@string/title_starred" />
 			
         <activity
             android:name="org.ietf.ietfsched.ui.WellNoteActivity"
+            android:hardwareAccelerated="false"
             android:exported="true"
             android:label="@string/title_well_note" />
 			
@@ -68,11 +71,13 @@
 
         <activity
             android:name="org.ietf.ietfsched.ui.phone.ScheduleActivity"
+            android:hardwareAccelerated="false"
             android:exported="true"
             android:label="@string/title_schedule" />
 
         <activity
             android:name="org.ietf.ietfsched.ui.phone.TracksActivity"
+            android:hardwareAccelerated="false"
             android:exported="true"
             android:label="@string/title_tracks">
             <intent-filter tools:ignore="AppLinkUrlError">
@@ -84,6 +89,7 @@
 
         <activity
             android:name="org.ietf.ietfsched.ui.phone.SessionsActivity"
+            android:hardwareAccelerated="false"
             android:exported="true"
             android:label="@string/title_sessions">
             <intent-filter tools:ignore="AppLinkUrlError">
@@ -95,6 +101,7 @@
         </activity>
 
         <activity android:name="org.ietf.ietfsched.ui.phone.SessionDetailActivity"
+            android:hardwareAccelerated="false"
             android:exported="true">
             <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />

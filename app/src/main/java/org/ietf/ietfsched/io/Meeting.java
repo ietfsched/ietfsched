@@ -21,14 +21,16 @@ import java.util.*;
 import java.text.*;
 import android.util.Log;
 
+import org.ietf.ietfsched.util.ParserUtils;
 import org.ietf.ietfsched.util.UIUtils;
 
 
 class Meeting {
+	private static final boolean debug = false;
 	private static final String TAG = "Meeting";
 	private final static SimpleDateFormat previousFormat = new SimpleDateFormat("yyyy-MM-dd HHmm"); // 2011-07-23 0900
 	// Hack: timezone format (Z) = +0800 where the ietfsched application expects +08:00.
-	private final static SimpleDateFormat afterFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:00", Locale.US);
+	private final static SimpleDateFormat afterFormat = ParserUtils.df;
 
 	private String day; // Saturday, March, 12
 	String startHour; //2010-05-19 10:45:00
@@ -47,6 +49,7 @@ class Meeting {
 		afterFormat.setTimeZone(UIUtils.CONFERENCE_TIME_ZONE);
 	}
 
+	// Handle parsing each line of the agenda.
 	Meeting(String lineCsv) throws Exception {
 		String[] elements = lineCsv.split(",");
 		day = elements[0].replaceAll("\"", "");
@@ -66,16 +69,20 @@ class Meeting {
 		  slides = elements[11].replaceAll("\"",
 				  "").split("\\|");
 		}
-		Log.d(TAG, "Agenda URL: " + hrefDetail);
-		Log.d(TAG, "Slides URLs count: " + slides.length);
-		for (int i = 0; i < slides.length; i++) {
-			Log.d(TAG, "Slides URL[" + i+ "]: " + slides[i]);
+		if (debug) Log.d(TAG, "Agenda URL: " + hrefDetail);
+		if (debug) Log.d(TAG, "Slides URLs count: " + slides.length);
+		if (debug) {
+			for (int i = 0; i < slides.length; i++) {
+				Log.d(TAG, "Slides URL[" + i + "]: " + slides[i]);
+			}
 		}
 	}
 
 	private static String convert(String date, String hour) throws Exception {
 		Date d;
+		if (debug) Log.d(TAG, String.format("Date: %s Hour: %s", date, hour));
 		d = previousFormat.parse(String.format("%s %s", date, hour));
+		if (debug) Log.d(TAG, String.format("Converted: %s", afterFormat.format(d)));
 		return afterFormat.format(d);
 	}
 }

@@ -98,19 +98,20 @@ public class ScheduleFragment extends Fragment implements
             25, 26, 27, 28, 29, 30, 31,
     };
     /* Note: How does this work for negative timezones? (RFC822 timezone)
-     * BKK: 03
-     * UTC: 00
-     * VIE: 01
-     * PHL: 04
-     * NRT: 13
+     * Timezones follow +/- UTC offset.
+     * BKK: GMT+0700
+     * UTC: GMT+0000
+     * VIE: GMT+0100
+     * PHL: GMT-0400
+     * NRT: GMT+0900
      */
-    private static final String tz = "09";
+    private static final String tz = "GMT+0900";
 
     static {
         for( int i = 0; i<months.length;i++) {
             for (int j = 0; j<days.length; j++) {
                 START_DAYS.add(ParserUtils.parseTime(
-                        String.format("%s-%02d-%02d %s:00:00", year, months[i], days[j], tz)));
+                        String.format("%s-%02d-%02d 00:00:00%s", year, months[i], days[j], tz)));
             }
         }
     }
