@@ -105,13 +105,13 @@ public class ScheduleFragment extends Fragment implements
      * PHL: GMT-0400
      * NRT: GMT+0900
      */
-    private static final String tz = "GMT+0900";
 
     static {
         for( int i = 0; i<months.length;i++) {
             for (int j = 0; j<days.length; j++) {
                 START_DAYS.add(ParserUtils.parseTime(
-                        String.format("%s-%02d-%02d 00:00:00%s", year, months[i], days[j], tz)));
+                        String.format("%s-%02d-%02d 00:00:00%s", year, months[i], days[j],
+                                UIUtils.CONFERENCE_TIME_ZONE.getID())));
             }
         }
     }

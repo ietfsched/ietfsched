@@ -71,7 +71,6 @@ public class SyncService extends IntentService {
     @Override
     public void onCreate() {
         super.onCreate();
-        super.onCreate();
         final ContentResolver resolver = getContentResolver();
         mLocalExecutor = new LocalExecutor(getResources(), resolver);
 
@@ -96,22 +95,21 @@ public class SyncService extends IntentService {
 
 		Log.d(TAG, "found localVersion=" + localVersion + " and VERSION_CURRENT=" + VERSION_CURRENT);
 		String remoteEtag = "";
-	
+		String aUrl = BASE_URL + "agenda.csv";
+
 		try {
-			String htmlURL = BASE_URL + "agenda.csv";
-			Log.d(TAG, 	"HEAD " + htmlURL);
-			remoteEtag = mRemoteExecutor.executeHead(htmlURL);
-			Log.d(TAG, 	"HEAD "  + htmlURL + " " + remoteEtag);
+			Log.d(TAG, 	"HEAD " + aUrl);
+			remoteEtag = mRemoteExecutor.executeHead(aUrl);
+			Log.d(TAG, 	"HEAD "  + aUrl + " " + remoteEtag);
 		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
 
-		String csvURL = BASE_URL + "agenda.csv";
 		try {
-			Log.d(TAG, csvURL);
-			String[] agenda = mRemoteExecutor.executeGet(csvURL);
-			Log.d(TAG, String.format("remote sync started for URL: %s", csvURL));
+			Log.d(TAG, aUrl);
+			String[] agenda = mRemoteExecutor.executeGet(aUrl);
+			Log.d(TAG, String.format("remote sync started for URL: %s", aUrl));
 			mLocalExecutor.execute(agenda);
 			prefs.edit().putString(Prefs.LAST_ETAG, remoteEtag).apply();
 			prefs.edit().putInt(Prefs.LOCAL_VERSION, VERSION_CURRENT).apply();
@@ -119,7 +117,7 @@ public class SyncService extends IntentService {
 			if (receiver != null) receiver.send(STATUS_FINISHED, Bundle.EMPTY);
 		}
 		catch (Exception e) {
-			Log.e(TAG, "Error HTTP request " + csvURL , e);
+			Log.e(TAG, "Error HTTP request " + aUrl, e);
 			final Bundle bundle = new Bundle();
 			bundle.putString(Intent.EXTRA_TEXT, "Connection error. No updates.");
 			if (receiver != null) {
