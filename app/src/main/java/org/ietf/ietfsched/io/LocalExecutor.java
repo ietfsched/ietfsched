@@ -304,7 +304,7 @@ public class LocalExecutor {
 			}
 			try {
 				line = is[c];
-				if (line != null && line.length() != 0) {
+				if (line != null && line.length() != 0 && !line.startsWith("\"Date\",")) {
 					Meeting m = new Meeting(line);
 					meetings.add(m);
 				}

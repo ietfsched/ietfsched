@@ -104,13 +104,13 @@ public class ScheduleFragment extends Fragment implements
      * PHL: 04
      * NRT: 13
      */
-    private static final String tz = "00";
+    private static final String tz = "09";
 
     static {
         for( int i = 0; i<months.length;i++) {
             for (int j = 0; j<days.length; j++) {
                 START_DAYS.add(ParserUtils.parseTime(
-                        String.format("%s-%02d-%02dT%s:00:00.000", year, months[i], days[j], tz)));
+                        String.format("%s-%02d-%02d %s:00:00", year, months[i], days[j], tz)));
             }
         }
     }

@@ -56,7 +56,7 @@ public class ParserUtils {
 	private static final SimpleDateFormat df;
 
 	static {
-		df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:00.000", Locale.US);
+		df = new SimpleDateFormat("yyyy-MM-dd HH:mm:00", Locale.US);
 		df.setTimeZone(UIUtils.CONFERENCE_TIME_ZONE);
 	}
 

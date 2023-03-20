@@ -28,11 +28,11 @@ class Meeting {
 	private static final String TAG = "Meeting";
 	private final static SimpleDateFormat previousFormat = new SimpleDateFormat("yyyy-MM-dd HHmm"); // 2011-07-23 0900
 	// Hack: timezone format (Z) = +0800 where the ietfsched application expects +08:00.
-	private final static SimpleDateFormat afterFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:00.000", Locale.US);
+	private final static SimpleDateFormat afterFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:00", Locale.US);
 
 	private String day; // Saturday, March, 12
-	String startHour; //2010-05-19T10:45:00.000-07:00
-	String endHour; // 2010-05-19T11:45:00.000-07:00
+	String startHour; //2010-05-19 10:45:00
+	String endHour; // 2010-05-19 11:45:00
 	String title;
 	String hrefDetail;
 	String location = "N/A"; // room
