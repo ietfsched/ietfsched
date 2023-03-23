@@ -17,7 +17,6 @@
 package org.ietf.ietfsched.io;
 
 
-import java.net.URL;
 import java.util.*;
 import java.text.*;
 import java.time.*;
@@ -41,7 +40,6 @@ class UnScheduledMeetingException extends Exception {
 class Meeting {
 	private static final boolean debug = false;
 	private static final String TAG = "Meeting";
-	// private final static SimpleDateFormat previousFormat = new SimpleDateFormat("yyyy-MM-dd HHmm"); // 2011-07-23 0900
 	//                                                        JSON time - Start - "2023-03-27T00:30:00Z
 	private final static SimpleDateFormat jsonDate = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 	// Hack: timezone format (Z) = +0800 where the ietfsched application expects +08:00.
