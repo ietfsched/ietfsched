@@ -17,26 +17,40 @@
 package org.ietf.ietfsched.io;
 
 
+import java.net.URL;
 import java.util.*;
 import java.text.*;
+import java.time.*;
 import android.util.Log;
 
+import org.ietf.ietfsched.service.SyncService;
 import org.ietf.ietfsched.util.ParserUtils;
 import org.ietf.ietfsched.util.UIUtils;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
+
+// A simple exception to be used when Meeting() creation expectations are a failure.
+class UnScheduledMeetingException extends Exception {
+	public UnScheduledMeetingException(String errorMessage) {
+		super(errorMessage);
+	}
+}
 
 class Meeting {
 	private static final boolean debug = false;
 	private static final String TAG = "Meeting";
-	private final static SimpleDateFormat previousFormat = new SimpleDateFormat("yyyy-MM-dd HHmm"); // 2011-07-23 0900
+	// private final static SimpleDateFormat previousFormat = new SimpleDateFormat("yyyy-MM-dd HHmm"); // 2011-07-23 0900
+	//                                                        JSON time - Start - "2023-03-27T00:30:00Z
+	private final static SimpleDateFormat jsonDate = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 	// Hack: timezone format (Z) = +0800 where the ietfsched application expects +08:00.
 	private final static SimpleDateFormat afterFormat = ParserUtils.df;
 
-	private String day; // Saturday, March, 12
 	String startHour; //2010-05-19 10:45:00
 	String endHour; // 2010-05-19 11:45:00
 	String title;
-	String hrefDetail;
+	String hrefDetail; // agenda link
 	String location = "N/A"; // room
 	String group; // APP
 	String area; // apparea
@@ -45,16 +59,85 @@ class Meeting {
 	String[] slides; // The list of slides urls.
 
 	static {
-		previousFormat.setTimeZone(UIUtils.CONFERENCE_TIME_ZONE);
+		// previousFormat.setTimeZone(UIUtils.CONFERENCE_TIME_ZONE);
+		jsonDate.setTimeZone((UIUtils.CONFERENCE_TIME_ZONE));
 		afterFormat.setTimeZone(UIUtils.CONFERENCE_TIME_ZONE);
 	}
 
 	// Handle parsing each line of the agenda.
-	Meeting(String lineCsv) throws Exception {
+	Meeting(JSONObject mJSON) throws UnScheduledMeetingException, Exception {
+		// TODO(morrowc): Validate that the agenda item is a 'status' == 'sched'.
+		String status = "";
+		try {
+			status = mJSON.getString("status");
+		} catch (JSONException e) {
+		  throw new UnScheduledMeetingException("Non Status event");
+		}
+		Log.d(TAG, String.format("Status of meeting(%s): %s", mJSON.getString("name"), status));
+		if (!status.equals("sched")) {
+			throw new UnScheduledMeetingException(
+					String.format(
+							"Unscheduled meeting(%s) status: %s",
+							mJSON.getString("name"),
+							status));
+		}
+		// Gather all of the elements for a Meeting().
+		try {
+			Date jDay = jsonDate.parse(mJSON.getString("start"));
+
+			title = mJSON.getString("name");
+			startHour = jDay.toInstant().toString();
+			// Build an endDate by using localTime, and Duration (from localtime start 00:00 to duration)
+			String[] durSplit = mJSON.getString("duration").split(":");
+			Integer[] durSplitInt = new Integer[durSplit.length];
+			for (int i = 0; i < durSplit.length; i++) {
+				durSplitInt[i] = Integer.parseInt(durSplit[i]);
+			}
+			LocalTime lt = LocalTime.parse(String.format("%02d:%02d:%02d", durSplitInt));
+			Duration d = Duration.between(LocalTime.MIN, lt);
+			endHour = jDay.toInstant().plusMillis(d.toMillis()).toString();
+
+			// Validate that 'objtype' == 'session', else throw exception.
+			typeSession = mJSON.getString("objtype");
+			if (!typeSession.equals("session")) {
+			  throw new UnScheduledMeetingException(String.format("Not a session: %s", title));
+			}
+			location = mJSON.getString("location");
+			JSONObject areaGroup = mJSON.getJSONObject("group");
+			area = areaGroup.getString("parent");
+			group = areaGroup.getString("acronym");
+			key = String.format("%d", mJSON.getInt("session_id"));
+			hrefDetail = mJSON.getString("agenda");
+		} catch (JSONException e) {
+		  throw new UnScheduledMeetingException(
+				  String.format("Event(%s) is missing JSON element: %s",title, e.toString()));
+		}
+		// Extract the presentation urls, if there are any.
+		try {
+			JSONObject presentationObj = mJSON.getJSONObject("presentations");
+			JSONArray pArray = presentationObj.optJSONArray(presentationObj.keys().next());
+			// Meeting BASE_URL - SyncService.BASE_URL - is:
+			//   https://datatracker.ietf.org/meeting/116
+			// Meeting materials are urls like:
+			//   https://datatracker.ietf.org/meeting/116/materials/slides-116-mpls-clarify-bootstrapping-bfd-over-mpls-lsp
+			// Agenda url:
+			//   https://datatracker.ietf.org/meeting/116/materials/agenda-116-mpls-00
+			// Presentation name == file-name in URL: slides-116-mpls-clarify-bootstrapping-bfd-over-mpls-lsp
+			for (int i = 0; i < pArray.length(); i++ ){
+                URL tURL = new URL(
+						SyncService.BASE_URL,
+						"materials/",
+						pArray.getJSONObject(i).getString("name"));
+				slides[i] = tURL.toString();
+			}
+		} catch (JSONException e) {
+			Log.d(TAG, String.format("NoPresentations for %s", title));
+		}
+		/*
 		String[] elements = lineCsv.split(",");
-		day = elements[0].replaceAll("\"", "");
-		startHour = convert(day, elements[1].replaceAll("\"", ""));
-		endHour = convert(day, elements[2].replaceAll("\"", ""));
+		day = elements[0].replaceAll("\"", ""); // 2008-03-31
+		startHour = convert(day, elements[1].replaceAll("\"", "")); // 2008-03-31 08:00
+		endHour = convert(day, elements[2].replaceAll("\"", ""));   // 2008-03-31 10:00
 		typeSession = elements[3].replaceAll("\"", "");
 		String tLocation = elements[4].trim().replaceAll("\"", "");
 		if (tLocation.length() > 0) {
@@ -63,12 +146,13 @@ class Meeting {
 		area = elements[5].replaceAll("\"", "");
 		group = elements[6].replaceAll("\"", "");
 		title = elements[8].replaceAll("\"", "");
-		key = elements[9].replaceAll("\"", "");
-		hrefDetail = elements[10].replaceAll("\"", "");
-		if (elements[11].length() > 0) {
+		key = elements[9].replaceAll("\"", "");  // session-id
+		hrefDetail = elements[10].replaceAll("\"", ""); // Agenda link
+		if (elements[11].length() > 0) {                // Slides links
 		  slides = elements[11].replaceAll("\"",
 				  "").split("\\|");
 		}
+		 */
 		if (debug) Log.d(TAG, "Agenda URL: " + hrefDetail);
 		if (debug) Log.d(TAG, "Slides URLs count: " + slides.length);
 		if (debug) {
@@ -81,7 +165,8 @@ class Meeting {
 	private static String convert(String date, String hour) throws Exception {
 		Date d;
 		if (debug) Log.d(TAG, String.format("Date: %s Hour: %s", date, hour));
-		d = previousFormat.parse(String.format("%s %s", date, hour));
+		// d = previousFormat.parse(String.format("%s %s", date, hour));
+		d = jsonDate.parse(String.format("%s %s", date, hour));
 		if (debug) Log.d(TAG, String.format("Converted: %s", afterFormat.format(d)));
 		return afterFormat.format(d);
 	}

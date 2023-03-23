@@ -18,6 +18,8 @@ package org.ietf.ietfsched.io;
 
 import android.util.Log;
 
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -71,7 +73,7 @@ public class RemoteExecutor {
 		return null;
 	}
 
-	public String[] executeGet(String urlString) throws Exception {
+	public JSONObject executeGet(String urlString) throws Exception {
 		URL url;
 		HttpURLConnection urlConnection = null;
 		try {
@@ -80,19 +82,12 @@ public class RemoteExecutor {
 
 			int status = urlConnection.getResponseCode();
 			if (status == HttpsURLConnection.HTTP_OK) {
-			    ArrayList<String> result = new ArrayList<>();
+			    StringBuilder result = new StringBuilder();
 			    BufferedReader reader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
 			    String line;
 			    while ((line = reader.readLine()) != null) {
 					try {
-						// Skip the initial header line.
-						if (line.startsWith("\"b'Date")) {
-							continue;
-						}
-						// Remove the b' start for fields. This is a byproduct of
-						// py3 conversion of the web side stack.
-						line = line.replaceAll("b['\"](.*?)['\"]", "$1");
-						result.add(line.trim());
+						result.append(line.trim());
 					} catch (Exception e) {
 						e.printStackTrace();
 						break;
@@ -101,13 +96,13 @@ public class RemoteExecutor {
 			    if (urlConnection != null) {
 					urlConnection.disconnect();
 				}
-				return result.toArray(new String[0]);
+				return new JSONObject(result.toString());
 			}
 		} finally {
 			if (urlConnection != null) {
 				urlConnection.disconnect();
 			}
 		}
-		return null;
+		return new JSONObject();
 	}
 }

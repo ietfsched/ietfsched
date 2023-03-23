@@ -25,6 +25,9 @@ import org.ietf.ietfsched.provider.ScheduleContract.Sessions;
 import org.ietf.ietfsched.provider.ScheduleContract.Tracks;
 import org.ietf.ietfsched.provider.ScheduleDatabase.SessionsTracks;
 import org.ietf.ietfsched.util.Lists;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import android.content.ContentProviderOperation;
 import android.content.ContentProviderResult;
@@ -53,7 +56,7 @@ public class LocalExecutor {
         mResolver = resolver;
     }
 
-	public void execute(String[] stream) throws Exception {
+	public void execute(JSONObject stream) throws Exception {
 		Log.d(TAG, "Parsing input page data");
 		if (stream != null) {
 			ArrayList<Meeting> meetings = decode(stream);
@@ -295,8 +298,27 @@ public class LocalExecutor {
 	}
 
 
-	private ArrayList<Meeting> decode(final String[] is) throws IOException {
+	private ArrayList<Meeting> decode(final JSONObject is) throws IOException {
 		final ArrayList<Meeting> meetings = new ArrayList<>();
+		if (is != null) {
+			try {
+			JSONArray isArray = is.optJSONArray(is.keys().next());
+				for (int i = 0; i < isArray.length(); i++) {
+					JSONObject mJSON = isArray.getJSONObject(i);
+					try {
+						Meeting m = new Meeting(mJSON);
+					} catch (UnScheduledMeetingException e) {
+						Log.d(TAG, String.format("Unscheduled meeting: %s", e.getMessage()));
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			} catch (final JSONException e) {
+				Log.d(TAG, String.format("Failed to parse JSONObject: %s", is));
+				return null;
+			}
+		}
+		/*
 		String line = null;
 		for (int c = 0; c < is.length; c++) {
 			if (c == 1) {
@@ -315,6 +337,7 @@ public class LocalExecutor {
 				Log.w(TAG, "Error parsing line csv file, involves: ** " + line + " **");
 			}
 		}
+		*/
 		return meetings;
 	}
             

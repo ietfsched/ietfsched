@@ -20,6 +20,7 @@ package org.ietf.ietfsched.service;
 import org.ietf.ietfsched.io.LocalExecutor;
 import org.ietf.ietfsched.io.RemoteExecutor;
 import org.ietf.ietfsched.provider.ScheduleProvider;
+import org.json.JSONObject;
 
 import android.app.IntentService;
 import android.app.Service;
@@ -54,7 +55,9 @@ public class SyncService extends IntentService {
 
     /** Root worksheet feed for online data source */
     private static final String mtg = "116";
-	private static final String BASE_URL = "https://datatracker.ietf.org/meeting/" + mtg + "/";
+	// https://datatracker.ietf.org/meeting/115/agenda.json
+	public static final String BASE_URL = "https://datatracker.ietf.org/meeting/" + mtg + "/";
+	private static final String BASE_FILE = "agenda.json";
     private static final String HEADER_ACCEPT_ENCODING = "Accept-Encoding";
     private static final String ENCODING_GZIP = "gzip";
 
@@ -95,7 +98,7 @@ public class SyncService extends IntentService {
 
 		Log.d(TAG, "found localVersion=" + localVersion + " and VERSION_CURRENT=" + VERSION_CURRENT);
 		String remoteEtag = "";
-		String aUrl = BASE_URL + "agenda.csv";
+		String aUrl = BASE_URL + BASE_FILE;
 
 		try {
 			Log.d(TAG, 	"HEAD " + aUrl);
@@ -108,7 +111,7 @@ public class SyncService extends IntentService {
 
 		try {
 			Log.d(TAG, aUrl);
-			String[] agenda = mRemoteExecutor.executeGet(aUrl);
+			JSONObject agenda = mRemoteExecutor.executeGet(aUrl);
 			Log.d(TAG, String.format("remote sync started for URL: %s", aUrl));
 			mLocalExecutor.execute(agenda);
 			prefs.edit().putString(Prefs.LAST_ETAG, remoteEtag).apply();
