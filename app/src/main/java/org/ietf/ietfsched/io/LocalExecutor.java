@@ -323,26 +323,6 @@ public class LocalExecutor {
 				return null;
 			}
 		}
-		/*
-		String line = null;
-		for (int c = 0; c < is.length; c++) {
-			if (c == 1) {
-			   continue;
-			}
-			try {
-				line = is[c];
-				if (line != null && line.length() != 0 && !line.startsWith("\"Date\",")) {
-					Meeting m = new Meeting(line);
-					meetings.add(m);
-				}
-				else {
-				    Log.w("DECODE", "decode/parse failure: "+line);
-				}
-			} catch (Exception e) {
-				Log.w(TAG, "Error parsing line csv file, involves: ** " + line + " **");
-			}
-		}
-		*/
 		return meetings;
 	}
             
