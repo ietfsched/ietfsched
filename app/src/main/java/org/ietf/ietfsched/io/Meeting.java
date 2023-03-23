@@ -39,7 +39,7 @@ class UnScheduledMeetingException extends Exception {
 }
 
 class Meeting {
-	private static final boolean debug = false;
+	private static final boolean debug = true;
 	private static final String TAG = "Meeting";
 	// private final static SimpleDateFormat previousFormat = new SimpleDateFormat("yyyy-MM-dd HHmm"); // 2011-07-23 0900
 	//                                                        JSON time - Start - "2023-03-27T00:30:00Z
@@ -66,14 +66,13 @@ class Meeting {
 
 	// Handle parsing each line of the agenda.
 	Meeting(JSONObject mJSON) throws UnScheduledMeetingException, Exception {
-		// TODO(morrowc): Validate that the agenda item is a 'status' == 'sched'.
+		// Validate that the agenda item is a 'status' == 'sched'.
 		String status = "";
 		try {
 			status = mJSON.getString("status");
 		} catch (JSONException e) {
 		  throw new UnScheduledMeetingException("Non Status event");
 		}
-		Log.d(TAG, String.format("Status of meeting(%s): %s", mJSON.getString("name"), status));
 		if (!status.equals("sched")) {
 			throw new UnScheduledMeetingException(
 					String.format(
@@ -131,43 +130,14 @@ class Meeting {
 				slides[i] = tURL.toString();
 			}
 		} catch (JSONException e) {
-			Log.d(TAG, String.format("NoPresentations for %s", title));
+			if (debug) Log.d(TAG, String.format("NoPresentations for %s", title));
 		}
-		/*
-		String[] elements = lineCsv.split(",");
-		day = elements[0].replaceAll("\"", ""); // 2008-03-31
-		startHour = convert(day, elements[1].replaceAll("\"", "")); // 2008-03-31 08:00
-		endHour = convert(day, elements[2].replaceAll("\"", ""));   // 2008-03-31 10:00
-		typeSession = elements[3].replaceAll("\"", "");
-		String tLocation = elements[4].trim().replaceAll("\"", "");
-		if (tLocation.length() > 0) {
-			location = tLocation;
-		}
-		area = elements[5].replaceAll("\"", "");
-		group = elements[6].replaceAll("\"", "");
-		title = elements[8].replaceAll("\"", "");
-		key = elements[9].replaceAll("\"", "");  // session-id
-		hrefDetail = elements[10].replaceAll("\"", ""); // Agenda link
-		if (elements[11].length() > 0) {                // Slides links
-		  slides = elements[11].replaceAll("\"",
-				  "").split("\\|");
-		}
-		 */
 		if (debug) Log.d(TAG, "Agenda URL: " + hrefDetail);
-		if (debug) Log.d(TAG, "Slides URLs count: " + slides.length);
-		if (debug) {
+		if (debug && slides != null) {
+			Log.d(TAG, "Slides URLs count: " + slides.length);
 			for (int i = 0; i < slides.length; i++) {
 				Log.d(TAG, "Slides URL[" + i + "]: " + slides[i]);
 			}
 		}
-	}
-
-	private static String convert(String date, String hour) throws Exception {
-		Date d;
-		if (debug) Log.d(TAG, String.format("Date: %s Hour: %s", date, hour));
-		// d = previousFormat.parse(String.format("%s %s", date, hour));
-		d = jsonDate.parse(String.format("%s %s", date, hour));
-		if (debug) Log.d(TAG, String.format("Converted: %s", afterFormat.format(d)));
-		return afterFormat.format(d);
 	}
 }
