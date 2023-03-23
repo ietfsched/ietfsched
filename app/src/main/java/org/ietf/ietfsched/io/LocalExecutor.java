@@ -224,7 +224,11 @@ public class LocalExecutor {
 			builder.withValue(Sessions.SESSION_KEYWORDS, null);
 			builder.withValue(Sessions.BLOCK_ID, blockId);
 			builder.withValue(Sessions.ROOM_ID, roomId);
-			builder.withValue(Sessions.SESSION_PDF_URL, TextUtils.join("::", m.slides));
+			if (m.slides != null ) {
+				builder.withValue(Sessions.SESSION_PDF_URL, TextUtils.join("::", m.slides));
+			} else {
+				builder.withValue(Sessions.SESSION_PDF_URL, "::");
+			}
 			
 			final Uri sessionUri = Sessions.buildSessionUri(sessionId);
 			final int starred = querySessionStarred(sessionUri, mResolver);
@@ -307,6 +311,7 @@ public class LocalExecutor {
 					JSONObject mJSON = isArray.getJSONObject(i);
 					try {
 						Meeting m = new Meeting(mJSON);
+						meetings.add(m);
 					} catch (UnScheduledMeetingException e) {
 						Log.d(TAG, String.format("Unscheduled meeting: %s", e.getMessage()));
 					} catch (Exception e) {

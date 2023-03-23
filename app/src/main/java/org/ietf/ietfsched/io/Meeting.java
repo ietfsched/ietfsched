@@ -85,7 +85,7 @@ class Meeting {
 			Date jDay = jsonDate.parse(mJSON.getString("start"));
 
 			title = mJSON.getString("name");
-			startHour = jDay.toInstant().toString();
+			startHour = afterFormat.format(jDay);
 			// Build an endDate by using localTime, and Duration (from localtime start 00:00 to duration)
 			String[] durSplit = mJSON.getString("duration").split(":");
 			Integer[] durSplitInt = new Integer[durSplit.length];
@@ -94,7 +94,8 @@ class Meeting {
 			}
 			LocalTime lt = LocalTime.parse(String.format("%02d:%02d:%02d", durSplitInt));
 			Duration d = Duration.between(LocalTime.MIN, lt);
-			endHour = jDay.toInstant().plusMillis(d.toMillis()).toString();
+			Instant tEndHour = jDay.toInstant().plusMillis(d.toMillis());
+			endHour = afterFormat.format(Date.from(tEndHour));
 
 			// Validate that 'objtype' == 'session', else throw exception.
 			typeSession = mJSON.getString("objtype");
@@ -113,8 +114,9 @@ class Meeting {
 		}
 		// Extract the presentation urls, if there are any.
 		try {
-			JSONObject presentationObj = mJSON.getJSONObject("presentations");
-			JSONArray pArray = presentationObj.optJSONArray(presentationObj.keys().next());
+			JSONArray pArray =  (JSONArray) mJSON.get("presentations");
+			if (pArray == null) throw new UnScheduledMeetingException("No presentations");
+			slides = new String[pArray.length()];
 			// Meeting BASE_URL - SyncService.BASE_URL - is:
 			//   https://datatracker.ietf.org/meeting/116
 			// Meeting materials are urls like:
@@ -122,15 +124,14 @@ class Meeting {
 			// Agenda url:
 			//   https://datatracker.ietf.org/meeting/116/materials/agenda-116-mpls-00
 			// Presentation name == file-name in URL: slides-116-mpls-clarify-bootstrapping-bfd-over-mpls-lsp
+			if (debug) Log.d(TAG, String.format("PRESENTATION LEN: %d", pArray.length()));
 			for (int i = 0; i < pArray.length(); i++ ){
-                URL tURL = new URL(
-						SyncService.BASE_URL,
-						"materials/",
-						pArray.getJSONObject(i).getString("name"));
-				slides[i] = tURL.toString();
+                String tURL = SyncService.BASE_URL + "materials/" +
+						pArray.getJSONObject(i).getString("name");
+				slides[i] = tURL;
 			}
 		} catch (JSONException e) {
-			if (debug) Log.d(TAG, String.format("NoPresentations for %s", title));
+			if (debug) Log.d(TAG, String.format("NoPresentations for %s: %s", title, e.toString()));
 		}
 		if (debug) Log.d(TAG, "Agenda URL: " + hrefDetail);
 		if (debug && slides != null) {
