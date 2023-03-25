@@ -18,7 +18,6 @@
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="org.ietf.ietfsched"
     android:versionCode="60"
     android:versionName="0.1.60"
     android:installLocation="auto">
