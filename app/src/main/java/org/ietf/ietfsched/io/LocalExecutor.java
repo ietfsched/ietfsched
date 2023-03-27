@@ -206,10 +206,16 @@ public class LocalExecutor {
 		String roomId;
 		String pdfs;
 
-		try {	
+		try {
+			// Use the times for start/end as presented from the JSON, in UTC.
 			startTime = ParserUtils.parseTime(m.startHour);
 			endTime = ParserUtils.parseTime(m.endHour);
-			title = String.format("%s -%s%s - %s%s", m.area, (m.area.length() == 0 ? "" : " "), m.group, (m.group.length() == 0 ? "" : " "),  m.title);
+			title = String.format("%s -%s%s - %s%s",
+					m.area,
+					(m.area.length() == 0 ? "" : " "),
+					m.group,
+					(m.group.length() == 0 ? "" : " "),
+					m.title);
 			roomId = Rooms.generateRoomId(m.location);
 			
 			sessionId = Sessions.generateSessionId(m.key);
@@ -225,6 +231,8 @@ public class LocalExecutor {
 			builder.withValue(Sessions.BLOCK_ID, blockId);
 			builder.withValue(Sessions.ROOM_ID, roomId);
 			if (m.slides != null ) {
+				// TODO(morrowc): Set the session urls and make more than 1 button appear
+				//                if there's more than 1 slide url in the set.
 				builder.withValue(Sessions.SESSION_PDF_URL, TextUtils.join("::", m.slides));
 			} else {
 				builder.withValue(Sessions.SESSION_PDF_URL, "::");
