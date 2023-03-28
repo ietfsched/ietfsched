@@ -291,7 +291,7 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
                     starred ? View.VISIBLE : View.INVISIBLE);
 
             // Possibly indicate that the session has occurred in the past.
-            UIUtils.setSessionTitleColor(blockStart, blockEnd, titleView, subtitleView);
+            UIUtils.setSessionTitleColor(blockEnd, titleView, subtitleView);
         }
     }
 

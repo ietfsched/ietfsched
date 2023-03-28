@@ -310,6 +310,7 @@ public class LocalExecutor {
 	}
 
 
+	// decode, decodes the JSON content from the origin (datatracker).
 	private ArrayList<Meeting> decode(final JSONObject is) throws IOException {
 		final ArrayList<Meeting> meetings = new ArrayList<>();
 		if (is != null) {
