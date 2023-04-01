@@ -16,6 +16,8 @@
 
 package org.ietf.ietfsched.util;
 
+import static java.time.ZoneId.systemDefault;
+
 import org.ietf.ietfsched.R;
 
 import android.content.Context;
@@ -28,7 +30,6 @@ import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
-import android.os.Build;
 import android.preference.PreferenceManager;
 import android.text.Html;
 import android.text.Spannable;
@@ -39,6 +40,10 @@ import android.text.method.LinkMovementMethod;
 import android.text.style.StyleSpan;
 import android.widget.TextView;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.TimeZone;
 
@@ -58,7 +63,7 @@ public class UIUtils {
      * PHL -4 EDT
      * NRT +9 JST GMT+9:00 - Use the GMT offset notation from now on.
      */
-    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("GMT+09:00");
+    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("GMT-09:00");
 
     // Date/Time here is format: "yyyy-MM-dd HH:mm:00TZ" - ParserUtils.java:59
     public static final Long CONFERENCE_START_MILLIS = ParserUtils.parseTime(
@@ -71,18 +76,19 @@ public class UIUtils {
             | DateUtils.FORMAT_SHOW_WEEKDAY | DateUtils.FORMAT_ABBREV_WEEKDAY;
 
     /** {@link StringBuilder} used for formatting time block. */
-    private static StringBuilder sBuilder = new StringBuilder(50);
+    private static final StringBuilder sBuilder = new StringBuilder(50);
 
     private static StyleSpan sBoldSpan = new StyleSpan(Typeface.BOLD);
 
     public static String formatSessionSubtitle(long blockStart, long blockEnd,
             String roomName, Context context) {
-        TimeZone.setDefault(CONFERENCE_TIME_ZONE);
-
-        // NOTE: There is an efficient version of formatDateRange in Eclair and
-        // beyond that allows you to recycle a StringBuilder.
+        // Convert the blockStart/blockEnd to localtimezone epochMillis.
+        LocalDateTime blockStartDate = Instant.ofEpochMilli(blockStart).atZone(ZoneId.systemDefault()).toLocalDateTime();
+        LocalDateTime blockEndDate = Instant.ofEpochMilli(blockEnd).atZone(ZoneId.systemDefault()).toLocalDateTime();
+        ZonedDateTime zdtBlockStart = ZonedDateTime.of(blockStartDate, ZoneId.systemDefault());
+        ZonedDateTime zdtBlockEnd = ZonedDateTime.of(blockEndDate, ZoneId.systemDefault());
         final CharSequence timeString = DateUtils.formatDateRange(context,
-                blockStart, blockEnd, TIME_FLAGS);
+                zdtBlockStart.toInstant().toEpochMilli(), zdtBlockEnd.toInstant().toEpochMilli(), TIME_FLAGS);
 			
 		return roomName == null ? context.getString(R.string.session_subtitle_no_room, timeString)
 				: context.getString(R.string.session_subtitle_room, timeString, roomName);
@@ -107,7 +113,7 @@ public class UIUtils {
         }
     }
 
-    public static void setSessionTitleColor(long blockStart, long blockEnd, TextView title,
+    public static void setSessionTitleColor(long blockEnd, TextView title,
             TextView subtitle) {
         long currentTimeMillis = System.currentTimeMillis();
         int colorId = R.color.body_text_1;

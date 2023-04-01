@@ -59,7 +59,7 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
     private boolean mHasSetEmptyText = false;
 
     private NotifyingAsyncQueryHandler mHandler;
-    private Handler mMessageQueueHandler = new Handler();
+    private final Handler mMessageQueueHandler = new Handler();
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -127,7 +127,7 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
         if (savedInstanceState != null) {
             mCheckedPosition = savedInstanceState.getInt(STATE_CHECKED_POSITION, -1);
         }
-        if (debug) Log.d(TAG, "onActivityCreated mChekedPosition " + mCheckedPosition);
+        if (debug) Log.d(TAG, "onActivityCreated mCheckedPosition " + mCheckedPosition);
 
         if (!mHasSetEmptyText) {
             // Could be a bug, but calling this twice makes it become visible when it shouldn't
@@ -140,6 +140,7 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
     /** {@inheritDoc} */
     public void onQueryComplete(int token, Object cookie, Cursor cursor) {
     	if (debug) Log.d(TAG, "onQueryComplete" + mCheckedPosition);
+
         if (getActivity() == null) {
             return;
         }
@@ -222,8 +223,14 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
         // Launch viewer for specific session, passing along any track knowledge
         // that should influence the title-bar.
         final Cursor cursor = (Cursor)mAdapter.getItem(position);
-        final String sessionId = cursor.getString(cursor.getColumnIndex(
-                ScheduleContract.Sessions.SESSION_ID));
+        final Integer colIdx = cursor.getColumnIndex(ScheduleContract.Sessions.SESSION_ID);
+        final String sessionId;
+        if (colIdx >= 0) {
+            sessionId = cursor.getString(colIdx);
+        } else {
+          sessionId = "";
+        }
+
         final Uri sessionUri = ScheduleContract.Sessions.buildSessionUri(sessionId);
         final Intent intent = new Intent(Intent.ACTION_VIEW, sessionUri);
         intent.putExtra(SessionDetailFragment.EXTRA_TRACK, mTrackUri);
@@ -291,7 +298,7 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
                     starred ? View.VISIBLE : View.INVISIBLE);
 
             // Possibly indicate that the session has occurred in the past.
-            UIUtils.setSessionTitleColor(blockStart, blockEnd, titleView, subtitleView);
+            UIUtils.setSessionTitleColor(blockEnd, titleView, subtitleView);
         }
     }
 

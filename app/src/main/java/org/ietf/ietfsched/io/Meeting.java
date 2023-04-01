@@ -66,6 +66,11 @@ class Meeting {
 
 	// Handle parsing each line of the agenda.
 	Meeting(JSONObject mJSON) throws UnScheduledMeetingException, Exception {
+		try {
+			title = mJSON.getString("name");
+		} catch (JSONException e) {
+		    throw new UnScheduledMeetingException("Missing title for event");
+		}
 		// Validate that the agenda item is a 'status' == 'sched'.
 		String status = "";
 		try {
@@ -84,7 +89,6 @@ class Meeting {
 		try {
 			Date jDay = jsonDate.parse(mJSON.getString("start"));
 
-			title = mJSON.getString("name");
 			startHour = afterFormat.format(jDay);
 			// Build an endDate by using localTime, and Duration (from localtime start 00:00 to duration)
 			String[] durSplit = mJSON.getString("duration").split(":");
@@ -92,7 +96,7 @@ class Meeting {
 			for (int i = 0; i < durSplit.length; i++) {
 				durSplitInt[i] = Integer.parseInt(durSplit[i]);
 			}
-			LocalTime lt = LocalTime.parse(String.format("%02d:%02d:%02d", durSplitInt));
+			LocalTime lt = LocalTime.parse(String.format("%02d:%02d:%02d", (Object[]) durSplitInt));
 			Duration d = Duration.between(LocalTime.MIN, lt);
 			Instant tEndHour = jDay.toInstant().plusMillis(d.toMillis());
 			endHour = afterFormat.format(Date.from(tEndHour));
