@@ -94,12 +94,13 @@ public class ScheduleFragment extends Fragment implements
      */
     private static final Integer[] months = new Integer[]{ 3 };
     private static final Integer[] days = new Integer[]{
-            18, 19, 20, 21, 22, 23, 24,
-            25, 26, 27, 28, 29, 30, 31,
+            16, 17, 18, 19, 20, 21, 22,
+            23, 24, 25, 26, 27, 28, 29,
     };
     /* Note: How does this work for negative timezones? (RFC822 timezone)
      * Timezones follow +/- UTC offset.
      * BKK: GMT+0700
+     * PDT: GMT-0700
      * UTC: GMT+0000
      * VIE: GMT+0100
      * PHL: GMT-0400
