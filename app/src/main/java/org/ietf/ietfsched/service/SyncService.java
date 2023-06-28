@@ -100,17 +100,18 @@ public class SyncService extends IntentService {
 		String remoteEtag = "";
 		String aUrl = BASE_URL + BASE_FILE;
 
+		// Run a HEAD on the agenda URL, to get it's status, presumably.
 		try {
-			Log.d(TAG, 	"HEAD " + aUrl);
+			if (debug) Log.d(TAG, 	"HEAD " + aUrl);
 			remoteEtag = mRemoteExecutor.executeHead(aUrl);
-			Log.d(TAG, 	"HEAD "  + aUrl + " " + remoteEtag);
+			if (debug) Log.d(TAG, 	"HEAD "  + aUrl + " " + remoteEtag);
 		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		try {
-			Log.d(TAG, aUrl);
+			if (debug) Log.d(TAG, aUrl);
 			JSONObject agenda = mRemoteExecutor.executeGet(aUrl);
 			Log.d(TAG, String.format("remote sync started for URL: %s", aUrl));
 			mLocalExecutor.execute(agenda);

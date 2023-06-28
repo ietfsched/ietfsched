@@ -311,13 +311,13 @@ public class LocalExecutor {
 
 
 	// decode, decodes the JSON content from the origin (datatracker).
-	private ArrayList<Meeting> decode(final JSONObject is) throws IOException {
+	private ArrayList<Meeting> decode(final JSONObject jsAgenda) throws IOException {
 		final ArrayList<Meeting> meetings = new ArrayList<>();
-		if (is != null) {
+		if (jsAgenda != null) {
 			try {
-			JSONArray isArray = is.optJSONArray(is.keys().next());
-				for (int i = 0; i < isArray.length(); i++) {
-					JSONObject mJSON = isArray.getJSONObject(i);
+			JSONArray jsAgendaArray = jsAgenda.optJSONArray(jsAgenda.keys().next());
+				for (int i = 0; i < jsAgendaArray.length(); i++) {
+					JSONObject mJSON = jsAgendaArray.getJSONObject(i);
 					try {
 						Meeting m = new Meeting(mJSON);
 						meetings.add(m);
@@ -328,7 +328,7 @@ public class LocalExecutor {
 					}
 				}
 			} catch (final JSONException e) {
-				Log.d(TAG, String.format("Failed to parse JSONObject: %s", is));
+				Log.d(TAG, String.format("Failed to parse JSONObject: %s", jsAgenda));
 				return null;
 			}
 		}
