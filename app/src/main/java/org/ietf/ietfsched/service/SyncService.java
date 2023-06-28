@@ -78,7 +78,7 @@ public class SyncService extends IntentService {
         mLocalExecutor = new LocalExecutor(getResources(), resolver);
 
         mRemoteExecutor = new RemoteExecutor();
-		if (debug) {
+        if (debug) {
 			Log.d(TAG, "SyncService OnCreate" + this.hashCode());
 			String[] tz = TimeZone.getAvailableIDs();
 			for (String id : tz) {

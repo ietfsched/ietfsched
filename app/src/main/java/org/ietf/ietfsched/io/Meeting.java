@@ -39,7 +39,7 @@ class UnScheduledMeetingException extends Exception {
 }
 
 class Meeting {
-	private static final boolean debug = false;
+	private static final boolean debug = true;
 	private static final String TAG = "Meeting";
 	// private final static SimpleDateFormat previousFormat = new SimpleDateFormat("yyyy-MM-dd HHmm"); // 2011-07-23 0900
 	//                                                        JSON time - Start - "2023-03-27T00:30:00Z
@@ -60,7 +60,7 @@ class Meeting {
 
 	static {
 		// previousFormat.setTimeZone(UIUtils.CONFERENCE_TIME_ZONE);
-		jsonDate.setTimeZone((UIUtils.CONFERENCE_TIME_ZONE));
+		jsonDate.setTimeZone((UIUtils.AGENDA_TIME_ZONE));
 		afterFormat.setTimeZone(UIUtils.CONFERENCE_TIME_ZONE);
 	}
 
@@ -78,7 +78,8 @@ class Meeting {
 		} catch (JSONException e) {
 		  throw new UnScheduledMeetingException("Non Status event");
 		}
-		if (!status.equals("sched")) {
+		// To permit use before the final agenda is published, permit 'schedw' status.
+		if (!status.equals("sched") && !status.equals("schedw")) {
 			throw new UnScheduledMeetingException(
 					String.format(
 							"Unscheduled meeting(%s) status: %s",
@@ -96,10 +97,17 @@ class Meeting {
 			for (int i = 0; i < durSplit.length; i++) {
 				durSplitInt[i] = Integer.parseInt(durSplit[i]);
 			}
+			// Parse the json duration represented as hour:min:sec to a time, 02:00:00 == 2am, effectively.
 			LocalTime lt = LocalTime.parse(String.format("%02d:%02d:%02d", (Object[]) durSplitInt));
+			// Get a duration from between '00:00:00 today' and the previous.
 			Duration d = Duration.between(LocalTime.MIN, lt);
+			// Add the duration millis to the start date.
 			Instant tEndHour = jDay.toInstant().plusMillis(d.toMillis());
 			endHour = afterFormat.format(Date.from(tEndHour));
+
+			if (debug) {
+				Log.d(TAG, String.format("Start/Stop time for %s: %s / %s", title, startHour, endHour));
+			}
 
 			// Validate that 'objtype' == 'session', else throw exception.
 			typeSession = mJSON.getString("objtype");

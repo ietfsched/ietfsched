@@ -58,9 +58,8 @@ public class ParserUtils {
     static {
         //                                "2023-03-31 22:00:00GMT+0900"
         df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssz");
-        df.setTimeZone(UIUtils.CONFERENCE_TIME_ZONE);
+        df.setTimeZone(UIUtils.AGENDA_TIME_ZONE);
     }
-	// df.setTimeZone(UIUtils.CONFERENCE_TIME_ZONE);
 
     /**
      * Sanitize the given string to be {@link Uri} safe for building

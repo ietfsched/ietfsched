@@ -57,14 +57,15 @@ public class UIUtils {
      * phone local time, use {@link TimeZone#getDefault()}.
      *   https://garygregory.wordpress.com/2013/06/18/what-are-the-java-timezone-ids/
      * BKK +7
-     * PDT -7 - ietf117
+     * PDT -8 - ietf117
      * UTC - ietf109
      * VIE +1 ietf113
      * SFO -7 - ietf111
      * PHL -4 EDT
      * NRT +9 JST GMT+9:00 - Use the GMT offset notation from now on.
      */
-    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("GMT-07:00");
+    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("GMT-08:00");
+    public static final TimeZone AGENDA_TIME_ZONE = TimeZone.getTimeZone("UTC");
 
     // Date/Time here is format: "yyyy-MM-dd HH:mm:00TZ" - ParserUtils.java:59
     public static final Long CONFERENCE_START_MILLIS = ParserUtils.parseTime(
