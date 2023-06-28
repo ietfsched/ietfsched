@@ -52,10 +52,9 @@ import java.util.TimeZone;
  */
 public class UIUtils {
     /**
-     * NOTE: It's possible that the agenda.csv is in 'local time', use that for now.
-     * Time zone to use when formatting all session times. To always use the
-     * phone local time, use {@link TimeZone#getDefault()}.
-     *   https://garygregory.wordpress.com/2013/06/18/what-are-the-java-timezone-ids/
+     * NOTE: JSON Agenda stores times as UTC.
+     * The CONFERENCE_TIME_ZONE below is local offset from GMT: pdt -> GMT-08:00.
+     * The AGENDA_TIME_ZONE is UTC, GMT-00:00.
      * BKK +7
      * PDT -8 - ietf117
      * UTC - ietf109
@@ -65,7 +64,7 @@ public class UIUtils {
      * NRT +9 JST GMT+9:00 - Use the GMT offset notation from now on.
      */
     public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("GMT-08:00");
-    public static final TimeZone AGENDA_TIME_ZONE = TimeZone.getTimeZone("UTC");
+    public static final TimeZone AGENDA_TIME_ZONE = TimeZone.getTimeZone("GMT-00:00");
 
     // Date/Time here is format: "yyyy-MM-dd HH:mm:00TZ" - ParserUtils.java:59
     public static final Long CONFERENCE_START_MILLIS = ParserUtils.parseTime(
