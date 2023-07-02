@@ -63,7 +63,7 @@ public class UIUtils {
      * PHL -4 EDT
      * NRT +9 JST GMT+9:00 - Use the GMT offset notation from now on.
      */
-    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("GMT-08:00");
+    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("GMT-07:00");
     public static final TimeZone AGENDA_TIME_ZONE = TimeZone.getTimeZone("GMT-00:00");
 
     // Date/Time here is format: "yyyy-MM-dd HH:mm:00TZ" - ParserUtils.java:59

@@ -28,6 +28,7 @@ import androidx.core.content.ContextCompat;
 import android.text.format.DateUtils;
 import android.widget.Button;
 
+import android.util.Log;
 import java.util.TimeZone;
 
 /**
@@ -36,6 +37,7 @@ import java.util.TimeZone;
  * {@link BlocksLayout} to match up against a {@link TimeRulerView} instance.
  */
 public class BlockView extends Button {
+    private static final String TAG = "BlockView";
     private static final int TIME_STRING_FLAGS = DateUtils.FORMAT_SHOW_DATE
             | DateUtils.FORMAT_SHOW_WEEKDAY | DateUtils.FORMAT_ABBREV_WEEKDAY |
             DateUtils.FORMAT_SHOW_TIME | DateUtils.FORMAT_ABBREV_TIME;
@@ -97,6 +99,7 @@ public class BlockView extends Button {
     }
 
     public long getStartTime() {
+        Log.d(TAG, "Block getStartTime: " + mStartTime / 1000);
         return mStartTime;
     }
 

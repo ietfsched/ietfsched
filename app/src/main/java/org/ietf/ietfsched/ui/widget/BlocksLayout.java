@@ -111,14 +111,18 @@ public class BlocksLayout extends ViewGroup {
         rulerView.layout(0, 0, getWidth(), getHeight());
 
         final int count = getChildCount();
+        // Agenda times are UTC, conference times are not, between json parsing and display
+        // convert from Agenda to Conference TZ.
+        final int tzOffset = UIUtils.CONFERENCE_TIME_ZONE.getRawOffset();
         for (int i = 0; i < count; i++) {
             final View child = getChildAt(i);
             if (child.getVisibility() == GONE) continue;
 
             if (child instanceof BlockView) {
                 final BlockView blockView = (BlockView) child;
-                final int top = rulerView.getTimeVerticalOffset(blockView.getStartTime());
-                final int bottom = rulerView.getTimeVerticalOffset(blockView.getEndTime());
+                // Convert the times  before display to the user.
+                final int top = rulerView.getTimeVerticalOffset(blockView.getStartTime() + tzOffset);
+                final int bottom = rulerView.getTimeVerticalOffset(blockView.getEndTime() + tzOffset);
                 final int left = headerWidth + (blockView.getColumn() * columnWidth);
                 final int right = left + columnWidth;
                 child.layout(left, top, right, bottom);

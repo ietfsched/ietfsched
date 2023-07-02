@@ -35,6 +35,8 @@ import java.util.regex.Pattern;
 
 public class ParserUtils {
 
+    private final static String TAG = "ParseUtils";
+
     public static final String BLOCK_TITLE_BREAKOUT_SESSIONS = "Breakout sessions";
     public static final String BLOCK_TITLE_REGISTRATION = String.format("%n%nR%nE%nG%nI%nS%nT%nR%nA%nT%nI%nO%nN");
 
@@ -84,6 +86,7 @@ public class ParserUtils {
 
     public static Long parseTime(String time) {
 		try {
+        Log.d(TAG, String.format("parseTime time: %s || %s", time, df.parse(time).getTime()));
 		return df.parse(time).getTime();
 		}
 		catch (Exception e) {
