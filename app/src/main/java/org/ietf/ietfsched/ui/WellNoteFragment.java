@@ -24,11 +24,15 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.ScrollView;
 
+import org.ietf.ietfsched.service.SyncService;
+
+
 /**
  * A fragment that shows the IETF Well Note.
  */
 public class WellNoteFragment extends Fragment {
-	private static final String WELL_NOTE_TEXT = "\n\n"+
+    private static final String noteWellURL = "https://www.ietf.org/media/documents/note-well.md";
+	private static final String default_note = "\n\n"+
 	"Any submission to the IETF intended by the Contributor for publication as all or part of an IETF Internet-Draft "+
 	"or RFC and any statement made within the context of an IETF activity is considered an \"IETF Contribution\".\n\n Such statements "+
 	"include oral statements in IETF sessions, as well as written and electronic communications made at any time or place, which are addressed to:\n\n"+
@@ -51,12 +55,10 @@ public class WellNoteFragment extends Fragment {
 	"A participant in any IETF activity is deemed to accept all IETF rules of process, as documented in Best Current Practices RFCs and IESG Statements.\n\n"+
 	"A participant in any IETF activity acknowledges that written, audio and video records of meetings may be made and may be available to the public."; 
 
-    private static final String TAG = "WelleNoteFragment";
+    private static final String TAG = "WellNoteFragment";
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-    }
+    public void onCreate(Bundle savedInstanceState) {super.onCreate(savedInstanceState); }
 
     @Override
     public void onResume() {
@@ -70,9 +72,13 @@ public class WellNoteFragment extends Fragment {
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        String disp_text = default_note;
+        if (SyncService.noteWellString.length() > 0) {
+            disp_text = SyncService.noteWellString;
+        }
 		ScrollView scroller = new ScrollView(getActivity());
 		TextView text = new TextView(getActivity());
-		text.setText(WELL_NOTE_TEXT);
+		text.setText(disp_text);
 		scroller.addView(text);
         return scroller;
     }

@@ -21,11 +21,9 @@ import android.util.Log;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Objects;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -73,7 +71,41 @@ public class RemoteExecutor {
 		return null;
 	}
 
-	public JSONObject executeGet(String urlString) throws Exception {
+	// Get a String object from a remote server.
+	public String executeGet(String urlString) throws Exception {
+		HttpsURLConnection urlConnection = null;
+		try {
+			URL url = new URL(urlString);
+			urlConnection = (HttpsURLConnection) url.openConnection();
+
+			int status = urlConnection.getResponseCode();
+			if (status == HttpsURLConnection.HTTP_OK) {
+				StringBuilder result = new StringBuilder();
+				BufferedReader reader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+				String line;
+				while ((line = reader.readLine()) != null) {
+					try {
+						result.append(line.trim());
+					} catch (Exception e){
+						e.printStackTrace();
+						break;
+					}
+				}
+				if (urlConnection != null) {
+					urlConnection.disconnect();
+				}
+				return result.toString();
+			}
+		} finally {
+			if (urlConnection != null) {
+				urlConnection.disconnect();
+			}
+		}
+		return new String();
+	}
+
+	// Get a JSON object from a remote server.
+	public JSONObject executeJSONGet(String urlString) throws Exception {
 		URL url;
 		HttpURLConnection urlConnection = null;
 		try {

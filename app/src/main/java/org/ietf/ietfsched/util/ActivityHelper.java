@@ -44,13 +44,10 @@ public class ActivityHelper {
 
     /**
      * Factory method for creating {@link ActivityHelper} objects for a given activity. Depending
-     * on which device the app is running, either a basic helper or Honeycomb-specific helper will
-     * be returned.
+     * on which device the app is running, a basic helper will be returned.
      */
     public static ActivityHelper createInstance(Activity activity) {
-		return UIUtils.isHoneycombTablet(activity.getApplicationContext()) ?
-                new ActivityHelperHoneycomb(activity) :
-                new ActivityHelper(activity);
+               return new ActivityHelper(activity);
     }
 
     protected ActivityHelper(Activity activity) {
@@ -213,7 +210,7 @@ public class ActivityHelper {
 
     /**
      * Returns the {@link ViewGroup} for the action bar on phones (compatibility action bar).
-     * Can return null, and will return null on Honeycomb.
+     * Can return null.
      */
     public ViewGroup getActionBarCompat() {
         return (ViewGroup) mActivity.findViewById(R.id.actionbar_compat);

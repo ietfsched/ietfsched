@@ -61,12 +61,14 @@ public class SyncService extends IntentService {
     private static final String HEADER_ACCEPT_ENCODING = "Accept-Encoding";
     private static final String ENCODING_GZIP = "gzip";
 
+    private static final String noteWellURL = "https://www.ietf.org/media/documents/note-well.md";
     private static final int VERSION_NONE = 0;
     private static final int VERSION_CURRENT = 47;
 
     private LocalExecutor mLocalExecutor;
     private RemoteExecutor mRemoteExecutor;
 
+	public static String noteWellString;
     public SyncService() {
         super(TAG);
     }
@@ -80,10 +82,6 @@ public class SyncService extends IntentService {
         mRemoteExecutor = new RemoteExecutor();
         if (debug) {
 			Log.d(TAG, "SyncService OnCreate" + this.hashCode());
-			String[] tz = TimeZone.getAvailableIDs();
-			for (String id : tz) {
-				Log.d(TAG, "Available timezone ids: " + id);
-			}
 		}
     }
 
@@ -110,9 +108,20 @@ public class SyncService extends IntentService {
 			e.printStackTrace();
 		}
 
+		// Get the NoteWell text. It's convenient to get that here instead of in the WellNoteFragment.
+		try {
+			String txt = mRemoteExecutor.executeGet(noteWellURL);
+			if (txt.length() > 0 ) {
+				noteWellString = txt;
+				Log.d(TAG, "Retrieved the remote notewell");
+			}
+		} catch (Exception e) {
+			Log.d(TAG, "Failed to get remote notewell, using static content: %s", e);
+		}
+
 		try {
 			if (debug) Log.d(TAG, aUrl);
-			JSONObject agenda = mRemoteExecutor.executeGet(aUrl);
+			JSONObject agenda = mRemoteExecutor.executeJSONGet(aUrl);
 			Log.d(TAG, String.format("remote sync started for URL: %s", aUrl));
 			mLocalExecutor.execute(agenda);
 			prefs.edit().putString(Prefs.LAST_ETAG, remoteEtag).apply();
