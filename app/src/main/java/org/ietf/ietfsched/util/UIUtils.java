@@ -16,7 +16,6 @@
 
 package org.ietf.ietfsched.util;
 
-import static java.time.ZoneId.systemDefault;
 
 import org.ietf.ietfsched.R;
 
@@ -25,7 +24,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.Typeface;

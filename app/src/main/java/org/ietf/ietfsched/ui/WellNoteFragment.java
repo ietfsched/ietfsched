@@ -16,14 +16,20 @@
 
 package org.ietf.ietfsched.ui;
 
+import org.ietf.ietfsched.R;
+
 import android.os.Bundle;
 import androidx.fragment.app.Fragment;
+
+import android.content.Context;
+import android.text.Spanned;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.ScrollView;
 
+import io.noties.markwon.Markwon;
 import org.ietf.ietfsched.service.SyncService;
 
 
@@ -32,7 +38,11 @@ import org.ietf.ietfsched.service.SyncService;
  */
 public class WellNoteFragment extends Fragment {
     private static final String noteWellURL = "https://www.ietf.org/media/documents/note-well.md";
-	private static final String default_note = "\n\n"+
+	// private static final String default_note = R.string.note_well_default;
+    public String default_note = String.valueOf(R.string.note_well_default);
+
+           /*
+            "\n\n"+
 	"Any submission to the IETF intended by the Contributor for publication as all or part of an IETF Internet-Draft "+
 	"or RFC and any statement made within the context of an IETF activity is considered an \"IETF Contribution\".\n\n Such statements "+
 	"include oral statements in IETF sessions, as well as written and electronic communications made at any time or place, which are addressed to:\n\n"+
@@ -53,7 +63,8 @@ public class WellNoteFragment extends Fragment {
 	"Please consult RFC 5378 and RFC 3979 for details.\n\n"+
 
 	"A participant in any IETF activity is deemed to accept all IETF rules of process, as documented in Best Current Practices RFCs and IESG Statements.\n\n"+
-	"A participant in any IETF activity acknowledges that written, audio and video records of meetings may be made and may be available to the public."; 
+	"A participant in any IETF activity acknowledges that written, audio and video records of meetings may be made and may be available to the public.";
+            */
 
     private static final String TAG = "WellNoteFragment";
 
@@ -76,9 +87,13 @@ public class WellNoteFragment extends Fragment {
         if (SyncService.noteWellString.length() > 0) {
             disp_text = SyncService.noteWellString;
         }
+        // Create a ScrollView, add to that a TextView, stick the text in the TextView.
 		ScrollView scroller = new ScrollView(getActivity());
 		TextView text = new TextView(getActivity());
-		text.setText(disp_text);
+        // Reformat the MD to useful Android formatted strings.
+        final Context context = getContext();
+        final Markwon mw = Markwon.create(context);
+        mw.setMarkdown(text, disp_text);
 		scroller.addView(text);
         return scroller;
     }

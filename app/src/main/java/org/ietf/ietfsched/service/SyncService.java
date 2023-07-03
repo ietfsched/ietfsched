@@ -62,7 +62,7 @@ public class SyncService extends IntentService {
     private static final String ENCODING_GZIP = "gzip";
 
     private static final String noteWellURL = "https://www.ietf.org/media/documents/note-well.md";
-    private static final int VERSION_NONE = 0;
+	private static final int VERSION_NONE = 0;
     private static final int VERSION_CURRENT = 47;
 
     private LocalExecutor mLocalExecutor;
@@ -112,6 +112,8 @@ public class SyncService extends IntentService {
 		try {
 			String txt = mRemoteExecutor.executeGet(noteWellURL);
 			if (txt.length() > 0 ) {
+				// The notewell is markdown, wrap it in simple html/pre tags.
+				// (because handling the raw text is hard?
 				noteWellString = txt;
 				Log.d(TAG, "Retrieved the remote notewell");
 			}
