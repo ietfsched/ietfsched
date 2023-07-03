@@ -176,14 +176,6 @@ public class UIUtils {
                 11 * Color.blue(color)) / 100) <= BRIGHTNESS_THRESHOLD;
     }
 
-    public static boolean isHoneycombTablet(Context context) {
-        // Can use static final constants like HONEYCOMB, declared in later versions
-        // of the OS since they are inlined at compile time. This is guaranteed behavior.
-        return (context.getResources().getConfiguration().screenLayout
-                & Configuration.SCREENLAYOUT_SIZE_MASK)
-                == Configuration.SCREENLAYOUT_SIZE_XLARGE;
-    }
-
     public static long getCurrentTime(final Context context) {
         return System.currentTimeMillis();
     }

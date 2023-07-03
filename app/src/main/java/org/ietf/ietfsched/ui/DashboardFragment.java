@@ -52,11 +52,7 @@ public class DashboardFragment extends Fragment {
 					return;
 					}
                 fireTrackerEvent("Schedule");
-                if (UIUtils.isHoneycombTablet(getActivity())) {
-                    startActivity(new Intent(getActivity(), ScheduleMultiPaneActivity.class));
-                } else {
-                    startActivity(new Intent(getActivity(), ScheduleActivity.class));
-                }
+                startActivity(new Intent(getActivity(), ScheduleActivity.class));
             }
             
         });
@@ -70,15 +66,10 @@ public class DashboardFragment extends Fragment {
 					}
 				fireTrackerEvent("Sessions");
 				// Launch sessions list
-				if (UIUtils.isHoneycombTablet(getActivity())) {
-					startActivity(new Intent(getActivity(), SessionsMultiPaneActivity.class));
-				} else {
-					final Intent intent = new Intent(Intent.ACTION_VIEW, ScheduleContract.Tracks.CONTENT_URI);
-					intent.putExtra(Intent.EXTRA_TITLE, getString(R.string.title_session_tracks));
-					intent.putExtra(TracksFragment.EXTRA_NEXT_TYPE,	TracksFragment.NEXT_TYPE_SESSIONS);
-					startActivity(intent);
-				}
-
+				final Intent intent = new Intent(Intent.ACTION_VIEW, ScheduleContract.Tracks.CONTENT_URI);
+				intent.putExtra(Intent.EXTRA_TITLE, getString(R.string.title_session_tracks));
+				intent.putExtra(TracksFragment.EXTRA_NEXT_TYPE,	TracksFragment.NEXT_TYPE_SESSIONS);
+				startActivity(intent);
 			}
 		});	
 

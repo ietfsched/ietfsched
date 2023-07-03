@@ -16,7 +16,6 @@
   limitations under the License.
   -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- in Honeycomb, the search item should be left-most -->
 <!--    <item android:id="@+id/menu_search"
         android:icon="@drawable/ic_title_search"
         android:title="@string/description_search"
