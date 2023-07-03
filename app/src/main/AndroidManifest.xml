@@ -18,8 +18,8 @@
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:versionCode="63"
-    android:versionName="0.1.63"
+    android:versionCode="64"
+    android:versionName="0.1.64"
     android:installLocation="auto">
     <permission
         android:name="org.ietf.ietfsched.permission.WRITE_SCHEDULE"
