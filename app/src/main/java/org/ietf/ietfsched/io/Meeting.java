@@ -52,8 +52,8 @@ class Meeting {
 	String title;
 	String hrefDetail; // agenda link
 	String location = "N/A"; // room
-	String group; // APP
-	String area; // apparea
+	String group = "Unknown"; // APP
+	String area = "Unknown"; // apparea
 	String typeSession; // Morning Session I
 	String key; // unique identifier
 	String[] slides; // The list of slides urls.
@@ -104,7 +104,6 @@ class Meeting {
 			// Add the duration millis to the start date.
 			Instant tEndHour = jDay.toInstant().plusMillis(d.toMillis());
 			endHour = afterFormat.format(Date.from(tEndHour));
-
 			if (debug) {
 				Log.d(TAG, String.format("Start/Stop time for %s: %s / %s", title, startHour, endHour));
 			}
@@ -115,15 +114,35 @@ class Meeting {
 			  throw new UnScheduledMeetingException(String.format("Not a session: %s", title));
 			}
 			location = mJSON.getString("location");
-			JSONObject areaGroup = mJSON.getJSONObject("group");
-			area = areaGroup.getString("parent");
-			group = areaGroup.getString("acronym");
 			key = String.format("%d", mJSON.getInt("session_id"));
 			hrefDetail = mJSON.getString("agenda");
 		} catch (JSONException e) {
-		  throw new UnScheduledMeetingException(
-				  String.format("Event(%s) is missing JSON element: %s",title, e.toString()));
+			throw new UnScheduledMeetingException(
+					String.format("Event(%s) is missing JSON element: %s", title, e.toString()));
 		}
+		// Parse the group sub element from the agenda, there are instances of meeting
+		// where parts of group are unset: IEPG has no parent, for instance.
+		JSONObject areaGroup;
+		try {
+			areaGroup = mJSON.getJSONObject("group");
+		} catch (JSONException e) {
+			throw new UnScheduledMeetingException(
+					String.format("Event(%s) is missing JSON element: %s", title, e.toString()));
+		}
+		// Do not throw an exception for missing parent/acronym.
+		try {
+			area = areaGroup.getString("parent");
+			group = areaGroup.getString("acronym");
+		} catch (JSONException e) {
+			if (debug) {
+				Log.d(TAG, String.format("Meeting %s is missing area or group.", title));
+			}
+		}
+		// Handle an unknown group/area a bit more gracefully.
+		if (group == "Unknown") {
+			group = title;
+		}
+
 		// Extract the presentation urls, if there are any.
 		try {
 			JSONArray pArray =  (JSONArray) mJSON.get("presentations");

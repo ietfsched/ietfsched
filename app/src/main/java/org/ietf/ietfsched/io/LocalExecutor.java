@@ -267,7 +267,7 @@ public class LocalExecutor {
 		if (m.group.length() == 0 || m.area.length() == 0) {
 			return null;
 		}
-	
+
 		ContentProviderOperation.Builder builder = ContentProviderOperation.newInsert(Tracks.CONTENT_URI);
         builder.withValue(Tracks.UPDATED, versionBuild);
 		builder.withValue(Tracks.TRACK_ID, Tracks.generateTrackId(m.area + m.group));
@@ -282,7 +282,8 @@ public class LocalExecutor {
 		if (m.group.length() == 0 || m.area.length() == 0) {
 			return null;
 		}
-		final String sessionId = Sessions.generateSessionId(m.key);
+
+	final String sessionId = Sessions.generateSessionId(m.key);
 		final Uri sessionsTracksUri = Sessions.buildTracksDirUri(sessionId);
 		ContentProviderOperation.Builder builder = ContentProviderOperation.newInsert(sessionsTracksUri);
 		builder.withValue(SessionsTracks.SESSION_ID, sessionId);
