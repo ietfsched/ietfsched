@@ -5,7 +5,7 @@ The Internet Engineering Task Force (IETF) is a large open international communi
 
 The actual technical work of the IETF is done in its working groups, which are organized by topic into several areas (e.g., routing, transport, security, etc.). Much of the work is handled via mailing lists. The IETF holds meetings three times per year.
 
-This project is the Android app for the IETF meeting. The app supports devices running Android 2.3+, and is optimized for phones and tablets of all shapes and sizes.
+This project is the Android app for the IETF meeting. The app supports devices running Android 11+, and is optimized for phones and tablets of all shapes and sizes.
 
 <h2>Source</h2>
 
