@@ -15,8 +15,8 @@
   limitations under the License.
   -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="app_name">IETF 117</string>
-    <string name="description_logo">IETF 117</string>
+    <string name="app_name">IETF 118</string>
+    <string name="description_logo">IETF 118</string>
     <string name="description_home">Home</string>
     <string name="description_search">Search</string>
     <string name="description_map">Map</string>
@@ -114,9 +114,9 @@
 
     <string name="whats_on_stream_title">Realtime\nStream</string>
     <string name="whats_on_now_playing_title">Now Playing</string>
-	<string name="whats_on_thank_you_title">See you at IETF 118</string>
+	<string name="whats_on_thank_you_title">See you at IETF 119</string>
     <string name="permission_write">Modify IETF schedule data</string>
-    <string name="toast_now_not_visible">Press this button during IETF 117 to show the current time.</string>
+    <string name="toast_now_not_visible">Press this button during IETF 118 to show the current time.</string>
 
 
     <!-- Notes integration -->

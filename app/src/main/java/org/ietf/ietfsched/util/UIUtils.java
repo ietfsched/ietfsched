@@ -36,12 +36,14 @@ import android.text.TextUtils;
 import android.text.format.DateUtils;
 import android.text.method.LinkMovementMethod;
 import android.text.style.StyleSpan;
+import android.util.Log;
 import android.widget.TextView;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
 
@@ -61,14 +63,15 @@ public class UIUtils {
      * PHL -4 EDT
      * NRT +9 JST GMT+9:00 - Use the GMT offset notation from now on.
      */
-    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("GMT-07:00");
+    private static final String TAG = "UIUtils";
+    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("GMT+02:00");
     public static final TimeZone AGENDA_TIME_ZONE = TimeZone.getTimeZone("GMT-00:00");
 
     // Date/Time here is format: "yyyy-MM-dd HH:mm:00TZ" - ParserUtils.java:59
     public static final Long CONFERENCE_START_MILLIS = ParserUtils.parseTime(
-            String.format("2023-07-16 07:00:00%s", CONFERENCE_TIME_ZONE.getID()));
+            String.format("2023-11-01 07:00:00%s", CONFERENCE_TIME_ZONE.getID()));
     public static final Long CONFERENCE_END_MILLIS = ParserUtils.parseTime(
-            String.format("2023-07-29 22:00:00%s", CONFERENCE_TIME_ZONE.getID()));
+            String.format("2023-11-11 22:00:00%s", CONFERENCE_TIME_ZONE.getID()));
 
     /** Flags used with {@link DateUtils#formatDateRange}. */
     private static final int TIME_FLAGS = DateUtils.FORMAT_SHOW_TIME
@@ -175,7 +178,9 @@ public class UIUtils {
     }
 
     public static long getCurrentTime(final Context context) {
-        return System.currentTimeMillis();
+        long t = Calendar.getInstance(CONFERENCE_TIME_ZONE).getTimeInMillis();
+        Log.d(TAG, String.format("Sending currentTime: %d", t));
+        return t;
     }
 
     public static Drawable getIconForIntent(final Context context, Intent i) {

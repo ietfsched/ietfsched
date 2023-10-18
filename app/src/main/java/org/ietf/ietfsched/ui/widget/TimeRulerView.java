@@ -31,6 +31,11 @@ import android.text.format.Time;
 import android.util.AttributeSet;
 import android.view.View;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.Date;
+
 /**
  * Custom view that draws a vertical time "ruler" representing the chronological
  * progression of a single day. Usually shown along with {@link BlockView}
@@ -85,10 +90,11 @@ public class TimeRulerView extends View {
      * milliseconds since epoch).
      */
     public int getTimeVerticalOffset(long timeMillis) {
-        Time time = new Time(UIUtils.CONFERENCE_TIME_ZONE.getID());
-        time.set(timeMillis);
+        LocalDateTime ldt = LocalDateTime.ofEpochSecond((long) timeMillis / 1000,
+                0, ZoneOffset.of(String.valueOf(UIUtils.CONFERENCE_TIME_ZONE.getRawOffset())));
 
-        final int minutes = ((time.hour - mStartHour) * 60) + time.minute;
+
+        final int minutes = ldt.getMinute();
         return (minutes * mHourHeight) / 60;
     }
 
