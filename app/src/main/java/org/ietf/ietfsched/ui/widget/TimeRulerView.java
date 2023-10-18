@@ -91,7 +91,11 @@ public class TimeRulerView extends View {
      */
     public int getTimeVerticalOffset(long timeMillis) {
         LocalDateTime ldt = LocalDateTime.ofEpochSecond((long) timeMillis / 1000,
-                0, ZoneOffset.of(String.valueOf(UIUtils.CONFERENCE_TIME_ZONE.getRawOffset())));
+                0, ZoneOffset.of(
+                        UIUtils.CONFERENCE_TIME_ZONE.getID()
+                                .replaceAll("^GMT", "")
+                                .replaceAll(":", "")
+                ));
 
 
         final int minutes = ldt.getMinute();

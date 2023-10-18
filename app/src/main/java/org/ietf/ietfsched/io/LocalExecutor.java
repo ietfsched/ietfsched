@@ -140,7 +140,6 @@ public class LocalExecutor {
 		String blockType;
 		String sessionType;
 
-
 		startTime = ParserUtils.parseTime(m.startHour);
 		endTime = ParserUtils.parseTime(m.endHour);
 		String blockId = Blocks.generateBlockId(startTime, endTime);
