@@ -262,8 +262,6 @@ public class ScheduleFragment extends Fragment implements
         day.blocksView = (BlocksLayout) day.rootView.findViewById(R.id.blocks);
         day.nowView = day.rootView.findViewById(R.id.blocks_now);
 
-        day.blocksView.setDrawingCacheEnabled(true);
-
         TimeZone.setDefault(UIUtils.CONFERENCE_TIME_ZONE);
         day.label = DateUtils.formatDateTime(getActivity(), startMillis, TIME_FLAGS);
 

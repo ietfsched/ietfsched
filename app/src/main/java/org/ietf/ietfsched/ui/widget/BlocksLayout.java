@@ -22,6 +22,7 @@ import org.ietf.ietfsched.util.UIUtils;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -31,6 +32,7 @@ import android.view.ViewGroup;
  * {@link R.id#blocks_now} view when applicable.
  */
 public class BlocksLayout extends ViewGroup {
+    private static final String TAG = "BlocksLayout";
     // Columns in the schedule view.
     private int mColumns = 4;
 
@@ -61,13 +63,11 @@ public class BlocksLayout extends ViewGroup {
         if (mRulerView == null) {
             throw new IllegalStateException("Must include a R.id.blocks_ruler view.");
         }
-        mRulerView.setDrawingCacheEnabled(true);
 
         mNowView = findViewById(R.id.blocks_now);
         if (mNowView == null) {
             throw new IllegalStateException("Must include a R.id.blocks_now view.");
         }
-        mNowView.setDrawingCacheEnabled(true);
     }
 
     /**
@@ -82,7 +82,6 @@ public class BlocksLayout extends ViewGroup {
     }
 
     public void addBlock(BlockView blockView) {
-        blockView.setDrawingCacheEnabled(true);
         addView(blockView, 1);
     }
 
@@ -120,9 +119,13 @@ public class BlocksLayout extends ViewGroup {
 
             if (child instanceof BlockView) {
                 final BlockView blockView = (BlockView) child;
-                // Convert the times  before display to the user.
-                final int top = rulerView.getTimeVerticalOffset(blockView.getStartTime() + tzOffset);
-                final int bottom = rulerView.getTimeVerticalOffset(blockView.getEndTime() + tzOffset);
+                // Convert the times before display to the user.
+                final long startTime = blockView.getStartTime() + tzOffset;
+                final long endTime = blockView.getEndTime() + tzOffset;
+                Log.d(TAG, "BlockStartTime: Orig: " + blockView.getStartTime() + " Adjusted: " + startTime + " via tzoffset: " + tzOffset);
+                Log.d(TAG, "BlockEndTime: Orig: " + blockView.getEndTime() + " Adjusted: " + endTime + "  via tzoffset: " + tzOffset);
+                final int top = rulerView.getTimeVerticalOffset(startTime);
+                final int bottom = rulerView.getTimeVerticalOffset(endTime);
                 final int left = headerWidth + (blockView.getColumn() * columnWidth);
                 final int right = left + columnWidth;
                 child.layout(left, top, right, bottom);

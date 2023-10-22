@@ -16,9 +16,6 @@
 
 package org.ietf.ietfsched.ui.widget;
 
-import org.ietf.ietfsched.R;
-import org.ietf.ietfsched.util.UIUtils;
-
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
@@ -27,14 +24,15 @@ import android.graphics.Paint;
 import android.graphics.Paint.FontMetricsInt;
 import android.graphics.Paint.Style;
 import android.graphics.Typeface;
-import android.text.format.Time;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 
-import java.time.Instant;
+import org.ietf.ietfsched.R;
+import org.ietf.ietfsched.util.UIUtils;
+
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.Date;
 
 /**
  * Custom view that draws a vertical time "ruler" representing the chronological
@@ -42,6 +40,7 @@ import java.util.Date;
  * instances to give a spatial sense of time.
  */
 public class TimeRulerView extends View {
+    private static final String TAG = "TimeRulerView";
 
     private int mHeaderWidth = 70;
     private int mHourHeight = 90;
@@ -99,7 +98,8 @@ public class TimeRulerView extends View {
 
 
         final int minutes = ldt.getMinute();
-        return (minutes * mHourHeight) / 60;
+        Log.d(TAG,"TimeMillis: " + timeMillis + " LDT: " + ldt + " Minutes: " + minutes + " - height - " + (minutes * mHourHeight) / 60);
+        return Math.abs((minutes * mHourHeight) / 60);
     }
 
     @Override

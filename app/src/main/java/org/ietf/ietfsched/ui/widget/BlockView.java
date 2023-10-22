@@ -82,11 +82,14 @@ public class BlockView extends Button {
 
         LayerDrawable buttonDrawable = (LayerDrawable)
                 ContextCompat.getDrawable(context, R.drawable.btn_block);
+        // TODO(morrowc): Fix the setColorFilter below with:
+        //  mydrawable.colorFilter =
+        //   BlendModeColorFilterCompat.createBlendModeColorFilterCompat(color, BlendModeCompat.SRC_ATOP)
         buttonDrawable.getDrawable(0).setColorFilter(accentColor, PorterDuff.Mode.SRC_ATOP);
         buttonDrawable.getDrawable(1).setAlpha(mContainsStarred ? 255 : 0);
 
         setTextColor(textColor);
-        setBackgroundDrawable(buttonDrawable);
+        setBackground(buttonDrawable);
     }
 
     public String getBlockId() {
