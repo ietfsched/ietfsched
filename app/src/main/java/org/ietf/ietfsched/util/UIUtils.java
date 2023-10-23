@@ -64,8 +64,10 @@ public class UIUtils {
      * NRT +9 JST GMT+9:00 - Use the GMT offset notation from now on.
      */
     private static final String TAG = "UIUtils";
+    // Conference timezone is the local used at the venue.
     public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("GMT+02:00");
-    public static final TimeZone AGENDA_TIME_ZONE = TimeZone.getTimeZone("GMT-00:00");
+    // Agenda is published with timezones as UTC.
+    public static final TimeZone AGENDA_TIME_ZONE = TimeZone.getTimeZone("GMT+00:00");
 
     // Date/Time here is format: "yyyy-MM-dd HH:mm:00TZ" - ParserUtils.java:59
     public static final Long CONFERENCE_START_MILLIS = ParserUtils.parseTime(

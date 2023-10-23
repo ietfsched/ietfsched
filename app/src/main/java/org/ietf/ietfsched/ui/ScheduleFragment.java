@@ -341,6 +341,8 @@ public class ScheduleFragment extends Fragment implements
                 final long start = cursor.getLong(BlocksQuery.BLOCK_START);
                 final long end = cursor.getLong(BlocksQuery.BLOCK_END);
                 final boolean containsStarred = cursor.getInt(BlocksQuery.CONTAINS_STARRED) != 0;
+                Log.d(TAG, "BlockData - Id: " + blockId + " title: " + title + " start: " +
+                        start + " end: " + end);
 
                 final BlockView blockView = new BlockView(getActivity(), blockId, title, start, end,
                         containsStarred, column);

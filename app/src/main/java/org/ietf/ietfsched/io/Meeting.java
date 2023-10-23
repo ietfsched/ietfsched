@@ -43,6 +43,7 @@ class Meeting {
 	private static final String TAG = "Meeting";
 	// private final static SimpleDateFormat previousFormat = new SimpleDateFormat("yyyy-MM-dd HHmm"); // 2011-07-23 0900
 	//                                                        JSON time - Start - "2023-03-27T00:30:00Z
+	//                                                                   "start": "2023-11-06T14:30:00Z",
 	private final static SimpleDateFormat jsonDate = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 	// Hack: timezone format (Z) = +0800 where the ietfsched application expects +08:00.
 	private final static SimpleDateFormat afterFormat = ParserUtils.df;
@@ -59,7 +60,6 @@ class Meeting {
 	String[] slides; // The list of slides urls.
 
 	static {
-		// previousFormat.setTimeZone(UIUtils.CONFERENCE_TIME_ZONE);
 		jsonDate.setTimeZone((UIUtils.AGENDA_TIME_ZONE));
 		afterFormat.setTimeZone(UIUtils.CONFERENCE_TIME_ZONE);
 	}
@@ -91,6 +91,7 @@ class Meeting {
 			Date jDay = jsonDate.parse(mJSON.getString("start"));
 
 			startHour = afterFormat.format(jDay);
+			Log.d(TAG, "jSON Date: " + jDay + " startHour: " + startHour);
 			// Build an endDate by using localTime, and Duration (from localtime start 00:00 to duration)
 			String[] durSplit = mJSON.getString("duration").split(":");
 			Integer[] durSplitInt = new Integer[durSplit.length];
@@ -115,7 +116,12 @@ class Meeting {
 			}
 			location = mJSON.getString("location");
 			key = String.format("%d", mJSON.getInt("session_id"));
-			hrefDetail = mJSON.getString("agenda");
+			hrefDetail = "";
+			try {
+				hrefDetail = mJSON.getString("agenda");
+			} catch (JSONException e) {
+				Log.d(TAG, "Failed to get an agenda / hrefDetail for " + title);
+			}
 		} catch (JSONException e) {
 			throw new UnScheduledMeetingException(
 					String.format("Event(%s) is missing JSON element: %s", title, e.toString()));

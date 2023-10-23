@@ -86,20 +86,26 @@ public class TimeRulerView extends View {
 
     /**
      * Return the vertical offset (in pixels) for a requested time (in
-     * milliseconds since epoch).
+     * milliseconds since epoch). This should be the child/count * mHourHeight, perhaps?
      */
-    public int getTimeVerticalOffset(long timeMillis) {
+    public int getTimeVerticalOffset(long timeMillis, int count, boolean start) {
         LocalDateTime ldt = LocalDateTime.ofEpochSecond((long) timeMillis / 1000,
-                0, ZoneOffset.of(
-                        UIUtils.CONFERENCE_TIME_ZONE.getID()
+                0,
+                // Attempting a time offset here may be incorrect.
+                // Meetings get stored with the CONFERENCE_TIME_ZONE at stora/collection time.
+                ZoneOffset.of(UIUtils.CONFERENCE_TIME_ZONE.getID()
                                 .replaceAll("^GMT", "")
                                 .replaceAll(":", "")
                 ));
 
 
         final int minutes = ldt.getMinute();
-        Log.d(TAG,"TimeMillis: " + timeMillis + " LDT: " + ldt + " Minutes: " + minutes + " - height - " + (minutes * mHourHeight) / 60);
-        return Math.abs((minutes * mHourHeight) / 60);
+        int isStart = 1;
+        if (!start) { isStart = 0; }
+        // int finalHeight = ((count + isStart) * mHourHeight) + ((minutes * mHourHeight) / 60);
+        int finalHeight = (minutes * mHourHeight) / 60;
+        Log.d(TAG,"Start: " + isStart + " Count: " + count + " TimeMillis: " + timeMillis + " LDT: " + ldt + " Minutes: " + minutes + " - height - " + finalHeight);
+        return finalHeight;
     }
 
     @Override

@@ -113,6 +113,7 @@ public class BlocksLayout extends ViewGroup {
         // Agenda times are UTC, conference times are not, between json parsing and display
         // convert from Agenda to Conference TZ.
         final int tzOffset = UIUtils.CONFERENCE_TIME_ZONE.getRawOffset();
+        Log.d(TAG, "Children to add to ruler: " + count);
         for (int i = 0; i < count; i++) {
             final View child = getChildAt(i);
             if (child.getVisibility() == GONE) continue;
@@ -124,8 +125,8 @@ public class BlocksLayout extends ViewGroup {
                 final long endTime = blockView.getEndTime() + tzOffset;
                 Log.d(TAG, "BlockStartTime: Orig: " + blockView.getStartTime() + " Adjusted: " + startTime + " via tzoffset: " + tzOffset);
                 Log.d(TAG, "BlockEndTime: Orig: " + blockView.getEndTime() + " Adjusted: " + endTime + "  via tzoffset: " + tzOffset);
-                final int top = rulerView.getTimeVerticalOffset(startTime);
-                final int bottom = rulerView.getTimeVerticalOffset(endTime);
+                final int top = rulerView.getTimeVerticalOffset(startTime, i, true);
+                final int bottom = rulerView.getTimeVerticalOffset(endTime, i, false);
                 final int left = headerWidth + (blockView.getColumn() * columnWidth);
                 final int right = left + columnWidth;
                 child.layout(left, top, right, bottom);
@@ -136,7 +137,7 @@ public class BlocksLayout extends ViewGroup {
         final View nowView = mNowView;
         final long now = UIUtils.getCurrentTime(getContext());
 
-        final int top = rulerView.getTimeVerticalOffset(now);
+        final int top = rulerView.getTimeVerticalOffset(now, 0, true);
         final int bottom = top + nowView.getMeasuredHeight();
         final int left = 0;
         final int right = getWidth();
