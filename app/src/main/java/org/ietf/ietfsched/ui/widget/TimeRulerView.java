@@ -51,7 +51,6 @@ public class TimeRulerView extends View {
     private int mDividerColor = Color.LTGRAY;
     private int mStartHour = 0;
     private int mEndHour = 23;
-
     public TimeRulerView(Context context) {
         this(context, null);
     }
@@ -89,6 +88,7 @@ public class TimeRulerView extends View {
      * milliseconds since epoch). This should be the child/count * mHourHeight, perhaps?
      */
     public int getTimeVerticalOffset(long timeMillis, int count, boolean start) {
+        Log.d(TAG, "getTimeVerticalOffset timeMillis: " + timeMillis + " Count: " + count);
         LocalDateTime ldt = LocalDateTime.ofEpochSecond((long) timeMillis / 1000,
                 0,
                 // Attempting a time offset here may be incorrect.

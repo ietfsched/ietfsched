@@ -123,8 +123,8 @@ public class BlocksLayout extends ViewGroup {
                 // Convert the times before display to the user.
                 final long startTime = blockView.getStartTime() + tzOffset;
                 final long endTime = blockView.getEndTime() + tzOffset;
-                Log.d(TAG, "BlockStartTime: Orig: " + blockView.getStartTime() + " Adjusted: " + startTime + " via tzoffset: " + tzOffset);
-                Log.d(TAG, "BlockEndTime: Orig: " + blockView.getEndTime() + " Adjusted: " + endTime + "  via tzoffset: " + tzOffset);
+                Log.d(TAG, "Mtg: " + blockView.getBlockId() +  " Orig: " + blockView.getStartTime() / 1000 + " Adjusted: " + startTime / 1000 + " via tzoffset: " + tzOffset);
+                Log.d(TAG, "Mtg: " + blockView.getBlockId() + " Orig: " + blockView.getEndTime() / 1000 + " Adjusted: " + endTime / 1000 + "  via tzoffset: " + tzOffset);
                 final int top = rulerView.getTimeVerticalOffset(startTime, i, true);
                 final int bottom = rulerView.getTimeVerticalOffset(endTime, i, false);
                 final int left = headerWidth + (blockView.getColumn() * columnWidth);

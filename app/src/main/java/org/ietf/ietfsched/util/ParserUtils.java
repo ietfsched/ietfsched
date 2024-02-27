@@ -85,13 +85,12 @@ public class ParserUtils {
     }
 
     public static Long parseTime(String time) {
-		try {
-        Log.d(TAG, String.format("parseTime time: %s || %s", time, df.parse(time).getTime()));
-        return df.parse(time).getTime();
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-			return 0L;
-		}
+        try {
+            Log.d(TAG, String.format("parseTime time: %s || %s", time, df.parse(time).getTime()));
+            return df.parse(time).getTime();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0L;
+        }
 	}
 }
