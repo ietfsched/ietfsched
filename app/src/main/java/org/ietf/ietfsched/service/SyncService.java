@@ -51,9 +51,7 @@ public class SyncService extends IntentService {
     public static final int STATUS_ERROR = 0x2;
     public static final int STATUS_FINISHED = 0x3;
 
-    private static final int SECOND_IN_MILLIS = (int) DateUtils.SECOND_IN_MILLIS;
-
-    /** Root worksheet feed for online data source */
+	/** Root worksheet feed for online data source */
     private static final String mtg = "119";
 	// https://datatracker.ietf.org/meeting/115/agenda.json
 	public static final String BASE_URL = "https://datatracker.ietf.org/meeting/" + mtg + "/";
@@ -123,8 +121,10 @@ public class SyncService extends IntentService {
 
 		try {
 			if (debug) Log.d(TAG, aUrl);
+			// Attempt to Collect the JSON content from the source.
 			JSONObject agenda = mRemoteExecutor.executeJSONGet(aUrl);
 			Log.d(TAG, String.format("remote sync started for URL: %s", aUrl));
+			// Parse the JSON data retrieved locally.
 			mLocalExecutor.execute(agenda);
 			prefs.edit().putString(Prefs.LAST_ETAG, remoteEtag).apply();
 			prefs.edit().putInt(Prefs.LOCAL_VERSION, VERSION_CURRENT).apply();
