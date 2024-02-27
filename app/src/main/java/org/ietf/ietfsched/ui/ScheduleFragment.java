@@ -85,29 +85,18 @@ public class ScheduleFragment extends Fragment implements
      *      NOTE: This covers the 1 week of IETF and the previous week as well.
      */
     private static ArrayList<Long> START_DAYS = new ArrayList<Long>();
-    private static final String year = "2023";
+    private static final String year = "2024";
 
     /*
      * 2wks of time is required here, Week prior to IETF and IETF week.
      * Months are the month numbers over which the meeting will span.
      * Days are the days of the month.
      */
-    private static final Integer[] months = new Integer[]{ 11 };
+    private static final Integer[] months = new Integer[]{ 3 };
     private static final Integer[] days = new Integer[]{
-                        1, 2, 3, 4,
-            5, 6, 7, 8, 9, 10, 11,
+                   13, 14, 15, 16,
+       17, 18, 19, 20, 21, 22, 23,
     };
-    /* Note: How does this work for negative timezones? (RFC822 timezone)
-     * Timezones follow +/- UTC offset.
-     * BKK: GMT+0700
-     * PDT: GMT-0700
-     * UTC: GMT+0000
-     * VIE: GMT+0100
-     * PRG: GMT+0200
-     * PHL: GMT-0400
-     * NRT: GMT+0900
-     */
-
     static {
         for( int i = 0; i<months.length;i++) {
             for (int j = 0; j<days.length; j++) {
@@ -117,8 +106,6 @@ public class ScheduleFragment extends Fragment implements
             }
         }
     }
-
-	
 
     private static final int DISABLED_BLOCK_ALPHA = 100;
 
