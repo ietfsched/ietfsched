@@ -52,7 +52,7 @@ public class SyncService extends IntentService {
     public static final int STATUS_FINISHED = 0x3;
 
 	/** Root worksheet feed for online data source */
-    private static final String mtg = "119";
+    private static final String mtg = "120";
 	// https://datatracker.ietf.org/meeting/115/agenda.json
 	public static final String BASE_URL = "https://datatracker.ietf.org/meeting/" + mtg + "/";
 	private static final String BASE_FILE = "agenda.json";
@@ -85,6 +85,7 @@ public class SyncService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
+        assert intent != null;
         final ResultReceiver receiver = intent.getParcelableExtra(EXTRA_STATUS_RECEIVER);
         if (receiver != null) receiver.send(STATUS_RUNNING, Bundle.EMPTY);
         final Context context = this;
