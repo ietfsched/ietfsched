@@ -94,8 +94,8 @@ public class ScheduleFragment extends Fragment implements
      */
     private static final Integer[] months = new Integer[]{ 3 };
     private static final Integer[] days = new Integer[]{
-                   13, 14, 15, 16,
-       17, 18, 19, 20, 21, 22, 23,
+                   18, 19, 20, 21,
+       22, 23, 24, 25, 26, 27, 28,
     };
     static {
         for( int i = 0; i<months.length;i++) {

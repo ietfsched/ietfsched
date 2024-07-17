@@ -18,8 +18,8 @@
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:versionCode="67"
-    android:versionName="0.1.67"
+    android:versionCode="68"
+    android:versionName="0.1.68"
     android:installLocation="auto">
     <permission
         android:name="org.ietf.ietfsched.permission.WRITE_SCHEDULE"
@@ -37,7 +37,7 @@
         android:allowBackup="true"
         android:hardwareAccelerated="true"
         android:icon="@drawable/ic_launcher"
-        android:label="IETF 119"
+        android:label="IETF 120"
         android:theme="@style/Theme.IOSched">
         <!-- Required addition for APIv28/android 9.0 -->
         <uses-library android:name="org.apache.http.legacy" android:required="false" />

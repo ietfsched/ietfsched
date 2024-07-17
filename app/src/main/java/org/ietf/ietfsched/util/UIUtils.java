@@ -65,15 +65,15 @@ public class UIUtils {
      */
     private static final String TAG = "UIUtils";
     // Conference timezone is the local used at the venue.
-    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("GMT+11:00");
+    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("GMT-07:00");
     // Agenda is published with timezones as UTC.
     public static final TimeZone AGENDA_TIME_ZONE = TimeZone.getTimeZone("GMT+00:00");
 
     // Date/Time here is format: "yyyy-MM-dd HH:mm:00TZ" - ParserUtils.java:59
     public static final Long CONFERENCE_START_MILLIS = ParserUtils.parseTime(
-            String.format("2024-03-22 07:00:00%s", CONFERENCE_TIME_ZONE.getID()));
+            String.format("2024-07-20 07:00:00%s", CONFERENCE_TIME_ZONE.getID()));
     public static final Long CONFERENCE_END_MILLIS = ParserUtils.parseTime(
-            String.format("2024-03-30 22:00:00%s", CONFERENCE_TIME_ZONE.getID()));
+            String.format("2024-07-28 22:00:00%s", CONFERENCE_TIME_ZONE.getID()));
 
     /** Flags used with {@link DateUtils#formatDateRange}. */
     private static final int TIME_FLAGS = DateUtils.FORMAT_SHOW_TIME
