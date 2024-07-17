@@ -58,7 +58,7 @@ public class ParserUtils {
 	public static final SimpleDateFormat df;
 
     static {
-        //                                "2023-03-31 22:00:00GMT+0900"
+        //                        "2023-03-31 22:00:00GMT+0900"
         df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssz");
         df.setTimeZone(UIUtils.AGENDA_TIME_ZONE);
     }
