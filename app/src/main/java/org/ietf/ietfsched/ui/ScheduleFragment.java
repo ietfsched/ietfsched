@@ -92,7 +92,7 @@ public class ScheduleFragment extends Fragment implements
      * Months are the month numbers over which the meeting will span.
      * Days are the days of the month.
      */
-    private static final Integer[] months = new Integer[]{ 3 };
+    private static final Integer[] months = new Integer[]{ 7 };
     private static final Integer[] days = new Integer[]{
                    18, 19, 20, 21,
        22, 23, 24, 25, 26, 27, 28,

@@ -19,7 +19,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:versionCode="68"
-    android:versionName="0.1.68"
+    android:versionName="0.1.69"
     android:installLocation="auto">
     <permission
         android:name="org.ietf.ietfsched.permission.WRITE_SCHEDULE"
