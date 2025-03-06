@@ -8,6 +8,12 @@ android {
             keyAlias 'key0'
             keyPassword 'Gideon Likes MK!!'
         }
+        release {
+            storeFile file('~/work/android_studio_keystore.jks')
+            storePassword 'Gideon Likes MK!!'
+            keyAlias 'key0'
+            keyPassword 'Gideon Likes MK!!'
+        }
     }
     compileSdkVersion 34
     defaultConfig {
@@ -19,6 +25,7 @@ android {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+            signingConfig signingConfigs.release
         }
     }
     productFlavors {
