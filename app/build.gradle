@@ -3,19 +3,19 @@ apply plugin: 'com.android.application'
 android {
     signingConfigs {
         debug {
-            storeFile file('~/work/android_studio_keystore.jks')
+            storeFile file('/home/morrowc/work/android_studio_keystore.jks')
             storePassword 'Gideon Likes MK!!'
             keyAlias 'key0'
             keyPassword 'Gideon Likes MK!!'
         }
         release {
-            storeFile file('~/work/android_studio_keystore.jks')
+            storeFile file('/home/morrowc/work/android_studio_keystore.jks')
             storePassword 'Gideon Likes MK!!'
             keyAlias 'key0'
             keyPassword 'Gideon Likes MK!!'
         }
     }
-    compileSdkVersion 34
+    compileSdkVersion 35
     defaultConfig {
         applicationId "org.ietf.ietfsched"
         minSdkVersion 34
