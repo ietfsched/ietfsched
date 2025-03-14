@@ -18,7 +18,7 @@ android {
     compileSdkVersion 35
     defaultConfig {
         applicationId "org.ietf.ietfsched"
-        minSdkVersion 34
+        minSdkVersion 33
         targetSdkVersion 34
     }
     buildTypes {
