@@ -1,20 +1,6 @@
 apply plugin: 'com.android.application'
 
 android {
-    signingConfigs {
-        debug {
-            storeFile file('/home/morrowc/work/android_studio_keystore.jks')
-            storePassword 'Gideon Likes MK!!'
-            keyAlias 'key0'
-            keyPassword 'Gideon Likes MK!!'
-        }
-        release {
-            storeFile file('/home/morrowc/work/android_studio_keystore.jks')
-            storePassword 'Gideon Likes MK!!'
-            keyAlias 'key0'
-            keyPassword 'Gideon Likes MK!!'
-        }
-    }
     compileSdkVersion 35
     defaultConfig {
         applicationId "org.ietf.ietfsched"
