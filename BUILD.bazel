@@ -1,0 +1,14 @@
+load("@rules_android//android:rules.bzl", "android_library")
+load("@rules_jvm_external//:defs.bzl", "maven_install")
+
+maven_install(
+    artifacts = [
+        "androidx.legacy:legacy-support-v4:1.0.0",
+        "io.noties.markwon:core:4.2.0",
+    ],
+    repositories = [
+        "https://repo1.maven.org/maven2/",
+        "https://maven.google.com",
+        "https://oss.sonatype.org/content/repositories/snapshots/"
+    ],
+)

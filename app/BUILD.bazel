@@ -1,0 +1,42 @@
+bazel
+load("@rules_android//android:rules.bzl", "android_binary", "android_library", "android_local_test", "android_instrumentation_test")
+load("@rules_jvm_external//:defs.bzl", "artifact")
+
+android_library(
+    name = "app_lib",
+    srcs = glob(["src/main/java/**/*.java"]),
+    resource_files = glob(["src/main/res/**"]),
+    custom_package = "org.ietf.ietfsched",
+    manifest = "src/main/AndroidManifest.xml",
+    deps = [
+        "@maven//:androidx_legacy_legacy_support_v4",
+        "@maven//:io_noties_markwon_core",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+android_binary(
+    name = "app",
+    manifest = "src/main/AndroidManifest.xml",
+    deps = [":app_lib"],
+    custom_package = "org.ietf.ietfsched",
+    target_sdk_version = "34",
+    min_sdk_version = "34",
+    multidex = "native",
+)
+
+android_local_test(
+    name = "app_local_test",
+    deps = [":app_lib"],
+    manifest = "src/main/AndroidManifest.xml",
+    target_sdk_version = "34",
+    min_sdk_version = "34",
+)
+
+android_instrumentation_test(
+    name = "app_instrumentation_test",
+    deps = [":app_lib"],
+    manifest = "src/main/AndroidManifest.xml",
+    target_sdk_version = "34",
+    min_sdk_version = "34",
+)
