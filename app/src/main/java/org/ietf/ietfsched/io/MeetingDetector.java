@@ -17,7 +17,8 @@ public class MeetingDetector {
     private static final String TAG = "MeetingDetector";
     private static final boolean DEBUG = true;
     
-    private static final String MEETINGS_API_URL = "https://datatracker.ietf.org/api/v1/meeting/meeting/";
+    // Request more meetings to ensure we get past meetings (API defaults to very few)
+    private static final String MEETINGS_API_URL = "https://datatracker.ietf.org/api/v1/meeting/meeting/?limit=50";
     
     // Cache settings
     private static final long CACHE_DURATION_DURING_MEETING = 60 * 60 * 1000; // 1 hour
