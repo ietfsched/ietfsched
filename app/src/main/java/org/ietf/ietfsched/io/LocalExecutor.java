@@ -201,9 +201,31 @@ public class LocalExecutor {
 		}
 		// Default: if typeSession contains "session", it's a regular session block
 		else if (sessionType.contains("session")) {
-			// Generate a descriptive title based on time of day
-			title = generateBlockTitle(startTime);
-			blockType = ParserUtils.BLOCK_TYPE_SESSION;
+			// Only use numbered session title (I, II, III) if this time is in the session times map
+			// Otherwise use the actual meeting title (for special events, evening sessions, etc.)
+			if (isInSessionTimesMap(startTime)) {
+				// Regular numbered session → Red
+				title = generateBlockTitle(startTime);
+				blockType = ParserUtils.BLOCK_TYPE_SESSION;
+			} else {
+				// Special event → assign appropriate color based on type
+				title = m.title;
+				String titleLower = m.title.toLowerCase();
+				
+				if (titleLower.contains("reception") || titleLower.contains("social")) {
+					// Receptions/social events → Blue (FOOD type)
+					blockType = ParserUtils.BLOCK_TYPE_FOOD;
+				} else if (titleLower.contains("education") || 
+						   titleLower.contains("outreach") ||
+						   titleLower.contains("tutorial") ||
+						   titleLower.contains("newcomer")) {
+					// Administrative/educational events → Green (OFFICE_HOURS type)
+					blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
+				} else {
+					// Other special sessions (evening WG sessions, etc.) → keep as Red
+					blockType = ParserUtils.BLOCK_TYPE_SESSION;
+				}
+			}
 		}
 		else {
 			Log.d(TAG, String.format("Unknown Agenda slot(%s - %s), type: %s, title: %s",
@@ -328,6 +350,26 @@ public class LocalExecutor {
 				Log.d(TAG, sb.toString());
 			}
 		}
+	}
+	
+	/**
+	 * Check if a given start time is in the session times map.
+	 * Returns true if this time should be numbered as a session (I, II, III).
+	 */
+	private boolean isInSessionTimesMap(long startTimeMillis) {
+		java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
+		cal.setTimeInMillis(startTimeMillis);
+		
+		String dayKey = String.format("%04d-%03d", 
+			cal.get(java.util.Calendar.YEAR), 
+			cal.get(java.util.Calendar.DAY_OF_YEAR));
+		
+		ArrayList<Long> times = mDaySessionTimes.get(dayKey);
+		if (times == null) {
+			return false;
+		}
+		
+		return times.contains(startTimeMillis);
 	}
 	
 	/**
