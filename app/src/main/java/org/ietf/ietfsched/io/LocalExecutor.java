@@ -130,14 +130,6 @@ public class LocalExecutor {
 		final ContentProviderOperation.Builder builder = ContentProviderOperation.newInsert(Blocks.CONTENT_URI);
         builder.withValue(Blocks.UPDATED, versionBuild);
 	
-		String key = String.format("%s-%s", m.startHour, m.typeSession);
-		if (blockRefs.contains(key)) {
-			return null;
-		}
-		else {
-			blockRefs.add(key);
-		}
-	
 		String title;
 		Long startTime;
 		Long endTime;
@@ -146,6 +138,21 @@ public class LocalExecutor {
 
 		startTime = ParserUtils.parseTime(m.startHour);
 		endTime = ParserUtils.parseTime(m.endHour);
+		
+		// Group blocks by day + session period (I, II, III) instead of exact start time
+		// This consolidates multiple sessions starting at different times into one block
+		java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
+		cal.setTimeInMillis(startTime);
+		String dayOfYear = String.format("%04d-%03d", cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.DAY_OF_YEAR));
+		String sessionPeriod = getSessionPeriod(cal.get(java.util.Calendar.HOUR_OF_DAY));
+		
+		String key = String.format("%s-%s-%s", dayOfYear, sessionPeriod, m.typeSession);
+		if (blockRefs.contains(key)) {
+			return null;
+		}
+		else {
+			blockRefs.add(key);
+		}
 		String blockId = Blocks.generateBlockId(startTime, endTime);
 		title = m.title;
 		blockType = ParserUtils.BLOCK_TYPE_UNKNOWN;
@@ -214,6 +221,20 @@ public class LocalExecutor {
 	}
 	
 	/**
+	 * Determine session period (I, II, III) based on hour of day.
+	 * This is used to group sessions into blocks.
+	 */
+	private String getSessionPeriod(int hourOfDay) {
+		if (hourOfDay < 12) {
+			return "I";
+		} else if (hourOfDay < 17) {
+			return "II";
+		} else {
+			return "III";
+		}
+	}
+	
+	/**
 	 * Generate a descriptive block title matching IETF web agenda format.
 	 * Examples: "Monday Session I", "Tuesday Session II", "Wednesday Session III"
 	 * 
@@ -228,17 +249,8 @@ public class LocalExecutor {
 		String dayName = new java.text.SimpleDateFormat("EEEE", java.util.Locale.ENGLISH).format(cal.getTime());
 		
 		// Determine session number based on time of day
-		// Typical IETF schedule: Session I (morning), Session II (afternoon), Session III (evening)
 		int hourOfDay = cal.get(java.util.Calendar.HOUR_OF_DAY);
-		String sessionNumber;
-		
-		if (hourOfDay < 12) {
-			sessionNumber = "I";
-		} else if (hourOfDay < 17) {
-			sessionNumber = "II";
-		} else {
-			sessionNumber = "III";
-		}
+		String sessionNumber = getSessionPeriod(hourOfDay);
 		
 		return dayName + " Session " + sessionNumber;
 	}
