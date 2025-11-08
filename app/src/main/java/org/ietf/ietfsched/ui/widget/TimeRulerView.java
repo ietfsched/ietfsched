@@ -104,12 +104,14 @@ public class TimeRulerView extends View {
                 offset);
 
 
+        final int hour = ldt.getHour();
         final int minutes = ldt.getMinute();
-        int isStart = 1;
-        if (!start) { isStart = 0; }
-        // int finalHeight = ((count + isStart) * mHourHeight) + ((minutes * mHourHeight) / 60);
-        int finalHeight = (minutes * mHourHeight) / 60;
-        Log.d(TAG,"Start: " + isStart + " Count: " + count + " TimeMillis: " + timeMillis + " LDT: " + ldt + " Minutes: " + minutes + " - height - " + finalHeight);
+        
+        // Calculate vertical offset: (hour - startHour + minutes/60) * pixelsPerHour
+        int finalHeight = (int) ((hour - mStartHour + minutes / 60f) * mHourHeight);
+        
+        Log.d(TAG, "getTimeVerticalOffset: " + ldt + " (hour=" + hour + ", min=" + minutes + 
+              ") startHour=" + mStartHour + ", hourHeight=" + mHourHeight + " -> offset=" + finalHeight);
         return finalHeight;
     }
 
