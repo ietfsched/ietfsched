@@ -44,7 +44,6 @@ public class MeetingMetadata {
     public static MeetingMetadata fromJSON(JSONObject json) throws JSONException {
         int number = Integer.parseInt(json.getString("number"));
         String date = json.getString("date");
-        String endDate = json.optString("end_date", date);
         String city = json.optString("city", "Unknown");
         String country = json.optString("country", "Unknown");
         String timezoneId = json.optString("time_zone", "UTC");
@@ -61,18 +60,14 @@ public class MeetingMetadata {
         long endMillis = 0;
         try {
             Date startDate = ISO_DATE_FORMAT.parse(date);
-            Date endDateParsed = ISO_DATE_FORMAT.parse(endDate);
             if (startDate != null) {
                 startMillis = startDate.getTime();
-            }
-            if (endDateParsed != null) {
-                // IMPORTANT: The API's end_date appears to be just the start+1 day,
-                // not the actual meeting end. IETF meetings are typically 7 days long.
-                // Add 6 days to the end_date to get the actual meeting end.
+                // IMPORTANT: The API's end_date is unreliable (sometimes before start date!).
+                // IETF meetings are typically 7 days long, so calculate end date from start.
+                // Add 6 full days plus end-of-day (23:59:59) to the start date.
                 long WEEK_IN_MILLIS = 6 * 24 * 60 * 60 * 1000L;
-                // Set to end of day (23:59:59) plus 6 days
-                endMillis = endDateParsed.getTime() + WEEK_IN_MILLIS + (24 * 60 * 60 * 1000 - 1);
-                Log.d(TAG, "Adjusted end date: API gave " + endDate + ", extended by 6 days for full meeting week");
+                endMillis = startMillis + WEEK_IN_MILLIS + (24 * 60 * 60 * 1000 - 1);
+                Log.d(TAG, "Calculated end date: start=" + date + ", end is 6 days later");
             }
         } catch (Exception e) {
             Log.e(TAG, "Failed to parse meeting dates", e);
