@@ -214,6 +214,14 @@ public class ScheduleFragment extends Fragment implements
 		// Generate schedule days dynamically based on detected meeting
 		generateStartDays();
 		
+		// Handle case where conference dates aren't set yet (before first sync)
+		if (START_DAYS.isEmpty()) {
+			Log.w(TAG, "No schedule days available - meeting data may not be synced yet");
+			// We can't set up the schedule without meeting dates
+			// Return the root view, but it will be empty until data is synced
+			return root;
+		}
+		
 		for (long day : START_DAYS) {
 			setupDay(inflater, day);
 			}
@@ -230,6 +238,11 @@ public class ScheduleFragment extends Fragment implements
 
     public void updateWorkspaceHeader(int dayIndex) {
         if (mTitleCurrentDayIndex == dayIndex) {
+            return;
+        }
+        
+        // Safety check - if no days are loaded yet, return early
+        if (mDays.isEmpty() || dayIndex >= mDays.size()) {
             return;
         }
 
