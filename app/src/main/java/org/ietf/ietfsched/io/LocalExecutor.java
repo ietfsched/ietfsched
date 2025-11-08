@@ -236,7 +236,8 @@ public class LocalExecutor {
 						 titleLower.contains("sprint") ||
 						 titleLower.contains("iepg") ||
 						 titleLower.contains("hotrfc") ||
-						 titleLower.contains("lightning talk")) {
+						 titleLower.contains("lightning talk") ||
+						 titleLower.contains("office hours")) {
 					blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
 				} 
 				// Other special sessions (evening WG sessions, side meetings) → keep as Red
