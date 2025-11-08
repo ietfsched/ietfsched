@@ -144,7 +144,7 @@ public class LocalExecutor {
 		blockType = ParserUtils.BLOCK_TYPE_UNKNOWN;
 		sessionType = m.typeSession.toLowerCase();
 
-		if (debug) Log.d(TAG, "Creating block: title='" + m.title + "' typeSession='" + m.typeSession + "'");
+		if (debug) Log.d(TAG, "Creating block: title='" + m.title + "' typeSession='" + m.typeSession + "' group='" + m.group + "'");
 
 		// Based on rough parsing of the agenda elements assign block TYPE.
 		// Check specific types FIRST before the generic "session" check
@@ -200,28 +200,13 @@ public class LocalExecutor {
 			blockType = ParserUtils.BLOCK_TYPE_SESSION;
 		}
 
-		// Consolidate WG session blocks by day + period
-		// Only session blocks get consolidated; other types (registration, breaks, etc.) 
-		// create individual blocks to preserve their specific names
-		if (blockType.equals(ParserUtils.BLOCK_TYPE_SESSION)) {
-			java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
-			cal.setTimeInMillis(startTime);
-			String dayOfYear = String.format("%04d-%03d", cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.DAY_OF_YEAR));
-			String sessionPeriod = getSessionPeriod(cal.get(java.util.Calendar.HOUR_OF_DAY));
-			
-			String key = String.format("%s-%s-SESSION", dayOfYear, sessionPeriod);
-			if (blockRefs.contains(key)) {
-				return null; // Already created this session block
-			}
-			blockRefs.add(key);
-		} else {
-			// Non-session blocks: use unique key to create separate blocks for each
-			String key = String.format("%s-%s", m.startHour, m.typeSession);
-			if (blockRefs.contains(key)) {
-				return null;
-			}
-			blockRefs.add(key);
+		// Create blocks based on unique start time + type combination
+		// Each unique time slot gets its own block
+		String key = String.format("%s-%s", m.startHour, m.typeSession);
+		if (blockRefs.contains(key)) {
+			return null;
 		}
+		blockRefs.add(key);
 
 		builder.withValue(Blocks.BLOCK_ID, blockId);
 		builder.withValue(Blocks.BLOCK_TITLE, title);
