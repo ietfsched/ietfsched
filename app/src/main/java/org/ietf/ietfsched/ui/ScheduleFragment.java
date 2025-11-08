@@ -226,7 +226,10 @@ public class ScheduleFragment extends Fragment implements
 			setupDay(inflater, day);
 			}
 		
-        updateWorkspaceHeader(0);
+		// Find which day corresponds to "now" and start on that day
+		int initialDay = findCurrentDayIndex();
+        updateWorkspaceHeader(initialDay);
+        mWorkspace.setCurrentScreen(initialDay);
         mWorkspace.setOnScrollListener(new Workspace.OnScrollListener() {
             public void onScroll(float screenFraction) {
                 updateWorkspaceHeader(Math.round(screenFraction));
@@ -254,6 +257,33 @@ public class ScheduleFragment extends Fragment implements
                 .setVisibility((dayIndex != 0) ? View.VISIBLE : View.INVISIBLE);
         mRightIndicator
                 .setVisibility((dayIndex < mDays.size() - 1) ? View.VISIBLE : View.INVISIBLE);
+    }
+
+    /**
+     * Finds the day index that corresponds to the current time.
+     * Returns 0 if before the conference, last day if after, or the matching day during.
+     */
+    private int findCurrentDayIndex() {
+        if (mDays.isEmpty()) {
+            return 0;
+        }
+        
+        final long now = UIUtils.getCurrentTime(getActivity());
+        
+        // Find the day that contains "now"
+        for (Day day : mDays) {
+            if (now >= day.timeStart && now <= day.timeEnd) {
+                return day.index;
+            }
+        }
+        
+        // If we're before the conference, return first day
+        if (now < mDays.get(0).timeStart) {
+            return 0;
+        }
+        
+        // If we're after the conference, return last day
+        return mDays.size() - 1;
     }
 
     private void setupDay(LayoutInflater inflater, long startMillis) {
@@ -314,7 +344,9 @@ public class ScheduleFragment extends Fragment implements
         
         // Update header and scroll listener
         if (!mDays.isEmpty()) {
-            updateWorkspaceHeader(0);
+            int initialDay = findCurrentDayIndex();
+            updateWorkspaceHeader(initialDay);
+            mWorkspace.setCurrentScreen(initialDay);
             mWorkspace.setOnScrollListener(new Workspace.OnScrollListener() {
                 public void onScroll(float screenFraction) {
                     updateWorkspaceHeader(Math.round(screenFraction));
