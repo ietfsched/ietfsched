@@ -61,7 +61,8 @@ class Meeting {
 
 	static {
 		jsonDate.setTimeZone((UIUtils.AGENDA_TIME_ZONE));
-		afterFormat.setTimeZone(UIUtils.getConferenceTimeZone());
+		// Note: afterFormat is ParserUtils.df, which gets its timezone set by
+		// ParserUtils static initializer and updated by ParserUtils.updateTimezone()
 	}
 
 	// Handle parsing each line of the agenda.
