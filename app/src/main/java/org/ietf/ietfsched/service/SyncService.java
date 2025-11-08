@@ -157,7 +157,7 @@ public class SyncService extends IntentService {
 			JSONObject agenda = mRemoteExecutor.executeJSONGet(aUrl);
 			Log.d(TAG, String.format("remote sync started for URL: %s", aUrl));
 			// Parse the JSON data retrieved locally.
-			mLocalExecutor.execute(agenda);
+			mLocalExecutor.execute(agenda, meeting.number);
 			prefs.edit().putString(Prefs.LAST_ETAG, remoteEtag).apply();
 			prefs.edit().putInt(Prefs.LOCAL_VERSION, VERSION_CURRENT).apply();
 			Log.d(TAG, "remote sync finished");

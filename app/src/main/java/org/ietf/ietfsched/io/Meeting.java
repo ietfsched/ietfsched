@@ -48,6 +48,9 @@ class Meeting {
 	// Hack: timezone format (Z) = +0800 where the ietfsched application expects +08:00.
 	private final static SimpleDateFormat afterFormat = ParserUtils.df;
 
+	// Meeting number is set dynamically by LocalExecutor before parsing
+	private static int sMeetingNumber = 0;
+
 	String startHour; //2010-05-19 10:45:00
 	String endHour; // 2010-05-19 11:45:00
 	String title;
@@ -58,6 +61,13 @@ class Meeting {
 	String typeSession; // Morning Session I
 	String key; // unique identifier
 	String[] slides; // The list of slides urls.
+
+	/**
+	 * Sets the current meeting number. Must be called before creating Meeting objects.
+	 */
+	static void setMeetingNumber(int meetingNumber) {
+		sMeetingNumber = meetingNumber;
+	}
 
 	static {
 		jsonDate.setTimeZone((UIUtils.AGENDA_TIME_ZONE));
@@ -155,16 +165,15 @@ class Meeting {
 			JSONArray pArray =  (JSONArray) mJSON.get("presentations");
 			if (pArray == null) throw new UnScheduledMeetingException("No presentations");
 			slides = new String[pArray.length()];
-			// Meeting BASE_URL - SyncService.BASE_URL - is:
-			//   https://datatracker.ietf.org/meeting/116
 			// Meeting materials are urls like:
 			//   https://datatracker.ietf.org/meeting/116/materials/slides-116-mpls-clarify-bootstrapping-bfd-over-mpls-lsp
 			// Agenda url:
 			//   https://datatracker.ietf.org/meeting/116/materials/agenda-116-mpls-00
 			// Presentation name == file-name in URL: slides-116-mpls-clarify-bootstrapping-bfd-over-mpls-lsp
 			if (debug) Log.d(TAG, String.format("PRESENTATION LEN: %d", pArray.length()));
+			String baseUrl = "https://datatracker.ietf.org/meeting/" + sMeetingNumber + "/";
 			for (int i = 0; i < pArray.length(); i++ ){
-                String tURL = SyncService.BASE_URL + "materials/" +
+                String tURL = baseUrl + "materials/" +
 						pArray.getJSONObject(i).getString("name");
 				slides[i] = tURL;
 			}

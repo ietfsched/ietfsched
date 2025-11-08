@@ -56,9 +56,12 @@ public class LocalExecutor {
         mResolver = resolver;
     }
 
-	public void execute(JSONObject stream) throws Exception {
-		Log.d(TAG, "Parsing input page data");
+	public void execute(JSONObject stream, int meetingNumber) throws Exception {
+		Log.d(TAG, "Parsing input page data for meeting " + meetingNumber);
 		if (stream != null) {
+			// Set the meeting number for Meeting objects to use when building URLs
+			Meeting.setMeetingNumber(meetingNumber);
+			
 			ArrayList<Meeting> meetings = decode(stream);
 			if (meetings.size() == 0) {
 				throw new IOException("Cannot decode inputStream. Not an agenda ? ");
