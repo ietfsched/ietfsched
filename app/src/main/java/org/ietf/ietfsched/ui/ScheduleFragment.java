@@ -72,7 +72,7 @@ public class ScheduleFragment extends Fragment implements
         View.OnClickListener {
 
     private static final String TAG = "ScheduleFragment";
-    private static final boolean debug = false;
+    private static final boolean debug = true;
 
     /**
      * Flags used with {@link android.text.format.DateUtils#formatDateRange}.
@@ -171,6 +171,7 @@ public class ScheduleFragment extends Fragment implements
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
+        Log.d(TAG, "=== onCreateView START ===");
         ViewGroup root = (ViewGroup) inflater.inflate(R.layout.fragment_schedule, container, false);
 
         mWorkspace = (Workspace) root.findViewById(R.id.workspace);
@@ -222,9 +223,10 @@ public class ScheduleFragment extends Fragment implements
 			return root;
 		}
 		
+		Log.d(TAG, "Setting up " + START_DAYS.size() + " days");
 		for (long day : START_DAYS) {
 			setupDay(inflater, day);
-			}
+		}
 		
 		// Find which day corresponds to "now" and start on that day
 		int initialDay = findCurrentDayIndex();
@@ -295,7 +297,8 @@ public class ScheduleFragment extends Fragment implements
         day.timeEnd = startMillis + DateUtils.DAY_IN_MILLIS;
         day.blocksUri = ScheduleContract.Blocks.buildBlocksBetweenDirUri(
                 day.timeStart, day.timeEnd);
-        if (debug) Log.d(TAG, "day block uri " + day.blocksUri);
+        if (debug) Log.d(TAG, "Day " + day.index + " range: " + day.timeStart + " to " + day.timeEnd + 
+                " (" + new java.util.Date(day.timeStart) + " to " + new java.util.Date(day.timeEnd) + ")");
 
         // Setup views
         day.rootView = (ViewGroup) inflater.inflate(R.layout.blocks_content, null);
@@ -384,7 +387,9 @@ public class ScheduleFragment extends Fragment implements
     }
 
     private void requery() {
+        Log.d(TAG, "Requerying " + mDays.size() + " days");
         for (Day day : mDays) {
+            Log.d(TAG, "Querying day " + day.index + ": " + day.blocksUri);
             mHandler.startQuery(0, day, day.blocksUri, BlocksQuery.PROJECTION,
                     null, null, ScheduleContract.Blocks.DEFAULT_SORT);
         }
@@ -417,6 +422,7 @@ public class ScheduleFragment extends Fragment implements
         }
 
         Day day = (Day) cookie;
+        Log.d(TAG, "onQueryComplete for day " + day.index + ": " + cursor.getCount() + " blocks found");
 
         // Clear out any existing sessions before inserting again
         day.blocksView.removeAllBlocks();
