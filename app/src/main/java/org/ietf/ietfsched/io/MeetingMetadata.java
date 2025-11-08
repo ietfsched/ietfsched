@@ -59,7 +59,12 @@ public class MeetingMetadata {
         long startMillis = 0;
         long endMillis = 0;
         try {
-            Date startDate = ISO_DATE_FORMAT.parse(date);
+            // CRITICAL: Parse the date in the meeting's timezone, not the device timezone!
+            // The API gives us "2025-11-01" which means Nov 1 midnight in the MEETING's timezone.
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+            dateFormat.setTimeZone(tz);  // Use the meeting's timezone
+            
+            Date startDate = dateFormat.parse(date);
             if (startDate != null) {
                 startMillis = startDate.getTime();
                 // IMPORTANT: The API's end_date is unreliable (sometimes before start date!).
@@ -67,7 +72,7 @@ public class MeetingMetadata {
                 // Add 6 full days plus end-of-day (23:59:59) to the start date.
                 long WEEK_IN_MILLIS = 6 * 24 * 60 * 60 * 1000L;
                 endMillis = startMillis + WEEK_IN_MILLIS + (24 * 60 * 60 * 1000 - 1);
-                Log.d(TAG, "Calculated end date: start=" + date + ", end is 6 days later");
+                Log.d(TAG, "Calculated end date: start=" + date + " in " + tz.getID() + ", end is 6 days later");
             }
         } catch (Exception e) {
             Log.e(TAG, "Failed to parse meeting dates", e);
