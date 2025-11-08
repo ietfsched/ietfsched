@@ -281,13 +281,43 @@ public class LocalExecutor {
 	/**
 	 * Build a map of session start times per day.
 	 * This is used to assign session numbers (I, II, III) chronologically.
+	 * 
+	 * Uses a heuristic: only time slots with many parallel meetings (5+) are numbered.
+	 * Regular session blocks have 20-50 parallel WG meetings.
+	 * Special events typically have 1-3 parallel meetings.
 	 */
 	private void buildSessionTimesMap(ArrayList<Meeting> meetings) {
 		mDaySessionTimes.clear();
 		
+		// First pass: count parallel meetings per start time
+		HashMap<Long, Integer> parallelCounts = new HashMap<>();
+		
 		for (Meeting m : meetings) {
-			// Only process session-type meetings (regular WG sessions)
-			// Exclude special events, breaks, registration, etc.
+			// Only count session-type meetings (not breaks, registration, etc.)
+			String sessionType = m.typeSession.toLowerCase();
+			String titleLower = m.title.toLowerCase();
+			
+			if (!sessionType.contains("session")) {
+				continue;
+			}
+			
+			// Exclude non-session items from counting
+			if (titleLower.contains("break") || 
+				titleLower.contains("breakfast") ||
+				titleLower.contains("registration") ||
+				titleLower.contains("plenary") ||
+				titleLower.contains("hackathon")) {
+				continue;
+			}
+			
+			long startTime = ParserUtils.parseTime(m.startHour);
+			parallelCounts.put(startTime, parallelCounts.getOrDefault(startTime, 0) + 1);
+		}
+		
+		// Second pass: only include time slots with significant parallel meetings
+		final int MIN_PARALLEL_MEETINGS = 5; // Session blocks have 20-50, special events have 1-3
+		
+		for (Meeting m : meetings) {
 			String sessionType = m.typeSession.toLowerCase();
 			String titleLower = m.title.toLowerCase();
 			
@@ -315,6 +345,17 @@ public class LocalExecutor {
 			}
 			
 			long startTime = ParserUtils.parseTime(m.startHour);
+			
+			// Only include if this time slot has enough parallel meetings
+			int parallelCount = parallelCounts.getOrDefault(startTime, 0);
+			if (parallelCount < MIN_PARALLEL_MEETINGS) {
+				if (debug) {
+					Log.d(TAG, String.format("Skipping time slot with only %d parallel meetings: %s", 
+						parallelCount, m.title));
+				}
+				continue;
+			}
+			
 			java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
 			cal.setTimeInMillis(startTime);
 			
@@ -330,6 +371,13 @@ public class LocalExecutor {
 			ArrayList<Long> times = mDaySessionTimes.get(dayKey);
 			if (!times.contains(startTime)) {
 				times.add(startTime);
+				
+				if (debug) {
+					java.text.SimpleDateFormat fmt = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.ENGLISH);
+					fmt.setTimeZone(UIUtils.getConferenceTimeZone());
+					Log.d(TAG, String.format("Added session time %s with %d parallel meetings", 
+						fmt.format(new java.util.Date(startTime)), parallelCount));
+				}
 			}
 		}
 		
