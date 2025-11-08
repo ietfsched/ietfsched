@@ -171,7 +171,9 @@ public class LocalExecutor {
 			blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
 			title = m.title;
 		}
-		else if (m.title.contains("Office Hours")) {
+		else if (m.title.contains("Office Hours") && isActualOfficeHours(m)) {
+			// Only classify as office hours if it's IETF/IAB/IESG/ISE office hours,
+			// not a WG session that happens to mention office hours
 			blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
 			title = m.title;
 		}
@@ -227,6 +229,22 @@ public class LocalExecutor {
 		builder.withValue(Blocks.BLOCK_END, endTime);
 		builder.withValue(Blocks.BLOCK_TYPE, blockType);
 		return builder.build();	
+	}
+	
+	/**
+	 * Check if this is an actual office hours entry (IETF/IAB/IESG/ISE staff)
+	 * vs a WG session that mentions office hours.
+	 */
+	private boolean isActualOfficeHours(Meeting m) {
+		// Real office hours are from specific groups: iab, iesg, ise, ietf-trust, etc.
+		// WG sessions have normal WG acronyms (mpls, dispatch, 6man, etc.)
+		String group = m.group.toLowerCase();
+		return group.equals("iab") || 
+		       group.equals("iesg") || 
+		       group.equals("ise") ||
+		       group.equals("ietf-trust") ||
+		       m.title.contains("Coordinator") ||
+		       m.title.contains("Liaison");
 	}
 	
 	/**
