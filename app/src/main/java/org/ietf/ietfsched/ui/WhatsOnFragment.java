@@ -68,9 +68,9 @@ public class WhatsOnFragment extends Fragment {
         final long currentTimeMillis = UIUtils.getCurrentTime(getActivity());
 
         // Show Loading... and load the view corresponding to the current state
-        if (currentTimeMillis < UIUtils.CONFERENCE_START_MILLIS) {
+        if (currentTimeMillis < UIUtils.getConferenceStart()) {
             setupBefore();
-        } else if (currentTimeMillis > UIUtils.CONFERENCE_END_MILLIS) {
+        } else if (currentTimeMillis > UIUtils.getConferenceEnd()) {
             setupAfter();
         } else {
             setupDuring();
@@ -110,7 +110,7 @@ public class WhatsOnFragment extends Fragment {
     private Runnable mCountdownRunnable = new Runnable() {
         public void run() {
             int remainingSec = (int) Math.max(0,
-                    (UIUtils.CONFERENCE_START_MILLIS - System.currentTimeMillis()) / 1000);
+                    (UIUtils.getConferenceStart() - System.currentTimeMillis()) / 1000);
             final boolean conferenceStarted = remainingSec == 0;
 
             if (conferenceStarted) {

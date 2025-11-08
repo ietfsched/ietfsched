@@ -64,6 +64,13 @@ public class ParserUtils {
     }
 
     /**
+     * Updates the date formatter's timezone. Called when meeting configuration changes.
+     */
+    public static void updateTimezone() {
+        df.setTimeZone(UIUtils.getConferenceTimeZone());
+    }
+
+    /**
      * Sanitize the given string to be {@link Uri} safe for building
      * {@link ContentProvider} paths.
      */

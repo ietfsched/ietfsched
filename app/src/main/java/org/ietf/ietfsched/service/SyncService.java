@@ -18,8 +18,13 @@
 package org.ietf.ietfsched.service;
 
 import org.ietf.ietfsched.io.LocalExecutor;
+import org.ietf.ietfsched.io.MeetingDetector;
+import org.ietf.ietfsched.io.MeetingMetadata;
 import org.ietf.ietfsched.io.RemoteExecutor;
 import org.ietf.ietfsched.provider.ScheduleProvider;
+import org.ietf.ietfsched.util.MeetingPreferences;
+import org.ietf.ietfsched.util.ParserUtils;
+import org.ietf.ietfsched.util.UIUtils;
 import org.json.JSONObject;
 
 import android.app.IntentService;
@@ -52,9 +57,7 @@ public class SyncService extends IntentService {
     public static final int STATUS_FINISHED = 0x3;
 
 	/** Root worksheet feed for online data source */
-    private static final String mtg = "122";
-	// https://datatracker.ietf.org/meeting/115/agenda.json
-	public static final String BASE_URL = "https://datatracker.ietf.org/meeting/" + mtg + "/";
+    // Meeting number is now detected dynamically - no longer hardcoded
 	private static final String BASE_FILE = "agenda.json";
     private static final String HEADER_ACCEPT_ENCODING = "Accept-Encoding";
     private static final String ENCODING_GZIP = "gzip";
@@ -94,8 +97,36 @@ public class SyncService extends IntentService {
 		final String lastEtag = prefs.getString(Prefs.LAST_ETAG, "");
 
 		Log.d(TAG, "found localVersion=" + localVersion + " and VERSION_CURRENT=" + VERSION_CURRENT);
+		
+		// Detect current IETF meeting dynamically
+		MeetingDetector detector = new MeetingDetector(mRemoteExecutor);
+		MeetingMetadata meeting = detector.detectCurrentMeeting();
+		
+		if (meeting == null) {
+			Log.e(TAG, "Failed to detect current meeting");
+			final Bundle bundle = new Bundle();
+			bundle.putString(Intent.EXTRA_TEXT, "Could not determine current IETF meeting.");
+			if (receiver != null) {
+				receiver.send(STATUS_ERROR, bundle);
+			}
+			return;
+		}
+		
+		Log.i(TAG, "Using meeting: IETF " + meeting.number + " (" + meeting.city + ")");
+		
+		// Save meeting info for UI to use
+		MeetingPreferences.saveCurrentMeeting(context, meeting);
+		
+		// Update UIUtils with meeting timezone and dates
+		UIUtils.setConferenceTimeZone(meeting.timezone);
+		UIUtils.setConferenceDates(meeting.startMillis, meeting.endMillis);
+		
+		// Update the ParserUtils timezone
+		ParserUtils.updateTimezone();
+		
+		// Build agenda URL from detected meeting
+		String aUrl = meeting.agendaUrl;
 		String remoteEtag = "";
-		String aUrl = BASE_URL + BASE_FILE;
 
 		// Run a HEAD on the agenda URL, to get it's status, presumably.
 		try {

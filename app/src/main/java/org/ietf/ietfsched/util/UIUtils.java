@@ -64,16 +64,51 @@ public class UIUtils {
      * NRT +9 JST GMT+9:00 - Use the GMT offset notation from now on.
      */
     private static final String TAG = "UIUtils";
-    // Conference timezone is the local used at the venue.
-    public static final TimeZone CONFERENCE_TIME_ZONE = TimeZone.getTimeZone("GMT+07:00");
     // Agenda is published with timezones as UTC.
     public static final TimeZone AGENDA_TIME_ZONE = TimeZone.getTimeZone("GMT+00:00");
-
-    // Date/Time here is format: "yyyy-MM-dd HH:mm:00TZ" - ParserUtils.java:59
-    public static final Long CONFERENCE_START_MILLIS = ParserUtils.parseTime(
-            String.format("2025-03-14 07:00:00%s", CONFERENCE_TIME_ZONE.getID()));
-    public static final Long CONFERENCE_END_MILLIS = ParserUtils.parseTime(
-            String.format("2025-03-22 22:00:00%s", CONFERENCE_TIME_ZONE.getID()));
+    
+    // Conference timezone and dates are now dynamic, set by SyncService
+    private static TimeZone sConferenceTimeZone = TimeZone.getTimeZone("UTC");
+    private static long sConferenceStartMillis = 0;
+    private static long sConferenceEndMillis = Long.MAX_VALUE;
+    
+    /**
+     * Gets the dynamically set conference timezone.
+     */
+    public static TimeZone getConferenceTimeZone() {
+        return sConferenceTimeZone;
+    }
+    
+    /**
+     * Sets the conference timezone (called by SyncService).
+     */
+    public static void setConferenceTimeZone(TimeZone tz) {
+        sConferenceTimeZone = tz;
+        Log.d(TAG, "Conference timezone set to: " + tz.getID());
+    }
+    
+    /**
+     * Gets the dynamically set conference start time.
+     */
+    public static long getConferenceStart() {
+        return sConferenceStartMillis;
+    }
+    
+    /**
+     * Gets the dynamically set conference end time.
+     */
+    public static long getConferenceEnd() {
+        return sConferenceEndMillis;
+    }
+    
+    /**
+     * Sets the conference dates (called by SyncService).
+     */
+    public static void setConferenceDates(long startMillis, long endMillis) {
+        sConferenceStartMillis = startMillis;
+        sConferenceEndMillis = endMillis;
+        Log.d(TAG, "Conference dates set: " + startMillis + " to " + endMillis);
+    }
 
     /** Flags used with {@link DateUtils#formatDateRange}. */
     private static final int TIME_FLAGS = DateUtils.FORMAT_SHOW_TIME
