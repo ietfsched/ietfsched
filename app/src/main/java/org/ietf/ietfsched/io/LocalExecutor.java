@@ -232,19 +232,30 @@ public class LocalExecutor {
 	}
 	
 	/**
-	 * Check if this is an actual office hours entry (IETF/IAB/IESG/ISE staff)
-	 * vs a WG session that mentions office hours.
+	 * Check if this is an actual staff office hours entry vs a WG session.
+	 * 
+	 * Called only when title already contains "Office Hours". This function
+	 * verifies it's from staff groups (iesg, ise, ietf-trust) or is a 
+	 * Liaison/Coordinator office hours.
+	 * 
+	 * Returns FALSE for regular IAB/IESG meetings like "IAB Open Meeting"
+	 * which should be in the session block, not office hours block.
 	 */
 	private boolean isActualOfficeHours(Meeting m) {
-		// Real office hours are from specific groups: iab, iesg, ise, ietf-trust, etc.
-		// WG sessions have normal WG acronyms (mpls, dispatch, 6man, etc.)
 		String group = m.group.toLowerCase();
-		return group.equals("iab") || 
-		       group.equals("iesg") || 
-		       group.equals("ise") ||
-		       group.equals("ietf-trust") ||
-		       m.title.contains("Coordinator") ||
-		       m.title.contains("Liaison");
+		
+		// Staff group office hours (but NOT regular IAB meetings)
+		// IAB meetings like "IAB Open Meeting" should be sessions, not office hours
+		if (group.equals("iesg") || group.equals("ise") || group.equals("ietf-trust")) {
+			return true;
+		}
+		
+		// Liaison/Coordinator office hours (usually from IAB)
+		if (m.title.contains("Coordinator") || m.title.contains("Liaison")) {
+			return true;
+		}
+		
+		return false;
 	}
 	
 	/**
