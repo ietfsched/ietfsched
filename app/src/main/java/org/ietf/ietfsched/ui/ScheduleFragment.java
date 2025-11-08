@@ -41,6 +41,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.provider.BaseColumns;
 import androidx.fragment.app.Fragment;
+import java.util.Calendar;
 import androidx.core.content.res.TypedArrayUtils;
 import android.text.format.DateUtils;
 import android.util.Log;
@@ -80,32 +81,41 @@ public class ScheduleFragment extends Fragment implements
             DateUtils.FORMAT_SHOW_WEEKDAY |
             DateUtils.FORMAT_ABBREV_WEEKDAY;
 
-    /*		ParseerUtils defines the time format:
-     *      df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:00.000", Locale.US);
-     *      NOTE: This covers the 1 week of IETF and the previous week as well.
+	/**
+     * START_DAYS is the start of each day of IETF to permit building the view.
+     * Generated dynamically based on detected meeting dates.
      */
-    private static ArrayList<Long> START_DAYS = new ArrayList<Long>();
-    private static final String year = "2024";
+    private ArrayList<Long> START_DAYS = new ArrayList<Long>();
 
-    /*
-     * 2wks of time is required here, Week prior to IETF and IETF week.
-     * Months are the month numbers over which the meeting will span.
-     * Days are the days of the month.
+    /**
+     * Generates the START_DAYS list based on the conference start/end dates.
+     * Creates tabs for each day of the meeting.
      */
-    private static final Integer[] months = new Integer[]{ 3 };
-    private static final Integer[] days = new Integer[]{
-    // SU  MO  TU  WE  TH  FR  SA                 
-                           14, 15,
-       16, 17, 18, 19, 20, 21, 22,
-    };
-    static {
-        for( int i = 0; i<months.length;i++) {
-            for (int j = 0; j<days.length; j++) {
-                START_DAYS.add(ParserUtils.parseTime(
-                        String.format("%s-%02d-%02d 00:00:00%s", year, months[i], days[j],
-                                UIUtils.getConferenceTimeZone().getID())));
-            }
+    private void generateStartDays() {
+        START_DAYS.clear();
+        
+        long conferenceStart = UIUtils.getConferenceStart();
+        long conferenceEnd = UIUtils.getConferenceEnd();
+        
+        if (conferenceStart == 0 || conferenceEnd == 0) {
+            Log.w(TAG, "Conference dates not set yet, cannot generate schedule days");
+            return;
         }
+        
+        // Generate a day entry for each day of the conference
+        Calendar cal = Calendar.getInstance(UIUtils.getConferenceTimeZone());
+        cal.setTimeInMillis(conferenceStart);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        
+        while (cal.getTimeInMillis() <= conferenceEnd) {
+            START_DAYS.add(cal.getTimeInMillis());
+            cal.add(Calendar.DAY_OF_MONTH, 1);
+        }
+        
+        Log.d(TAG, "Generated " + START_DAYS.size() + " schedule days");
     }
 
     private static final int DISABLED_BLOCK_ALPHA = 100;
@@ -201,6 +211,9 @@ public class ScheduleFragment extends Fragment implements
             }
         });
 
+		// Generate schedule days dynamically based on detected meeting
+		generateStartDays();
+		
 		for (long day : START_DAYS) {
 			setupDay(inflater, day);
 			}
