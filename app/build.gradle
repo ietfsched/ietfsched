@@ -11,7 +11,7 @@ android {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
-            signingConfig signingConfigs.release
+            // signingConfig signingConfigs.release  // Commented out - no signing config defined
         }
     }
     productFlavors {
