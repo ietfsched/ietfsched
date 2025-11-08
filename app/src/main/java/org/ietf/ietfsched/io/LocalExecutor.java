@@ -151,41 +151,52 @@ public class LocalExecutor {
 		sessionType = m.typeSession.toLowerCase();
 
 		// Based on rough parsing of the agenda elements assign block TYPE.
-		if (m.typeSession.contains("Registration")) {
-			title = ParserUtils.BLOCK_TITLE_REGISTRATION;
-			blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
-		}
-		else if (sessionType.contains(("session"))) {
-			title = m.typeSession.trim().length() == 0 ? m.area : m.typeSession;
-			blockType = ParserUtils.BLOCK_TYPE_SESSION;
-		}
-		else if (m.title.contains("Break")) {
+		// Check specific types FIRST before the generic "session" check
+		
+		// Check title-based patterns first (these are most specific)
+		if (m.title.contains("Break") || m.title.contains("break")) {
 			blockType = ParserUtils.BLOCK_TYPE_FOOD;
-		}
-		// NOC Helpdesk Hours must show up like office-hours.
-		// Otherwise these blocks overwrite the session blocks.
-		else if (m.title.contains("NOC")) {
-			blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
-		}
-		else if (m.title.contains("Office Hours")) {
-			blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
+			title = m.title;
 		}
 		else if (m.title.contains("Plenary")){
 			// Plenary actions should get shown, Food at least keeps them showing.
-            // Also, there is generally food served at the plenary.
-		    blockType = ParserUtils.BLOCK_TYPE_FOOD;
+			// Also, there is generally food served at the plenary.
+			blockType = ParserUtils.BLOCK_TYPE_FOOD;
+			title = m.title;
 		}
 		else if (m.title.contains("Hackathon")){
-		    title = ParserUtils.BLOCK_TYPE_HACKATHON;
-		    blockType = ParserUtils.BLOCK_TYPE_HACKATHON;
+			title = ParserUtils.BLOCK_TYPE_HACKATHON;
+			blockType = ParserUtils.BLOCK_TYPE_HACKATHON;
+		}
+		else if (m.title.contains("NOC") || m.title.contains("Helpdesk")) {
+			// NOC Helpdesk Hours must show up like office-hours.
+			blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
+			title = m.title;
+		}
+		else if (m.title.contains("Office Hours")) {
+			blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
+			title = m.title;
+		}
+		// Check typeSession patterns
+		else if (m.typeSession.contains("Registration") || m.title.contains("Registration")) {
+			title = ParserUtils.BLOCK_TITLE_REGISTRATION;
+			blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
 		}
 		else if (m.typeSession.contains("None")) {
 			title = "...";
 			blockType = ParserUtils.BLOCK_TYPE_SESSION;
 		}
+		// Default: if typeSession contains "session", it's a regular session block
+		else if (sessionType.contains("session")) {
+			title = m.typeSession.trim().length() == 0 ? m.area : m.typeSession;
+			blockType = ParserUtils.BLOCK_TYPE_SESSION;
+		}
 		else {
-		    Log.d(TAG, String.format("Unknown Agenda slot(%s - %s), type: %s, title: %s",
+			Log.d(TAG, String.format("Unknown Agenda slot(%s - %s), type: %s, title: %s",
 					startTime, endTime, m.typeSession, m.title));
+			// Default to session if we don't know what it is
+			title = m.typeSession.trim().length() == 0 ? m.title : m.typeSession;
+			blockType = ParserUtils.BLOCK_TYPE_SESSION;
 		}
 
 		builder.withValue(Blocks.BLOCK_ID, blockId);
