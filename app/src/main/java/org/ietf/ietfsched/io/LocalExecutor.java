@@ -205,28 +205,9 @@ public class LocalExecutor {
 			blockType = ParserUtils.BLOCK_TYPE_SESSION;
 		}
 
-		// For SESSION blocks, consolidate by day+period
-		// For other blocks, keep individual times
-		String key;
-		if (blockType.equals(ParserUtils.BLOCK_TYPE_SESSION)) {
-			// Use consolidated times for session blocks
-			startTime = getConsolidatedStartTime(actualStartTime);
-			endTime = getConsolidatedEndTime(actualStartTime);
-			blockId = Blocks.generateBlockId(startTime, endTime);
-			
-			// Create one block per day+period
-			java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
-			cal.setTimeInMillis(actualStartTime);
-			String dayOfYear = String.format("%04d-%03d", 
-				cal.get(java.util.Calendar.YEAR), 
-				cal.get(java.util.Calendar.DAY_OF_YEAR));
-			String sessionPeriod = getSessionPeriod(cal.get(java.util.Calendar.HOUR_OF_DAY));
-			key = String.format("%s-%s-SESSION", dayOfYear, sessionPeriod);
-		} else {
-			// Non-session blocks: use unique start time + type
-			key = String.format("%s-%s", m.startHour, m.typeSession);
-		}
-		
+		// Create one block per unique start time + type
+		// Don't consolidate - session times vary by meeting
+		String key = String.format("%s-%s", m.startHour, m.typeSession);
 		if (blockRefs.contains(key)) {
 			return null;
 		}
@@ -268,87 +249,11 @@ public class LocalExecutor {
 	}
 	
 	/**
-	 * Determine session period (I, II, III) based on hour of day.
-	 * This is used to group sessions into blocks.
-	 */
-	private String getSessionPeriod(int hourOfDay) {
-		if (hourOfDay < 12) {
-			return "I";
-		} else if (hourOfDay < 17) {
-			return "II";
-		} else {
-			return "III";
-		}
-	}
-	
-	/**
-	 * Get the consolidated start time for a session period.
-	 * Returns the earliest typical start time for that period.
-	 */
-	private long getConsolidatedStartTime(long actualStartTime) {
-		java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
-		cal.setTimeInMillis(actualStartTime);
-		
-		int hourOfDay = cal.get(java.util.Calendar.HOUR_OF_DAY);
-		
-		// Set to start of day
-		cal.set(java.util.Calendar.HOUR_OF_DAY, 0);
-		cal.set(java.util.Calendar.MINUTE, 0);
-		cal.set(java.util.Calendar.SECOND, 0);
-		cal.set(java.util.Calendar.MILLISECOND, 0);
-		
-		// Add the consolidated period start time
-		if (hourOfDay < 12) {
-			// Session I: 9:00 AM
-			cal.add(java.util.Calendar.HOUR_OF_DAY, 9);
-		} else if (hourOfDay < 17) {
-			// Session II: 1:00 PM
-			cal.add(java.util.Calendar.HOUR_OF_DAY, 13);
-		} else {
-			// Session III: 5:00 PM
-			cal.add(java.util.Calendar.HOUR_OF_DAY, 17);
-		}
-		
-		return cal.getTimeInMillis();
-	}
-	
-	/**
-	 * Get the consolidated end time for a session period.
-	 * Returns the latest typical end time for that period.
-	 */
-	private long getConsolidatedEndTime(long actualStartTime) {
-		java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
-		cal.setTimeInMillis(actualStartTime);
-		
-		int hourOfDay = cal.get(java.util.Calendar.HOUR_OF_DAY);
-		
-		// Set to start of day
-		cal.set(java.util.Calendar.HOUR_OF_DAY, 0);
-		cal.set(java.util.Calendar.MINUTE, 0);
-		cal.set(java.util.Calendar.SECOND, 0);
-		cal.set(java.util.Calendar.MILLISECOND, 0);
-		
-		// Add the consolidated period end time
-		if (hourOfDay < 12) {
-			// Session I: ends at 12:00 PM
-			cal.add(java.util.Calendar.HOUR_OF_DAY, 12);
-		} else if (hourOfDay < 17) {
-			// Session II: ends at 5:00 PM
-			cal.add(java.util.Calendar.HOUR_OF_DAY, 17);
-		} else {
-			// Session III: ends at 8:00 PM
-			cal.add(java.util.Calendar.HOUR_OF_DAY, 20);
-		}
-		
-		return cal.getTimeInMillis();
-	}
-	
-	/**
-	 * Generate a descriptive block title matching IETF web agenda format.
-	 * Examples: "Monday Session I", "Tuesday Session II", "Wednesday Session III"
+	 * Generate a descriptive block title with day name and time.
+	 * Examples: "Monday 09:30 Sessions", "Tuesday 14:00 Sessions"
 	 * 
-	 * The web agenda shows day name + session number. Sessions are numbered
-	 * sequentially throughout each day (Session I, II, III, etc.).
+	 * Since session times vary by meeting, we include the actual start time
+	 * rather than trying to assign session numbers (I, II, III).
 	 */
 	private String generateBlockTitle(long startTimeMillis) {
 		java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
@@ -357,11 +262,10 @@ public class LocalExecutor {
 		// Get day of week name (Monday, Tuesday, etc.)
 		String dayName = new java.text.SimpleDateFormat("EEEE", java.util.Locale.ENGLISH).format(cal.getTime());
 		
-		// Determine session number based on time of day
-		int hourOfDay = cal.get(java.util.Calendar.HOUR_OF_DAY);
-		String sessionNumber = getSessionPeriod(hourOfDay);
+		// Get time in HH:mm format
+		String time = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.ENGLISH).format(cal.getTime());
 		
-		return dayName + " Session " + sessionNumber;
+		return dayName + " " + time + " Sessions";
 	}
 
 	private ContentProviderOperation createSession(Meeting m, long versionBuild) throws Exception {
@@ -390,26 +294,8 @@ public class LocalExecutor {
 			
 			sessionId = Sessions.generateSessionId(m.key);
 			
-			// Calculate block_id using the same logic as createBlock
-			// For session-type meetings, use consolidated times so they map to the right block
-			String blockId;
-			String sessionType = m.typeSession.toLowerCase();
-			boolean isSessionType = sessionType.contains("session") && 
-									!m.title.contains("Break") && 
-									!m.title.contains("Registration") &&
-									!m.title.contains("Office Hours") &&
-									!m.title.contains("Plenary") &&
-									!m.title.contains("Hackathon");
-			
-			if (isSessionType) {
-				// Use consolidated times to match the consolidated session block
-				long consolidatedStart = getConsolidatedStartTime(startTime);
-				long consolidatedEnd = getConsolidatedEndTime(startTime);
-				blockId = Blocks.generateBlockId(consolidatedStart, consolidatedEnd);
-			} else {
-				// Use actual times for non-session blocks
-				blockId = Blocks.generateBlockId(startTime, endTime);
-			}
+			// Use actual times for block_id - no consolidation
+			String blockId = Blocks.generateBlockId(startTime, endTime);
 		
 			builder.withValue(Sessions.SESSION_ID, sessionId);
 			builder.withValue(Sessions.SESSION_TITLE, title);
