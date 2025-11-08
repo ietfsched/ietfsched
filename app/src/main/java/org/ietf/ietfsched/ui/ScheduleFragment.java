@@ -431,13 +431,18 @@ public class ScheduleFragment extends Fragment implements
             while (cursor.moveToNext()) {
                 final String type = cursor.getString(BlocksQuery.BLOCK_TYPE);
                 final Integer column = sTypeColumnMap.get(type);
+                
+                final String blockId = cursor.getString(BlocksQuery.BLOCK_ID);
+                final String title = cursor.getString(BlocksQuery.BLOCK_TITLE);
+                
+                Log.d(TAG, "Block type: '" + type + "' maps to column: " + column + " for block: " + blockId);
+                
                 // TODO: place random blocks at bottom of entire layout
                 if (column == null || column == -1)  {
+                    Log.w(TAG, "SKIPPING block '" + title + "' because type '" + type + "' has no column mapping");
                     continue;
                 }
 
-                final String blockId = cursor.getString(BlocksQuery.BLOCK_ID);
-                final String title = cursor.getString(BlocksQuery.BLOCK_TITLE);
                 final long start = cursor.getLong(BlocksQuery.BLOCK_START);
                 final long end = cursor.getLong(BlocksQuery.BLOCK_END);
                 final boolean containsStarred = cursor.getInt(BlocksQuery.CONTAINS_STARRED) != 0;
