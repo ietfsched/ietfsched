@@ -283,9 +283,57 @@ public class ScheduleFragment extends Fragment implements
         mDays.add(day);
     }
 
+    /**
+     * Rebuilds schedule tabs when data becomes available after initial view creation.
+     */
+    private void rebuildScheduleTabs() {
+        if (getActivity() == null) {
+            return;
+        }
+        
+        LayoutInflater inflater = getActivity().getLayoutInflater();
+        
+        // Generate START_DAYS based on now-available conference dates
+        generateStartDays();
+        
+        if (START_DAYS.isEmpty()) {
+            Log.w(TAG, "Still no conference dates available");
+            return;
+        }
+        
+        // Clear any existing workspace views
+        if (mWorkspace != null) {
+            mWorkspace.removeAllViews();
+        }
+        mDays.clear();
+        
+        // Create tabs for each day
+        for (long day : START_DAYS) {
+            setupDay(inflater, day);
+        }
+        
+        // Update header and scroll listener
+        if (!mDays.isEmpty()) {
+            updateWorkspaceHeader(0);
+            mWorkspace.setOnScrollListener(new Workspace.OnScrollListener() {
+                public void onScroll(float screenFraction) {
+                    updateWorkspaceHeader(Math.round(screenFraction));
+                }
+            }, true);
+        }
+        
+        Log.i(TAG, "Schedule tabs rebuilt with " + mDays.size() + " days");
+    }
+
     @Override
     public void onResume() {
         super.onResume();
+
+        // Check if we need to rebuild tabs (in case view was created before data was available)
+        if (mDays.isEmpty() && UIUtils.getConferenceStart() != 0) {
+            Log.i(TAG, "Conference data now available, rebuilding schedule tabs");
+            rebuildScheduleTabs();
+        }
 
         // Since we build our views manually instead of using an adapter, we
         // need to manually requery every time launched.
