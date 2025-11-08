@@ -150,6 +150,8 @@ public class LocalExecutor {
 		blockType = ParserUtils.BLOCK_TYPE_UNKNOWN;
 		sessionType = m.typeSession.toLowerCase();
 
+		if (debug) Log.d(TAG, "Creating block: title='" + m.title + "' typeSession='" + m.typeSession + "'");
+
 		// Based on rough parsing of the agenda elements assign block TYPE.
 		// Check specific types FIRST before the generic "session" check
 		
@@ -168,8 +170,10 @@ public class LocalExecutor {
 			title = ParserUtils.BLOCK_TYPE_HACKATHON;
 			blockType = ParserUtils.BLOCK_TYPE_HACKATHON;
 		}
-		else if (m.title.contains("NOC") || m.title.contains("Helpdesk")) {
-			// NOC Helpdesk Hours must show up like office-hours.
+		else if (m.title.toLowerCase().contains("noc") || 
+				 m.title.toLowerCase().contains("helpdesk") || 
+				 m.title.toLowerCase().contains("help desk")) {
+			// NOC Helpdesk Hours must show up in yellow column.
 			blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
 			title = m.title;
 		}
