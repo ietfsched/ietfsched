@@ -41,6 +41,8 @@ import android.content.res.Resources;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 
 public class LocalExecutor {
@@ -50,6 +52,9 @@ public class LocalExecutor {
     private ContentResolver mResolver;
 	private final String mAuthority = ScheduleContract.CONTENT_AUTHORITY;
 	private final HashSet<String> blockRefs = new HashSet<>();
+	
+	// Map of (day -> sorted list of session start times) for assigning session numbers (I, II, III)
+	private final HashMap<String, ArrayList<Long>> mDaySessionTimes = new HashMap<>();
 
 
     public LocalExecutor(Resources res, ContentResolver resolver) {
@@ -97,6 +102,9 @@ public class LocalExecutor {
 	}
 
 	private ArrayList<ContentProviderOperation> transform(ArrayList<Meeting> meetings, long versionBuild) throws Exception {
+		// First pass: build map of session start times per day for numbering (I, II, III)
+		buildSessionTimesMap(meetings);
+		
 		final ArrayList<ContentProviderOperation> batch = Lists.newArrayList();
 		for (int i = 0; i < meetings.size(); i++) {
 			Meeting m = meetings.get(i);
@@ -249,11 +257,84 @@ public class LocalExecutor {
 	}
 	
 	/**
-	 * Generate a descriptive block title with day name and time.
-	 * Examples: "Monday 09:30 Sessions", "Tuesday 14:00 Sessions"
+	 * Build a map of session start times per day.
+	 * This is used to assign session numbers (I, II, III) chronologically.
+	 */
+	private void buildSessionTimesMap(ArrayList<Meeting> meetings) {
+		mDaySessionTimes.clear();
+		
+		for (Meeting m : meetings) {
+			// Only process session-type meetings
+			String sessionType = m.typeSession.toLowerCase();
+			if (!sessionType.contains("session") || 
+				m.title.contains("Break") || 
+				m.title.contains("Registration") ||
+				m.title.contains("Office Hours") ||
+				m.title.contains("Plenary") ||
+				m.title.contains("Hackathon")) {
+				continue;
+			}
+			
+			long startTime = ParserUtils.parseTime(m.startHour);
+			java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
+			cal.setTimeInMillis(startTime);
+			
+			// Get day key (YYYY-DDD format)
+			String dayKey = String.format("%04d-%03d", 
+				cal.get(java.util.Calendar.YEAR), 
+				cal.get(java.util.Calendar.DAY_OF_YEAR));
+			
+			// Add this start time to the day's list
+			if (!mDaySessionTimes.containsKey(dayKey)) {
+				mDaySessionTimes.put(dayKey, new ArrayList<Long>());
+			}
+			ArrayList<Long> times = mDaySessionTimes.get(dayKey);
+			if (!times.contains(startTime)) {
+				times.add(startTime);
+			}
+		}
+		
+		// Sort times for each day
+		for (ArrayList<Long> times : mDaySessionTimes.values()) {
+			Collections.sort(times);
+		}
+	}
+	
+	/**
+	 * Get the session number (I, II, III, etc.) for a given start time.
+	 * Returns the Roman numeral based on chronological order within the day.
+	 */
+	private String getSessionNumber(long startTimeMillis) {
+		java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
+		cal.setTimeInMillis(startTimeMillis);
+		
+		String dayKey = String.format("%04d-%03d", 
+			cal.get(java.util.Calendar.YEAR), 
+			cal.get(java.util.Calendar.DAY_OF_YEAR));
+		
+		ArrayList<Long> times = mDaySessionTimes.get(dayKey);
+		if (times == null) {
+			return "I"; // Default fallback
+		}
+		
+		int index = times.indexOf(startTimeMillis);
+		if (index == -1) {
+			return "I"; // Default fallback
+		}
+		
+		// Convert index to Roman numeral
+		String[] numerals = {"I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"};
+		if (index < numerals.length) {
+			return numerals[index];
+		}
+		return String.valueOf(index + 1); // Fallback to Arabic if > X
+	}
+	
+	/**
+	 * Generate a descriptive block title matching IETF web agenda format.
+	 * Examples: "Monday Session I", "Tuesday Session II", "Wednesday Session III"
 	 * 
-	 * Since session times vary by meeting, we include the actual start time
-	 * rather than trying to assign session numbers (I, II, III).
+	 * Session numbers are assigned chronologically within each day.
 	 */
 	private String generateBlockTitle(long startTimeMillis) {
 		java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
@@ -262,10 +343,10 @@ public class LocalExecutor {
 		// Get day of week name (Monday, Tuesday, etc.)
 		String dayName = new java.text.SimpleDateFormat("EEEE", java.util.Locale.ENGLISH).format(cal.getTime());
 		
-		// Get time in HH:mm format
-		String time = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.ENGLISH).format(cal.getTime());
+		// Get session number based on chronological order
+		String sessionNumber = getSessionNumber(startTimeMillis);
 		
-		return dayName + " " + time + " Sessions";
+		return dayName + " Session " + sessionNumber;
 	}
 
 	private ContentProviderOperation createSession(Meeting m, long versionBuild) throws Exception {
