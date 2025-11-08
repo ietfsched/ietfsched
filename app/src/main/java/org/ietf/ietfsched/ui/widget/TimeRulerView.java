@@ -32,7 +32,9 @@ import org.ietf.ietfsched.R;
 import org.ietf.ietfsched.util.UIUtils;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.TimeZone;
 
 /**
  * Custom view that draws a vertical time "ruler" representing the chronological
@@ -89,14 +91,17 @@ public class TimeRulerView extends View {
      */
     public int getTimeVerticalOffset(long timeMillis, int count, boolean start) {
         Log.d(TAG, "getTimeVerticalOffset timeMillis: " + timeMillis + " Count: " + count);
+        
+        // Get the conference timezone and convert to ZoneId for proper handling
+        TimeZone tz = UIUtils.getConferenceTimeZone();
+        ZoneId zoneId = tz.toZoneId();
+        
+        // Get the offset at the specific time (accounts for DST)
+        ZoneOffset offset = zoneId.getRules().getOffset(java.time.Instant.ofEpochMilli(timeMillis));
+        
         LocalDateTime ldt = LocalDateTime.ofEpochSecond((long) timeMillis / 1000,
                 0,
-                // Attempting a time offset here may be incorrect.
-                // Meetings get stored with the CONFERENCE_TIME_ZONE at stora/collection time.
-                ZoneOffset.of(UIUtils.getConferenceTimeZone().getID()
-                                .replaceAll("^GMT", "")
-                                .replaceAll(":", "")
-                ));
+                offset);
 
 
         final int minutes = ldt.getMinute();
