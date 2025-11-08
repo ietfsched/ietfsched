@@ -82,15 +82,21 @@ class Meeting {
 		} catch (JSONException e) {
 		    throw new UnScheduledMeetingException("Missing title for event");
 		}
-		// Validate that the agenda item is a 'status' == 'sched'.
+		// Validate that the agenda item has a valid status.
+		// For past meetings, accept sessions even without explicit status since the
+		// meeting has already happened and data quality may vary.
 		String status = "";
 		try {
 			status = mJSON.getString("status");
 		} catch (JSONException e) {
-		  throw new UnScheduledMeetingException("Non Status event");
+			// No status field - accept it (common for historical/past meetings)
+			status = "nostatus";
+			if (debug) Log.d(TAG, "Session without status field, accepting: " + mJSON.optString("name"));
 		}
-		// To permit use before the final agenda is published, permit 'schedw' status.
-		if (!status.equals("sched") && !status.equals("schedw")) {
+		
+		// Accept: sched, schedw (scheduled), and sessions without status
+		// Reject: canceled, resched, deleted  
+		if (status.equals("canceled") || status.equals("resched") || status.equals("deleted")) {
 			throw new UnScheduledMeetingException(
 					String.format(
 							"Unscheduled meeting(%s) status: %s",
