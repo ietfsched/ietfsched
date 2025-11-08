@@ -103,7 +103,7 @@ public class ScheduleFragment extends Fragment implements
             for (int j = 0; j<days.length; j++) {
                 START_DAYS.add(ParserUtils.parseTime(
                         String.format("%s-%02d-%02d 00:00:00%s", year, months[i], days[j],
-                                UIUtils.CONFERENCE_TIME_ZONE.getID())));
+                                UIUtils.getConferenceTimeZone().getID())));
             }
         }
     }
@@ -250,7 +250,7 @@ public class ScheduleFragment extends Fragment implements
         day.blocksView = (BlocksLayout) day.rootView.findViewById(R.id.blocks);
         day.nowView = day.rootView.findViewById(R.id.blocks_now);
 
-        TimeZone.setDefault(UIUtils.CONFERENCE_TIME_ZONE);
+        TimeZone.setDefault(UIUtils.getConferenceTimeZone());
         day.label = DateUtils.formatDateTime(getActivity(), startMillis, TIME_FLAGS);
 
         mWorkspace.addView(day.rootView);

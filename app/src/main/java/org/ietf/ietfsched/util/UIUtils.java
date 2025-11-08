@@ -159,7 +159,7 @@ public class UIUtils {
         int subColorId = R.color.body_text_2;
 
         if (currentTimeMillis > blockEnd &&
-                currentTimeMillis < CONFERENCE_END_MILLIS) {
+                currentTimeMillis < getConferenceEnd()) {
             colorId = subColorId = R.color.body_text_disabled;
         }
 
@@ -215,7 +215,7 @@ public class UIUtils {
     }
 
     public static long getCurrentTime(final Context context) {
-        long t = Calendar.getInstance(CONFERENCE_TIME_ZONE).getTimeInMillis();
+        long t = Calendar.getInstance(getConferenceTimeZone()).getTimeInMillis();
         Log.d(TAG, String.format("Sending currentTime: %d", t));
         return t;
     }

@@ -112,7 +112,7 @@ public class BlocksLayout extends ViewGroup {
         final int count = getChildCount();
         // Agenda times are UTC, conference times are not, between json parsing and display
         // convert from Agenda to Conference TZ.
-        final int tzOffset = UIUtils.CONFERENCE_TIME_ZONE.getRawOffset();
+        final int tzOffset = UIUtils.getConferenceTimeZone().getRawOffset();
         Log.d(TAG, "Children to add to ruler: " + count);
         for (int i = 0; i < count; i++) {
             final View child = getChildAt(i);

@@ -93,7 +93,7 @@ public class TimeRulerView extends View {
                 0,
                 // Attempting a time offset here may be incorrect.
                 // Meetings get stored with the CONFERENCE_TIME_ZONE at stora/collection time.
-                ZoneOffset.of(UIUtils.CONFERENCE_TIME_ZONE.getID()
+                ZoneOffset.of(UIUtils.getConferenceTimeZone().getID()
                                 .replaceAll("^GMT", "")
                                 .replaceAll(":", "")
                 ));

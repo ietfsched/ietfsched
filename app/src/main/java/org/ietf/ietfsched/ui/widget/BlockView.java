@@ -97,7 +97,7 @@ public class BlockView extends Button {
     }
 
     public String getBlockTimeString() {
-        TimeZone.setDefault(UIUtils.CONFERENCE_TIME_ZONE);
+        TimeZone.setDefault(UIUtils.getConferenceTimeZone());
         return DateUtils.formatDateTime(getContext(), mStartTime, TIME_STRING_FLAGS);
     }
 
