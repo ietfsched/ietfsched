@@ -47,7 +47,7 @@ import java.util.HashSet;
 
 public class LocalExecutor {
 	private static final String TAG = "LocalExecutor";
-	private static final boolean debug = false;
+	private static final boolean debug = true;
     private Resources mRes;
     private ContentResolver mResolver;
 	private final String mAuthority = ScheduleContract.CONTENT_AUTHORITY;
@@ -264,14 +264,31 @@ public class LocalExecutor {
 		mDaySessionTimes.clear();
 		
 		for (Meeting m : meetings) {
-			// Only process session-type meetings
+			// Only process session-type meetings (regular WG sessions)
+			// Exclude special events, breaks, registration, etc.
 			String sessionType = m.typeSession.toLowerCase();
-			if (!sessionType.contains("session") || 
-				m.title.contains("Break") || 
-				m.title.contains("Registration") ||
-				m.title.contains("Office Hours") ||
-				m.title.contains("Plenary") ||
-				m.title.contains("Hackathon")) {
+			String titleLower = m.title.toLowerCase();
+			
+			if (!sessionType.contains("session")) {
+				continue;
+			}
+			
+			// Exclude non-session blocks
+			if (titleLower.contains("break") || 
+				titleLower.contains("breakfast") ||
+				titleLower.contains("registration") ||
+				titleLower.contains("office hours") ||
+				titleLower.contains("plenary") ||
+				titleLower.contains("hackathon") ||
+				titleLower.contains("reception") ||
+				titleLower.contains("social") ||
+				titleLower.contains("education") ||
+				titleLower.contains("outreach") ||
+				titleLower.contains("tutorial") ||
+				titleLower.contains("newcomer") ||
+				titleLower.contains("noc") ||
+				titleLower.contains("helpdesk") ||
+				titleLower.contains("help desk")) {
 				continue;
 			}
 			
@@ -295,8 +312,21 @@ public class LocalExecutor {
 		}
 		
 		// Sort times for each day
-		for (ArrayList<Long> times : mDaySessionTimes.values()) {
+		for (String day : mDaySessionTimes.keySet()) {
+			ArrayList<Long> times = mDaySessionTimes.get(day);
 			Collections.sort(times);
+			
+			// Debug: log session times for this day
+			if (debug) {
+				StringBuilder sb = new StringBuilder();
+				sb.append("Day ").append(day).append(" has ").append(times.size()).append(" session times: ");
+				for (Long time : times) {
+					java.text.SimpleDateFormat fmt = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.ENGLISH);
+					fmt.setTimeZone(UIUtils.getConferenceTimeZone());
+					sb.append(fmt.format(new java.util.Date(time))).append(" ");
+				}
+				Log.d(TAG, sb.toString());
+			}
 		}
 	}
 	
