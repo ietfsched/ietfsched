@@ -66,7 +66,7 @@ public class UIUtils {
     private static final String TAG = "UIUtils";
     // Agenda is published with timezones as UTC.
     public static final TimeZone AGENDA_TIME_ZONE = TimeZone.getTimeZone("GMT+00:00");
-    
+
     // Conference timezone and dates are now dynamic, set by SyncService
     private static TimeZone sConferenceTimeZone = TimeZone.getTimeZone("UTC");
     private static long sConferenceStartMillis = 0;

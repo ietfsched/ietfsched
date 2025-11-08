@@ -18,6 +18,7 @@
 package org.ietf.ietfsched.io;
 
 import org.ietf.ietfsched.util.ParserUtils;
+import org.ietf.ietfsched.util.UIUtils;
 import org.ietf.ietfsched.provider.ScheduleContract;
 import org.ietf.ietfsched.provider.ScheduleContract.Blocks;
 import org.ietf.ietfsched.provider.ScheduleContract.Rooms;
@@ -192,7 +193,8 @@ public class LocalExecutor {
 		}
 		// Default: if typeSession contains "session", it's a regular session block
 		else if (sessionType.contains("session")) {
-			title = m.typeSession.trim().length() == 0 ? m.area : m.typeSession;
+			// Generate a descriptive title based on time of day
+			title = generateBlockTitle(startTime);
 			blockType = ParserUtils.BLOCK_TYPE_SESSION;
 		}
 		else {
@@ -211,6 +213,36 @@ public class LocalExecutor {
 		return builder.build();	
 	}
 	
+	/**
+	 * Generate a descriptive block title matching IETF web agenda format.
+	 * Examples: "Monday Session I", "Tuesday Session II", "Wednesday Session III"
+	 * 
+	 * The web agenda shows day name + session number. Sessions are numbered
+	 * sequentially throughout each day (Session I, II, III, etc.).
+	 */
+	private String generateBlockTitle(long startTimeMillis) {
+		java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
+		cal.setTimeInMillis(startTimeMillis);
+		
+		// Get day of week name (Monday, Tuesday, etc.)
+		String dayName = new java.text.SimpleDateFormat("EEEE", java.util.Locale.ENGLISH).format(cal.getTime());
+		
+		// Determine session number based on time of day
+		// Typical IETF schedule: Session I (morning), Session II (afternoon), Session III (evening)
+		int hourOfDay = cal.get(java.util.Calendar.HOUR_OF_DAY);
+		String sessionNumber;
+		
+		if (hourOfDay < 12) {
+			sessionNumber = "I";
+		} else if (hourOfDay < 17) {
+			sessionNumber = "II";
+		} else {
+			sessionNumber = "III";
+		}
+		
+		return dayName + " Session " + sessionNumber;
+	}
+
 	private ContentProviderOperation createSession(Meeting m, long versionBuild) throws Exception {
 		final ContentProviderOperation.Builder builder = ContentProviderOperation.newInsert(Sessions.CONTENT_URI);
         builder.withValue(Sessions.UPDATED, versionBuild);
