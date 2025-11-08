@@ -139,20 +139,6 @@ public class LocalExecutor {
 		startTime = ParserUtils.parseTime(m.startHour);
 		endTime = ParserUtils.parseTime(m.endHour);
 		
-		// Group blocks by day + session period (I, II, III) instead of exact start time
-		// This consolidates multiple sessions starting at different times into one block
-		java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
-		cal.setTimeInMillis(startTime);
-		String dayOfYear = String.format("%04d-%03d", cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.DAY_OF_YEAR));
-		String sessionPeriod = getSessionPeriod(cal.get(java.util.Calendar.HOUR_OF_DAY));
-		
-		String key = String.format("%s-%s-%s", dayOfYear, sessionPeriod, m.typeSession);
-		if (blockRefs.contains(key)) {
-			return null;
-		}
-		else {
-			blockRefs.add(key);
-		}
 		String blockId = Blocks.generateBlockId(startTime, endTime);
 		title = m.title;
 		blockType = ParserUtils.BLOCK_TYPE_UNKNOWN;
@@ -210,6 +196,29 @@ public class LocalExecutor {
 			// Default to session if we don't know what it is
 			title = m.typeSession.trim().length() == 0 ? m.title : m.typeSession;
 			blockType = ParserUtils.BLOCK_TYPE_SESSION;
+		}
+
+		// Consolidate WG session blocks by day + period
+		// Only session blocks get consolidated; other types (registration, breaks, etc.) 
+		// create individual blocks to preserve their specific names
+		if (blockType.equals(ParserUtils.BLOCK_TYPE_SESSION)) {
+			java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
+			cal.setTimeInMillis(startTime);
+			String dayOfYear = String.format("%04d-%03d", cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.DAY_OF_YEAR));
+			String sessionPeriod = getSessionPeriod(cal.get(java.util.Calendar.HOUR_OF_DAY));
+			
+			String key = String.format("%s-%s-SESSION", dayOfYear, sessionPeriod);
+			if (blockRefs.contains(key)) {
+				return null; // Already created this session block
+			}
+			blockRefs.add(key);
+		} else {
+			// Non-session blocks: use unique key to create separate blocks for each
+			String key = String.format("%s-%s", m.startHour, m.typeSession);
+			if (blockRefs.contains(key)) {
+				return null;
+			}
+			blockRefs.add(key);
 		}
 
 		builder.withValue(Blocks.BLOCK_ID, blockId);
