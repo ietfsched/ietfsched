@@ -205,7 +205,8 @@ public class MeetingDetector {
                 if (upcomingMeeting == null || meeting.startMillis < upcomingMeeting.startMillis) {
                     upcomingMeeting = meeting; // Get the nearest upcoming
                 }
-            } else if (isPrevious && meeting.agendaAvailable) {
+            } else if (isPrevious) {
+                // For past meetings, don't check agendaAvailable - they should always have it
                 if (previousMeeting == null || meeting.startMillis > previousMeeting.startMillis) {
                     previousMeeting = meeting; // Get the most recent previous
                 }
