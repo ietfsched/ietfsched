@@ -597,6 +597,57 @@ public class SessionDetailFragment extends Fragment implements
                                 ViewGroup.LayoutParams.WRAP_CONTENT));
                     separatorView.setBackgroundResource(android.R.drawable.divider_horizontal_bright);
                     container.addView(separatorView);
+                    
+                    // Add Meetecho Lite link after the Agenda link (SESSION_URL is first in LINKS_INDICES)
+                    if (SessionsQuery.LINKS_INDICES[i] == SessionsQuery.SESSION_URL) {
+                        // Extract group acronym from session title (format: "area - group - title")
+                        String groupAcronym = null;
+                        if (mTitleString != null && mTitleString.contains(" - ")) {
+                            String[] parts = mTitleString.split(" - ", 3);
+                            if (parts.length >= 2) {
+                                groupAcronym = parts[1].toLowerCase().trim();
+                            }
+                        }
+                        
+                        if (groupAcronym != null && !groupAcronym.isEmpty()) {
+                            // Construct Meetecho Lite URL
+                            int meetingNumber = org.ietf.ietfsched.util.MeetingPreferences.getCurrentMeetingNumber(getActivity());
+                            final String meetechoUrl = "https://meetings.conf.meetecho.com/onsite" + meetingNumber + "/?group=" + groupAcronym;
+                            
+                            ViewGroup meetechoContainer = (ViewGroup)
+                                    inflater.inflate(R.layout.list_item_session_link, container, false);
+                            TextView meetechoText = (TextView) meetechoContainer.findViewById(R.id.link_text);
+                            meetechoText.setText(R.string.session_link_meetecho);
+                            
+                            // Style as a button with green gradient (darker to lighter, left to right)
+                            android.graphics.drawable.GradientDrawable greenGradient = new android.graphics.drawable.GradientDrawable(
+                                android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+                                new int[] {0xFF388E3C, 0xFF66BB6A});  // Darker green to lighter green
+                            meetechoContainer.setBackground(greenGradient);
+                            meetechoText.setTextColor(0xFFFFFFFF);  // White text
+                            meetechoText.setTypeface(null, android.graphics.Typeface.BOLD);
+                            meetechoContainer.setPadding(16, 24, 16, 24);  // More padding for button feel
+                            
+                            meetechoContainer.setOnClickListener(new View.OnClickListener() {
+                                public void onClick(View view) {
+                                    fireLinkEvent(R.string.session_link_meetecho);
+                                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(meetechoUrl));
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
+                                    startActivity(intent);
+                                }
+                            });
+                            
+                            container.addView(meetechoContainer);
+                            
+                            // Create separator
+                            View meetechoSeparator = new ImageView(getActivity());
+                            meetechoSeparator.setLayoutParams(
+                                new ViewGroup.LayoutParams(ViewGroup.LayoutParams.FILL_PARENT,
+                                        ViewGroup.LayoutParams.WRAP_CONTENT));
+                            meetechoSeparator.setBackgroundResource(android.R.drawable.divider_horizontal_bright);
+                            container.addView(meetechoSeparator);
+                        }
+                    }
                 }
             } else {
                 Log.d(TAG, "NOT URL - Links Indices loop, Url[" + i + "]: " + SessionsQuery.LINKS_INDICES[i] + " Title: " + SessionsQuery.LINKS_TITLES[i]);

@@ -81,6 +81,7 @@
     <string name="tag_stream">Realtime stream for</string>
     
     <string name="session_link_main">Agenda</string>
+    <string name="session_link_meetecho">Join Meeting On Site</string>
     <string name="session_link_moderator">Ask questions</string>
     <string name="session_link_youtube">YouTube video</string>
     <string name="session_link_pdf">Presentation Slides</string>
