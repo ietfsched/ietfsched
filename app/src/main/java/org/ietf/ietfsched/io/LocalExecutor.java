@@ -369,11 +369,14 @@ public class LocalExecutor {
 	 * Session numbers are assigned chronologically within each day.
 	 */
 	private String generateBlockTitle(long startTimeMillis) {
+		// Use Calendar with conference timezone to get the correct day name
 		java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
 		cal.setTimeInMillis(startTimeMillis);
 		
-		// Use abbreviated day name (Mon, Tue, Wed) to save space in narrow columns
-		String dayName = new java.text.SimpleDateFormat("EEE", java.util.Locale.ENGLISH).format(cal.getTime());
+		// Get day name directly from Calendar (already in correct timezone)
+		String[] dayNames = {"", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+		int dayOfWeek = cal.get(java.util.Calendar.DAY_OF_WEEK);
+		String dayName = dayNames[dayOfWeek];
 		
 		// Get session number based on chronological order within the day
 		ArrayList<Long> times = mDaySessionTimes.get(getDayKey(startTimeMillis));
