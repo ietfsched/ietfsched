@@ -505,21 +505,32 @@ public class SessionDetailFragment extends Fragment implements
                 Log.d(TAG, "Links Indices loop, Url[" + i + "]: " + SessionsQuery.LINKS_INDICES[i] + " Title: " + SessionsQuery.LINKS_TITLES[i]);
                 hasLinks = true;
                 
-                // Special handling for PDF_URL (presentation slides) - can contain multiple URLs separated by "::"
+                // Special handling for PDF_URL (presentation slides) - can contain multiple entries separated by "::"
+                // Each entry is formatted as "title|||url"
                 if (i == SessionsQuery.PDF_URL) {
-                    // Split by "::" separator to get individual slide URLs
-                    String[] slideUrls = url.split("::");
-                    for (int j = 0; j < slideUrls.length; j++) {
-                        final String slideUrl = slideUrls[j].trim();
-                        if (slideUrl.isEmpty()) continue; // Skip empty entries
+                    // Split by "::" separator to get individual slide entries
+                    String[] slideEntries = url.split("::");
+                    for (int j = 0; j < slideEntries.length; j++) {
+                        final String slideEntry = slideEntries[j].trim();
+                        if (slideEntry.isEmpty()) continue; // Skip empty entries
+                        
+                        // Parse "title|||url" format
+                        String slideTitle;
+                        final String slideUrl;
+                        if (slideEntry.contains("|||")) {
+                            String[] parts = slideEntry.split("\\|\\|\\|", 2);
+                            slideTitle = parts[0].trim();
+                            slideUrl = parts[1].trim();
+                        } else {
+                            // Fallback for old format (just URL without title)
+                            slideTitle = slideEntries.length == 1 
+                                ? getString(R.string.session_link_pdf)  // Just "Presentation Slides" for single slide
+                                : getString(R.string.session_link_pdf) + " " + (j + 1);  // "Presentation Slides 1", etc.
+                            slideUrl = slideEntry;
+                        }
                         
                         ViewGroup linkContainer = (ViewGroup)
                                 inflater.inflate(R.layout.list_item_session_link, container, false);
-                        
-                        // Title: "Presentation Slide 1", "Presentation Slide 2", etc.
-                        String slideTitle = slideUrls.length == 1 
-                            ? getString(R.string.session_link_pdf)  // Just "Presentation Slides" for single slide
-                            : getString(R.string.session_link_pdf) + " " + (j + 1);  // "Presentation Slides 1", etc.
                         
                         ((TextView) linkContainer.findViewById(R.id.link_text)).setText(slideTitle);
                         

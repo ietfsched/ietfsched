@@ -166,7 +166,7 @@ class Meeting {
 			group = title;
 		}
 
-		// Extract the presentation urls, if there are any.
+		// Extract the presentation urls and titles, if there are any.
 		try {
 			JSONArray pArray =  (JSONArray) mJSON.get("presentations");
 			if (pArray == null) throw new UnScheduledMeetingException("No presentations");
@@ -177,23 +177,30 @@ class Meeting {
 				Log.d(TAG, "First presentation object: " + pArray.getJSONObject(0).toString());
 			}
 			
-			// The presentations array contains objects with a "url" field
-			// Example: {"name": "slides-124-...", "url": "https://datatracker.ietf.org/meeting/124/materials/slides-124-..."}
+			// The presentations array contains objects with "url", "name", and "text" (title) fields
+			// Store as: "title|||url" so we can display the actual presentation title
 			for (int i = 0; i < pArray.length(); i++ ){
 				JSONObject presentation = pArray.getJSONObject(i);
 				
-				// Try to get the URL field first (preferred)
+				// Get the presentation title (try "text" first, fallback to "name")
+				String presentationTitle = presentation.optString("text", "");
+				if (presentationTitle.isEmpty()) {
+					presentationTitle = presentation.optString("name", "Presentation " + (i+1));
+				}
+				
+				// Get the URL (preferred from API, fallback to construct)
 				String url = presentation.optString("url", null);
-				if (url != null && !url.isEmpty()) {
-					slides[i] = url;
-					if (debug) Log.d(TAG, "Using URL from API: " + url);
-				} else {
-					// Fallback: construct URL from name (old behavior)
+				if (url == null || url.isEmpty()) {
+					// Fallback: construct URL from name
 					String name = presentation.getString("name");
 					String baseUrl = "https://datatracker.ietf.org/meeting/" + sMeetingNumber + "/";
-					slides[i] = baseUrl + "materials/" + name;
-					Log.w(TAG, "No URL in presentation, constructed: " + slides[i]);
+					url = baseUrl + "materials/" + name;
+					Log.w(TAG, "No URL in presentation, constructed: " + url);
 				}
+				
+				// Store as "title|||url" (using ||| as separator since :: separates multiple presentations)
+				slides[i] = presentationTitle + "|||" + url;
+				if (debug) Log.d(TAG, "Presentation: " + presentationTitle + " -> " + url);
 			}
 		} catch (JSONException e) {
 			if (debug) Log.d(TAG, String.format("NoPresentations for %s: %s", title, e.toString()));
