@@ -178,17 +178,21 @@ public class LocalExecutor {
 			blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
 			title = m.title;
 		}
-	else if (m.title.contains("Office Hours") && isActualOfficeHours(m)) {
-		// Only classify as office hours if it's IETF/IAB/IESG/ISE office hours,
-		// not a WG session that happens to mention office hours
+	else if (m.title.contains("Office Hours")) {
+		// Only classify as office hours if from staff groups (iesg, ise, ietf-trust) or Liaison/Coordinator
+		String group = m.group.toLowerCase();
+		boolean isStaffOfficeHours = group.equals("iesg") || group.equals("ise") || group.equals("ietf-trust") ||
+			m.title.contains("Coordinator") || m.title.contains("Liaison");
 		
-		// Map AD office hours to NOC column (yellow) to reduce overlap with other green blocks
-		if (m.title.contains("AD Office Hours")) {
-			blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
-		} else {
-			blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
+		if (isStaffOfficeHours) {
+			// Map AD office hours to NOC column (yellow) to reduce overlap with other green blocks
+			if (m.title.contains("AD Office Hours")) {
+				blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
+			} else {
+				blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
+			}
+			title = m.title;
 		}
-		title = m.title;
 	}
 		// Check typeSession patterns
 		else if (m.typeSession.contains("Registration") || m.title.contains("Registration")) {
@@ -274,33 +278,6 @@ public class LocalExecutor {
 	}
 	
 	/**
-	 * Check if this is an actual staff office hours entry vs a WG session.
-	 * 
-	 * Called only when title already contains "Office Hours". This function
-	 * verifies it's from staff groups (iesg, ise, ietf-trust) or is a 
-	 * Liaison/Coordinator office hours.
-	 * 
-	 * Returns FALSE for regular IAB/IESG meetings like "IAB Open Meeting"
-	 * which should be in the session block, not office hours block.
-	 */
-	private boolean isActualOfficeHours(Meeting m) {
-		String group = m.group.toLowerCase();
-		
-		// Staff group office hours (but NOT regular IAB meetings)
-		// IAB meetings like "IAB Open Meeting" should be sessions, not office hours
-		if (group.equals("iesg") || group.equals("ise") || group.equals("ietf-trust")) {
-			return true;
-		}
-		
-		// Liaison/Coordinator office hours (usually from IAB)
-		if (m.title.contains("Coordinator") || m.title.contains("Liaison")) {
-			return true;
-		}
-		
-		return false;
-	}
-	
-	/**
 	 * Build a map of session start times per day.
 	 * This is used to assign session numbers (I, II, III) chronologically.
 	 * 
@@ -378,13 +355,7 @@ public class LocalExecutor {
 				continue;
 			}
 			
-			java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
-			cal.setTimeInMillis(startTime);
-			
-			// Get day key (YYYY-DDD format)
-			String dayKey = String.format("%04d-%03d", 
-				cal.get(java.util.Calendar.YEAR), 
-				cal.get(java.util.Calendar.DAY_OF_YEAR));
+			String dayKey = getDayKey(startTime);
 			
 			// Add this start time to the day's list
 			if (!mDaySessionTimes.containsKey(dayKey)) {
@@ -423,53 +394,23 @@ public class LocalExecutor {
 	}
 	
 	/**
+	 * Get the day key (YYYY-DDD format) for a given timestamp.
+	 */
+	private String getDayKey(long timeMillis) {
+		java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
+		cal.setTimeInMillis(timeMillis);
+		return String.format("%04d-%03d", 
+			cal.get(java.util.Calendar.YEAR), 
+			cal.get(java.util.Calendar.DAY_OF_YEAR));
+	}
+	
+	/**
 	 * Check if a given start time is in the session times map.
 	 * Returns true if this time should be numbered as a session (I, II, III).
 	 */
 	private boolean isInSessionTimesMap(long startTimeMillis) {
-		java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
-		cal.setTimeInMillis(startTimeMillis);
-		
-		String dayKey = String.format("%04d-%03d", 
-			cal.get(java.util.Calendar.YEAR), 
-			cal.get(java.util.Calendar.DAY_OF_YEAR));
-		
-		ArrayList<Long> times = mDaySessionTimes.get(dayKey);
-		if (times == null) {
-			return false;
-		}
-		
-		return times.contains(startTimeMillis);
-	}
-	
-	/**
-	 * Get the session number (I, II, III, etc.) for a given start time.
-	 * Returns the Roman numeral based on chronological order within the day.
-	 */
-	private String getSessionNumber(long startTimeMillis) {
-		java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
-		cal.setTimeInMillis(startTimeMillis);
-		
-		String dayKey = String.format("%04d-%03d", 
-			cal.get(java.util.Calendar.YEAR), 
-			cal.get(java.util.Calendar.DAY_OF_YEAR));
-		
-		ArrayList<Long> times = mDaySessionTimes.get(dayKey);
-		if (times == null) {
-			return "I"; // Default fallback
-		}
-		
-		int index = times.indexOf(startTimeMillis);
-		if (index == -1) {
-			return "I"; // Default fallback
-		}
-		
-		// Convert index to Roman numeral
-		String[] numerals = {"I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"};
-		if (index < numerals.length) {
-			return numerals[index];
-		}
-		return String.valueOf(index + 1); // Fallback to Arabic if > X
+		ArrayList<Long> times = mDaySessionTimes.get(getDayKey(startTimeMillis));
+		return times != null && times.contains(startTimeMillis);
 	}
 	
 	/**
@@ -482,13 +423,19 @@ public class LocalExecutor {
 		java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
 		cal.setTimeInMillis(startTimeMillis);
 		
-		// Get day of week name (Monday, Tuesday, etc.)
 		String dayName = new java.text.SimpleDateFormat("EEEE", java.util.Locale.ENGLISH).format(cal.getTime());
 		
-		// Get session number based on chronological order
-		String sessionNumber = getSessionNumber(startTimeMillis);
+		// Get session number based on chronological order within the day
+		ArrayList<Long> times = mDaySessionTimes.get(getDayKey(startTimeMillis));
+		if (times == null) {
+			return dayName + " Session I";
+		}
 		
-		return dayName + " Session " + sessionNumber;
+		int index = times.indexOf(startTimeMillis);
+		String[] numerals = {"I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"};
+		String number = (index >= 0 && index < numerals.length) ? numerals[index] : String.valueOf(index + 1);
+		
+		return dayName + " Session " + number;
 	}
 
 	private ContentProviderOperation createSession(Meeting m, long versionBuild) throws Exception {
