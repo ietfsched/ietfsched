@@ -88,6 +88,7 @@ public class HomeActivity extends BaseActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.menu_refresh) {
             // Manual refresh always forces a sync, bypassing cache
+            Toast.makeText(this, "Refreshing schedule data...", Toast.LENGTH_SHORT).show();
             triggerRefresh();
             return true;
         }
@@ -173,6 +174,7 @@ public class HomeActivity extends BaseActivity {
                 case SyncService.STATUS_FINISHED: {
                     mSyncing = false;
                     activity.recordSyncTime(); // Cache the sync timestamp
+                    Toast.makeText(activity, "Schedule updated", Toast.LENGTH_SHORT).show();
                     break;
                 }
                 case SyncService.STATUS_ERROR: {
