@@ -288,89 +288,38 @@ public class LocalExecutor {
 	private void buildSessionTimesMap(ArrayList<Meeting> meetings) {
 		mDaySessionTimes.clear();
 		
-		// First pass: count parallel meetings per start time
+		// Count parallel meetings per start time, excluding special events
 		HashMap<Long, Integer> parallelCounts = new HashMap<>();
+		final int MIN_PARALLEL_MEETINGS = 5;
 		
 		for (Meeting m : meetings) {
-			// Only count session-type meetings (not breaks, registration, etc.)
-			String sessionType = m.typeSession.toLowerCase();
-			String titleLower = m.title.toLowerCase();
-			
-			if (!sessionType.contains("session")) {
+			if (!m.typeSession.toLowerCase().contains("session")) {
 				continue;
 			}
 			
-			// Exclude non-session items from counting
-			if (titleLower.contains("break") || 
-				titleLower.contains("breakfast") ||
-				titleLower.contains("registration") ||
-				titleLower.contains("plenary") ||
-				titleLower.contains("hackathon")) {
+			String titleLower = m.title.toLowerCase();
+			// Skip special events - they shouldn't be numbered as sessions
+			if (titleLower.contains("break") || titleLower.contains("breakfast") || 
+				titleLower.contains("registration") || titleLower.contains("office hours") ||
+				titleLower.contains("plenary") || titleLower.contains("hackathon") ||
+				titleLower.contains("reception") || titleLower.contains("social") ||
+				titleLower.contains("education") || titleLower.contains("outreach") ||
+				titleLower.contains("tutorial") || titleLower.contains("newcomer") ||
+				titleLower.contains("noc") || titleLower.contains("helpdesk") || titleLower.contains("help desk")) {
 				continue;
 			}
 			
 			long startTime = ParserUtils.parseTime(m.startHour);
-			parallelCounts.put(startTime, parallelCounts.getOrDefault(startTime, 0) + 1);
-		}
-		
-		// Second pass: only include time slots with significant parallel meetings
-		final int MIN_PARALLEL_MEETINGS = 5; // Session blocks have 20-50, special events have 1-3
-		
-		for (Meeting m : meetings) {
-			String sessionType = m.typeSession.toLowerCase();
-			String titleLower = m.title.toLowerCase();
+			int count = parallelCounts.getOrDefault(startTime, 0) + 1;
+			parallelCounts.put(startTime, count);
 			
-			if (!sessionType.contains("session")) {
-				continue;
-			}
-			
-			// Exclude non-session blocks
-			if (titleLower.contains("break") || 
-				titleLower.contains("breakfast") ||
-				titleLower.contains("registration") ||
-				titleLower.contains("office hours") ||
-				titleLower.contains("plenary") ||
-				titleLower.contains("hackathon") ||
-				titleLower.contains("reception") ||
-				titleLower.contains("social") ||
-				titleLower.contains("education") ||
-				titleLower.contains("outreach") ||
-				titleLower.contains("tutorial") ||
-				titleLower.contains("newcomer") ||
-				titleLower.contains("noc") ||
-				titleLower.contains("helpdesk") ||
-				titleLower.contains("help desk")) {
-				continue;
-			}
-			
-			long startTime = ParserUtils.parseTime(m.startHour);
-			
-			// Only include if this time slot has enough parallel meetings
-			int parallelCount = parallelCounts.getOrDefault(startTime, 0);
-			if (parallelCount < MIN_PARALLEL_MEETINGS) {
-				if (debug) {
-					Log.d(TAG, String.format("Skipping time slot with only %d parallel meetings: %s", 
-						parallelCount, m.title));
+			// Once we know this time slot has enough meetings, add it to the map
+			if (count == MIN_PARALLEL_MEETINGS) {
+				String dayKey = getDayKey(startTime);
+				if (!mDaySessionTimes.containsKey(dayKey)) {
+					mDaySessionTimes.put(dayKey, new ArrayList<Long>());
 				}
-				continue;
-			}
-			
-			String dayKey = getDayKey(startTime);
-			
-			// Add this start time to the day's list
-			if (!mDaySessionTimes.containsKey(dayKey)) {
-				mDaySessionTimes.put(dayKey, new ArrayList<Long>());
-			}
-			ArrayList<Long> times = mDaySessionTimes.get(dayKey);
-			if (!times.contains(startTime)) {
-				times.add(startTime);
-				
-				if (debug) {
-					java.text.SimpleDateFormat fmt = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.ENGLISH);
-					fmt.setTimeZone(UIUtils.getConferenceTimeZone());
-					Log.d(TAG, String.format("Added session time %s with %d parallel meetings", 
-						fmt.format(new java.util.Date(startTime)), parallelCount));
-				}
+				mDaySessionTimes.get(dayKey).add(startTime);
 			}
 		}
 		
