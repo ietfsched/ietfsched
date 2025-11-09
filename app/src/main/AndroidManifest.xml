@@ -73,7 +73,7 @@
 
         <activity
             android:name="org.ietf.ietfsched.ui.phone.ScheduleActivity"
-            android:hardwareAccelerated="false"
+            android:hardwareAccelerated="true"
             android:exported="true"
             android:label="@string/title_schedule"
             tools:ignore="Instantiatable" />
