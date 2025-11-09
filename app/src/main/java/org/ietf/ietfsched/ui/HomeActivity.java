@@ -41,34 +41,23 @@ import android.widget.Toast;
 public class HomeActivity extends BaseActivity {
     private static final String TAG = "HomeActivity";
 
-//    private TagStreamFragment mTagStreamFragment;
     private SyncStatusUpdaterFragment mSyncStatusUpdaterFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-/*        if (!EulaHelper.hasAcceptedEula(this)) {
-            EulaHelper.showEula(false, this);
-        }
-
-        AnalyticsUtils.getInstance(this).trackPageView("/Home");
-*/	
-
         setContentView(R.layout.activity_home);
         getActivityHelper().setupActionBar(null, 0);
 
         FragmentManager fm = getSupportFragmentManager();
 
-//        mTagStreamFragment = (TagStreamFragment) fm.findFragmentById(R.id.fragment_tag_stream);
-
         mSyncStatusUpdaterFragment = (SyncStatusUpdaterFragment) fm.findFragmentByTag(SyncStatusUpdaterFragment.TAG);
         if (mSyncStatusUpdaterFragment == null) {
             mSyncStatusUpdaterFragment = new SyncStatusUpdaterFragment();
             fm.beginTransaction().add(mSyncStatusUpdaterFragment,  SyncStatusUpdaterFragment.TAG).commit();
-//            triggerRefresh();
         }
-	   triggerRefresh();
+        triggerRefresh();
 		
     }
 
@@ -96,20 +85,12 @@ public class HomeActivity extends BaseActivity {
     }
 
     private void triggerRefresh() {
-	
         final Intent intent = new Intent(Intent.ACTION_SYNC, null, this, SyncService.class);
         intent.putExtra(SyncService.EXTRA_STATUS_RECEIVER, mSyncStatusUpdaterFragment.mReceiver);
-		Log.d(TAG, "Start Sync service");
         startService(intent);
-
-/*        if (mTagStreamFragment != null) {
-            mTagStreamFragment.refresh();
-        }
-*/	
     }
 
     private void updateRefreshStatus(boolean refreshing) {
-		Log.d(TAG, "Sync pending ? " + refreshing);
         getActivityHelper().setRefreshActionButtonCompatState(refreshing);
     }
 
@@ -131,15 +112,12 @@ public class HomeActivity extends BaseActivity {
 		public SyncStatusUpdaterFragment() {
 			mReceiver = new DetachableResultReceiver(new Handler());
 			mReceiver.setReceiver(this);
-//			Log.d(TAG, "New SyncStatusUpdaterFragment()");
-			}
+		}
 
         @Override
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
             setRetainInstance(true);
-//            mReceiver = new DetachableResultReceiver(new Handler()); 
-//            mReceiver.setReceiver(this);
         }
 
 
@@ -174,7 +152,6 @@ public class HomeActivity extends BaseActivity {
         @Override
         public void onActivityCreated(Bundle savedInstanceState) {
             super.onActivityCreated(savedInstanceState);
-//			Log.d(TAG, "SyncStatusUpdaterFragment() / OnActivityCreated. sync ?" + mSyncing);
             ((HomeActivity) getActivity()).updateRefreshStatus(mSyncing);
         }
     }
