@@ -173,10 +173,15 @@ public class LocalExecutor {
 			blockType = ParserUtils.BLOCK_TYPE_FOOD;
 			title = m.title;
 		}
-		else if (m.title.contains("Hackathon")){
-			title = m.title;
+	else if (m.title.contains("Hackathon")){
+		title = m.title;
+		// Hackathon Results Presentations go in green column to avoid overlap with main Hackathon
+		if (m.title.contains("Results") || m.title.contains("Presentations")) {
+			blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
+		} else {
 			blockType = ParserUtils.BLOCK_TYPE_HACKATHON;
 		}
+	}
 		else if (m.title.toLowerCase().contains("noc") || 
 				 m.title.toLowerCase().contains("helpdesk") || 
 				 m.title.toLowerCase().contains("help desk")) {
