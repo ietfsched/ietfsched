@@ -504,30 +504,70 @@ public class SessionDetailFragment extends Fragment implements
             if (!TextUtils.isEmpty(url)) {
                 Log.d(TAG, "Links Indices loop, Url[" + i + "]: " + SessionsQuery.LINKS_INDICES[i] + " Title: " + SessionsQuery.LINKS_TITLES[i]);
                 hasLinks = true;
-                ViewGroup linkContainer = (ViewGroup)
-                        inflater.inflate(R.layout.list_item_session_link, container, false);
-                ((TextView) linkContainer.findViewById(R.id.link_text)).setText(
-                        SessionsQuery.LINKS_TITLES[i]);
-                final int linkTitleIndex = i;
-                linkContainer.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View view) {
-                        fireLinkEvent(SessionsQuery.LINKS_TITLES[linkTitleIndex]);
-                    	Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
-                        startActivity(intent);
+                
+                // Special handling for PDF_URL (presentation slides) - can contain multiple URLs separated by "::"
+                if (i == SessionsQuery.PDF_URL) {
+                    // Split by "::" separator to get individual slide URLs
+                    String[] slideUrls = url.split("::");
+                    for (int j = 0; j < slideUrls.length; j++) {
+                        final String slideUrl = slideUrls[j].trim();
+                        if (slideUrl.isEmpty()) continue; // Skip empty entries
                         
+                        ViewGroup linkContainer = (ViewGroup)
+                                inflater.inflate(R.layout.list_item_session_link, container, false);
+                        
+                        // Title: "Presentation Slide 1", "Presentation Slide 2", etc.
+                        String slideTitle = slideUrls.length == 1 
+                            ? getString(R.string.session_link_pdf)  // Just "Presentation Slides" for single slide
+                            : getString(R.string.session_link_pdf) + " " + (j + 1);  // "Presentation Slides 1", etc.
+                        
+                        ((TextView) linkContainer.findViewById(R.id.link_text)).setText(slideTitle);
+                        
+                        linkContainer.setOnClickListener(new View.OnClickListener() {
+                            public void onClick(View view) {
+                                fireLinkEvent(R.string.session_link_pdf);
+                                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(slideUrl));
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
+                                startActivity(intent);
+                            }
+                        });
+                        
+                        container.addView(linkContainer);
+                        
+                        // Create separator
+                        View separatorView = new ImageView(getActivity());
+                        separatorView.setLayoutParams(
+                                new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1));
+                        separatorView.setBackgroundColor(0xFFCCCCCC);
+                        container.addView(separatorView);
                     }
-                });
+                } else {
+                    // Normal handling for other link types (single URL)
+                    ViewGroup linkContainer = (ViewGroup)
+                            inflater.inflate(R.layout.list_item_session_link, container, false);
+                    ((TextView) linkContainer.findViewById(R.id.link_text)).setText(
+                            SessionsQuery.LINKS_TITLES[i]);
+                    final int linkTitleIndex = i;
+                    linkContainer.setOnClickListener(new View.OnClickListener() {
+                        public void onClick(View view) {
+                            fireLinkEvent(SessionsQuery.LINKS_TITLES[linkTitleIndex]);
+                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
+                            startActivity(intent);
+                            
+                        }
+                    });
 
-                container.addView(linkContainer);
+                    container.addView(linkContainer);
 
-                // Create separator
-                View separatorView = new ImageView(getActivity());
-                separatorView.setLayoutParams(
+                    // Create separator
+                    View separatorView = new ImageView(getActivity());
+                    separatorView.setLayoutParams(
                         new ViewGroup.LayoutParams(ViewGroup.LayoutParams.FILL_PARENT,
                                 ViewGroup.LayoutParams.WRAP_CONTENT));
-                separatorView.setBackgroundResource(android.R.drawable.divider_horizontal_bright);
-                container.addView(separatorView);
+                    separatorView.setBackgroundResource(android.R.drawable.divider_horizontal_bright);
+                    container.addView(separatorView);
+                }
             } else {
                 Log.d(TAG, "NOT URL - Links Indices loop, Url[" + i + "]: " + SessionsQuery.LINKS_INDICES[i] + " Title: " + SessionsQuery.LINKS_TITLES[i]);
             }
