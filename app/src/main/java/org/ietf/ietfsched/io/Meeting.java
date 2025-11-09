@@ -171,17 +171,29 @@ class Meeting {
 			JSONArray pArray =  (JSONArray) mJSON.get("presentations");
 			if (pArray == null) throw new UnScheduledMeetingException("No presentations");
 			slides = new String[pArray.length()];
-			// Meeting materials are urls like:
-			//   https://datatracker.ietf.org/meeting/116/materials/slides-116-mpls-clarify-bootstrapping-bfd-over-mpls-lsp
-			// Agenda url:
-			//   https://datatracker.ietf.org/meeting/116/materials/agenda-116-mpls-00
-			// Presentation name == file-name in URL: slides-116-mpls-clarify-bootstrapping-bfd-over-mpls-lsp
-			if (debug) Log.d(TAG, String.format("PRESENTATION LEN: %d", pArray.length()));
-			String baseUrl = "https://datatracker.ietf.org/meeting/" + sMeetingNumber + "/";
+			
+			// DEBUG: Log the entire presentation object to understand structure
+			if (pArray.length() > 0) {
+				Log.d(TAG, "First presentation object: " + pArray.getJSONObject(0).toString());
+			}
+			
+			// The presentations array contains objects with a "url" field
+			// Example: {"name": "slides-124-...", "url": "https://datatracker.ietf.org/meeting/124/materials/slides-124-..."}
 			for (int i = 0; i < pArray.length(); i++ ){
-                String tURL = baseUrl + "materials/" +
-						pArray.getJSONObject(i).getString("name");
-				slides[i] = tURL;
+				JSONObject presentation = pArray.getJSONObject(i);
+				
+				// Try to get the URL field first (preferred)
+				String url = presentation.optString("url", null);
+				if (url != null && !url.isEmpty()) {
+					slides[i] = url;
+					if (debug) Log.d(TAG, "Using URL from API: " + url);
+				} else {
+					// Fallback: construct URL from name (old behavior)
+					String name = presentation.getString("name");
+					String baseUrl = "https://datatracker.ietf.org/meeting/" + sMeetingNumber + "/";
+					slides[i] = baseUrl + "materials/" + name;
+					Log.w(TAG, "No URL in presentation, constructed: " + slides[i]);
+				}
 			}
 		} catch (JSONException e) {
 			if (debug) Log.d(TAG, String.format("NoPresentations for %s: %s", title, e.toString()));
