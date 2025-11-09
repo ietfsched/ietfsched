@@ -189,12 +189,18 @@ public class LocalExecutor {
 			blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
 			title = m.title;
 		}
-		else if (m.title.contains("Office Hours") && isActualOfficeHours(m)) {
-			// Only classify as office hours if it's IETF/IAB/IESG/ISE office hours,
-			// not a WG session that happens to mention office hours
+	else if (m.title.contains("Office Hours") && isActualOfficeHours(m)) {
+		// Only classify as office hours if it's IETF/IAB/IESG/ISE office hours,
+		// not a WG session that happens to mention office hours
+		
+		// Map AD office hours to NOC column (yellow) to reduce overlap with other green blocks
+		if (m.title.contains("AD Office Hours")) {
+			blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
+		} else {
 			blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
-			title = m.title;
 		}
+		title = m.title;
+	}
 		// Check typeSession patterns
 		else if (m.typeSession.contains("Registration") || m.title.contains("Registration")) {
 			title = ParserUtils.BLOCK_TITLE_REGISTRATION;
@@ -213,42 +219,45 @@ public class LocalExecutor {
 				title = generateBlockTitle(startTime);
 				blockType = ParserUtils.BLOCK_TYPE_SESSION;
 			} else {
-				// Special event → assign appropriate color based on type
-				title = m.title;
-				String titleLower = m.title.toLowerCase();
-				
-				// Social/food events → Blue
-				if (titleLower.contains("reception") || 
-					titleLower.contains("social") ||
-					titleLower.contains("dinner") ||
-					titleLower.contains("lunch") ||
-					titleLower.contains("happy hour") ||
-					titleLower.contains("game night") ||
-					titleLower.contains("networking")) {
-					blockType = ParserUtils.BLOCK_TYPE_FOOD;
-				} 
-				// Administrative/educational/special programs → Green
-				else if (titleLower.contains("education") || 
-						 titleLower.contains("outreach") ||
-						 titleLower.contains("tutorial") ||
-						 titleLower.contains("newcomer") ||
-						 titleLower.contains("new participant") ||
-						 titleLower.contains("tools") ||
-						 titleLower.contains("chairs") ||
-						 titleLower.contains("forum") ||
-						 titleLower.contains("program") ||
-						 titleLower.contains("series") ||
-						 titleLower.contains("sprint") ||
-						 titleLower.contains("iepg") ||
-						 titleLower.contains("hotrfc") ||
-						 titleLower.contains("lightning talk") ||
-						 titleLower.contains("office hours")) {
-					blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
-				} 
-				// Other special sessions (evening WG sessions, side meetings) → keep as Red
-				else {
-					blockType = ParserUtils.BLOCK_TYPE_SESSION;
-				}
+			// Special event → assign appropriate color based on type
+			title = m.title;
+			String titleLower = m.title.toLowerCase();
+			
+			// IEPG goes to yellow column to avoid overlap with New Participant Program (check first!)
+			if (titleLower.contains("iepg")) {
+				blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
+			}
+			// Social/food events → Blue
+			else if (titleLower.contains("reception") || 
+				titleLower.contains("social") ||
+				titleLower.contains("dinner") ||
+				titleLower.contains("lunch") ||
+				titleLower.contains("happy hour") ||
+				titleLower.contains("game night") ||
+				titleLower.contains("networking")) {
+				blockType = ParserUtils.BLOCK_TYPE_FOOD;
+			} 
+			// Administrative/educational/special programs → Green
+			else if (titleLower.contains("education") || 
+					 titleLower.contains("outreach") ||
+					 titleLower.contains("tutorial") ||
+					 titleLower.contains("newcomer") ||
+					 titleLower.contains("new participant") ||
+					 titleLower.contains("tools") ||
+					 titleLower.contains("chairs") ||
+					 titleLower.contains("forum") ||
+					 titleLower.contains("program") ||
+					 titleLower.contains("series") ||
+					 titleLower.contains("sprint") ||
+					 titleLower.contains("hotrfc") ||
+					 titleLower.contains("lightning talk") ||
+					 titleLower.contains("office hours")) {
+				blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
+			} 
+			// Other special sessions (evening WG sessions, side meetings) → keep as Red
+			else {
+				blockType = ParserUtils.BLOCK_TYPE_SESSION;
+			}
 			}
 		}
 		else {
