@@ -125,7 +125,7 @@ public class HomeActivity extends BaseActivity {
             implements DetachableResultReceiver.Receiver {
         public static final String TAG = SyncStatusUpdaterFragment.class.getName();
 
-        private boolean mSyncing = true;
+        private boolean mSyncing = false;  // Start as false, will be set to true when sync actually starts
         private DetachableResultReceiver mReceiver;
 			
 		public SyncStatusUpdaterFragment() {
