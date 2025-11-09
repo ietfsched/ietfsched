@@ -61,6 +61,9 @@ public class BlockView extends Button {
         mColumn = column;
 
         setText(mTitle);
+        
+        // Use smaller text size to prevent overflow in narrow columns
+        setTextSize(11); // sp units
 
         // TODO: turn into color state list with layers?
         int textColor = Color.WHITE;

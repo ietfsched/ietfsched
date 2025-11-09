@@ -372,7 +372,8 @@ public class LocalExecutor {
 		java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
 		cal.setTimeInMillis(startTimeMillis);
 		
-		String dayName = new java.text.SimpleDateFormat("EEEE", java.util.Locale.ENGLISH).format(cal.getTime());
+		// Use abbreviated day name (Mon, Tue, Wed) to save space in narrow columns
+		String dayName = new java.text.SimpleDateFormat("EEE", java.util.Locale.ENGLISH).format(cal.getTime());
 		
 		// Get session number based on chronological order within the day
 		ArrayList<Long> times = mDaySessionTimes.get(getDayKey(startTimeMillis));
