@@ -174,7 +174,7 @@ public class LocalExecutor {
 			title = m.title;
 		}
 		else if (m.title.contains("Hackathon")){
-			title = ParserUtils.BLOCK_TYPE_HACKATHON;
+			title = m.title;
 			blockType = ParserUtils.BLOCK_TYPE_HACKATHON;
 		}
 		else if (m.title.toLowerCase().contains("noc") || 
