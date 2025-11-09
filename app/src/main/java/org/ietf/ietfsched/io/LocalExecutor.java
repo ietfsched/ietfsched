@@ -62,6 +62,18 @@ public class LocalExecutor {
         mResolver = resolver;
     }
 
+	/**
+	 * Helper method to check if a string contains any of the given keywords.
+	 */
+	private static boolean containsAny(String text, String... keywords) {
+		for (String keyword : keywords) {
+			if (text.contains(keyword)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public void execute(JSONObject stream, int meetingNumber) throws Exception {
 		if (stream != null) {
 			// Set the meeting number for Meeting objects to use when building URLs
@@ -150,55 +162,55 @@ public class LocalExecutor {
 		title = m.title;
 		blockType = ParserUtils.BLOCK_TYPE_UNKNOWN;
 		sessionType = m.typeSession.toLowerCase();
+		String titleLower = m.title.toLowerCase();
 
 		// Based on rough parsing of the agenda elements assign block TYPE.
 		// Check specific types FIRST before the generic "session" check
 		
 		// Check title-based patterns first (these are most specific)
-		if (m.title.contains("Break") || m.title.contains("break")) {
+		if (titleLower.contains("break")) {
 			blockType = ParserUtils.BLOCK_TYPE_FOOD;
 			title = m.title;
 		}
-		else if (m.title.contains("Plenary")){
+		else if (titleLower.contains("plenary")){
 			// Plenary actions should get shown, Food at least keeps them showing.
 			// Also, there is generally food served at the plenary.
 			blockType = ParserUtils.BLOCK_TYPE_FOOD;
 			title = m.title;
 		}
-	else if (m.title.contains("Hackathon")){
-		title = m.title;
-		// Hackathon Results Presentations go in green column to avoid overlap with main Hackathon
-		if (m.title.contains("Results") || m.title.contains("Presentations")) {
-			blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
-		} else {
-			blockType = ParserUtils.BLOCK_TYPE_HACKATHON;
+		else if (titleLower.contains("hackathon")){
+			title = m.title;
+			// Hackathon Results Presentations go in green column to avoid overlap with main Hackathon
+			if (titleLower.contains("results") || titleLower.contains("presentations")) {
+				blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
+			} else {
+				blockType = ParserUtils.BLOCK_TYPE_HACKATHON;
+			}
 		}
-	}
-		else if (m.title.toLowerCase().contains("noc") || 
-				 m.title.toLowerCase().contains("helpdesk") || 
-				 m.title.toLowerCase().contains("help desk")) {
+		else if (containsAny(titleLower, "noc", "helpdesk", "help desk")) {
 			// NOC Helpdesk Hours must show up in yellow column.
 			blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
 			title = m.title;
 		}
-	else if (m.title.contains("Office Hours")) {
-		// Only classify as office hours if from staff groups (iesg, ise, ietf-trust) or Liaison/Coordinator
-		String group = m.group.toLowerCase();
-		boolean isStaffOfficeHours = group.equals("iesg") || group.equals("ise") || group.equals("ietf-trust") ||
-			m.title.contains("Coordinator") || m.title.contains("Liaison");
-		
-		if (isStaffOfficeHours) {
-			// Map AD office hours to NOC column (yellow) to reduce overlap with other green blocks
-			if (m.title.contains("AD Office Hours")) {
-				blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
-			} else {
-				blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
+		else if (titleLower.contains("office hours")) {
+			// Only classify as office hours if from staff groups (iesg, ise, ietf-trust) or Liaison/Coordinator
+			String groupLower = m.group.toLowerCase();
+			boolean isStaffGroup = groupLower.equals("iesg") || groupLower.equals("ise") || 
+				groupLower.equals("ietf-trust");
+			boolean isStaffOfficeHours = isStaffGroup || containsAny(titleLower, "coordinator", "liaison");
+			
+			if (isStaffOfficeHours) {
+				// Map AD office hours to NOC column (yellow) to reduce overlap with other green blocks
+				if (titleLower.contains("ad office hours")) {
+					blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
+				} else {
+					blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
+				}
+				title = m.title;
 			}
-			title = m.title;
 		}
-	}
 		// Check typeSession patterns
-		else if (m.typeSession.contains("Registration") || m.title.contains("Registration")) {
+		else if (m.typeSession.contains("Registration") || titleLower.contains("registration")) {
 			title = ParserUtils.BLOCK_TITLE_REGISTRATION;
 			blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
 		}
@@ -217,37 +229,20 @@ public class LocalExecutor {
 			} else {
 			// Special event → assign appropriate color based on type
 			title = m.title;
-			String titleLower = m.title.toLowerCase();
 			
 			// IEPG goes to yellow column to avoid overlap with New Participant Program (check first!)
 			if (titleLower.contains("iepg")) {
 				blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
 			}
 			// Social/food events → Blue
-			else if (titleLower.contains("reception") || 
-				titleLower.contains("social") ||
-				titleLower.contains("dinner") ||
-				titleLower.contains("lunch") ||
-				titleLower.contains("happy hour") ||
-				titleLower.contains("game night") ||
-				titleLower.contains("networking")) {
+			else if (containsAny(titleLower, "reception", "social", "dinner", "lunch", 
+					"happy hour", "game night", "networking")) {
 				blockType = ParserUtils.BLOCK_TYPE_FOOD;
 			} 
 			// Administrative/educational/special programs → Green
-			else if (titleLower.contains("education") || 
-					 titleLower.contains("outreach") ||
-					 titleLower.contains("tutorial") ||
-					 titleLower.contains("newcomer") ||
-					 titleLower.contains("new participant") ||
-					 titleLower.contains("tools") ||
-					 titleLower.contains("chairs") ||
-					 titleLower.contains("forum") ||
-					 titleLower.contains("program") ||
-					 titleLower.contains("series") ||
-					 titleLower.contains("sprint") ||
-					 titleLower.contains("hotrfc") ||
-					 titleLower.contains("lightning talk") ||
-					 titleLower.contains("office hours")) {
+			else if (containsAny(titleLower, "education", "outreach", "tutorial", "newcomer", 
+					"new participant", "tools", "chairs", "forum", "program", "series", "sprint", 
+					"hotrfc", "lightning talk", "office hours")) {
 				blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
 			} 
 			// Other special sessions (evening WG sessions, side meetings) → keep as Red
@@ -302,13 +297,9 @@ public class LocalExecutor {
 			
 			String titleLower = m.title.toLowerCase();
 			// Skip special events - they shouldn't be numbered as sessions
-			if (titleLower.contains("break") || titleLower.contains("breakfast") || 
-				titleLower.contains("registration") || titleLower.contains("office hours") ||
-				titleLower.contains("plenary") || titleLower.contains("hackathon") ||
-				titleLower.contains("reception") || titleLower.contains("social") ||
-				titleLower.contains("education") || titleLower.contains("outreach") ||
-				titleLower.contains("tutorial") || titleLower.contains("newcomer") ||
-				titleLower.contains("noc") || titleLower.contains("helpdesk") || titleLower.contains("help desk")) {
+			if (containsAny(titleLower, "break", "breakfast", "registration", "office hours", 
+					"plenary", "hackathon", "reception", "social", "education", "outreach", 
+					"tutorial", "newcomer", "noc", "helpdesk", "help desk")) {
 				continue;
 			}
 			
