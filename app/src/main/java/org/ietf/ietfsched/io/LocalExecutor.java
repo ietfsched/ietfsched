@@ -254,13 +254,15 @@ public class LocalExecutor {
 			blockType = ParserUtils.BLOCK_TYPE_SESSION;
 		}
 
-		// Create one block per unique start time + type
-		// Don't consolidate - session times vary by meeting
-		String key = String.format("%s-%s", m.startHour, m.typeSession);
-		if (blockRefs.contains(key)) {
+		// Create one block per unique blockId (which includes start+end+title)
+		// Multiple events can start at the same time, so we need to use blockId instead of just startTime
+		if (debug) Log.d(TAG, "Block blockId: " + blockId + " for title: " + title);
+		if (blockRefs.contains(blockId)) {
+			if (debug) Log.d(TAG, "DUPLICATE BLOCK FILTERED: " + blockId + " for title: " + title);
 			return null;
 		}
-		blockRefs.add(key);
+		blockRefs.add(blockId);
+		if (debug) Log.d(TAG, "BLOCK ADDED: " + blockId + " for title: " + title);
 
 		builder.withValue(Blocks.BLOCK_ID, blockId);
 		builder.withValue(Blocks.BLOCK_TITLE, title);
