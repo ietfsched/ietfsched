@@ -110,7 +110,6 @@ public class BlocksLayout extends ViewGroup {
         rulerView.layout(0, 0, getWidth(), getHeight());
 
         final int count = getChildCount();
-        Log.d(TAG, "Children to add to ruler: " + count);
         for (int i = 0; i < count; i++) {
             final View child = getChildAt(i);
             if (child.getVisibility() == GONE) continue;
@@ -121,7 +120,6 @@ public class BlocksLayout extends ViewGroup {
                 // No conversion needed!
                 final long startTime = blockView.getStartTime();
                 final long endTime = blockView.getEndTime();
-                Log.d(TAG, "Laying out block: " + blockView.getBlockId() + " start: " + startTime + " end: " + endTime);
                 final int top = rulerView.getTimeVerticalOffset(startTime, i, true);
                 final int bottom = rulerView.getTimeVerticalOffset(endTime, i, false);
                 final int left = headerWidth + (blockView.getColumn() * columnWidth);

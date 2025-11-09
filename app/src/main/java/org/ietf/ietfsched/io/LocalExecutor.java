@@ -63,7 +63,6 @@ public class LocalExecutor {
     }
 
 	public void execute(JSONObject stream, int meetingNumber) throws Exception {
-		Log.d(TAG, "Parsing input page data for meeting " + meetingNumber);
 		if (stream != null) {
 			// Set the meeting number for Meeting objects to use when building URLs
 			Meeting.setMeetingNumber(meetingNumber);
@@ -83,17 +82,9 @@ public class LocalExecutor {
 		final long versionBuild = System.currentTimeMillis();
 		try {
 			ArrayList<ContentProviderOperation> batch = transform(meetings, versionBuild);
-			Log.d(TAG, "Build database ...");
 			mResolver.applyBatch(mAuthority, batch);
-			Log.d(TAG, "Build database done");
 			ArrayList<ContentProviderOperation> batchClean = purge(versionBuild);
-			Log.d(TAG, "Clean database ");
-			ContentProviderResult[] results = mResolver.applyBatch(mAuthority, batchClean);
-			if (debug) {
-				for (ContentProviderResult r : results) {
-					Log.d(TAG, "Result clean : " + r);
-				}	
-			}
+			mResolver.applyBatch(mAuthority, batchClean);
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -156,8 +147,6 @@ public class LocalExecutor {
 		title = m.title;
 		blockType = ParserUtils.BLOCK_TYPE_UNKNOWN;
 		sessionType = m.typeSession.toLowerCase();
-
-		if (debug) Log.d(TAG, "Creating block: title='" + m.title + "' typeSession='" + m.typeSession + "' group='" + m.group + "'");
 
 		// Based on rough parsing of the agenda elements assign block TYPE.
 		// Check specific types FIRST before the generic "session" check
@@ -261,8 +250,6 @@ public class LocalExecutor {
 			}
 		}
 		else {
-			Log.d(TAG, String.format("Unknown Agenda slot(%s - %s), type: %s, title: %s",
-					startTime, endTime, m.typeSession, m.title));
 			// Default to session if we don't know what it is
 			title = m.typeSession.trim().length() == 0 ? m.title : m.typeSession;
 			blockType = ParserUtils.BLOCK_TYPE_SESSION;
@@ -634,13 +621,12 @@ public class LocalExecutor {
 						Meeting m = new Meeting(mJSON);
 						meetings.add(m);
 					} catch (UnScheduledMeetingException e) {
-						Log.d(TAG, String.format("Unscheduled meeting: %s", e.getMessage()));
+						// Skip unscheduled meetings
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
 				}
 			} catch (final JSONException e) {
-				Log.d(TAG, String.format("Failed to parse JSONObject: %s", jsAgenda));
 				return null;
 			}
 		}

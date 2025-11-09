@@ -72,7 +72,6 @@ public class MeetingMetadata {
                 // Add 6 full days plus end-of-day (23:59:59) to the start date.
                 long WEEK_IN_MILLIS = 6 * 24 * 60 * 60 * 1000L;
                 endMillis = startMillis + WEEK_IN_MILLIS + (24 * 60 * 60 * 1000 - 1);
-                Log.d(TAG, "Calculated end date: start=" + date + " in " + tz.getID() + ", end is 6 days later");
             }
         } catch (Exception e) {
             Log.e(TAG, "Failed to parse meeting dates", e);

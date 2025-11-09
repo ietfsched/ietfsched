@@ -90,8 +90,6 @@ public class TimeRulerView extends View {
      * milliseconds since epoch). This should be the child/count * mHourHeight, perhaps?
      */
     public int getTimeVerticalOffset(long timeMillis, int count, boolean start) {
-        Log.d(TAG, "getTimeVerticalOffset timeMillis: " + timeMillis + " Count: " + count);
-        
         // Get the conference timezone and convert to ZoneId for proper handling
         TimeZone tz = UIUtils.getConferenceTimeZone();
         ZoneId zoneId = tz.toZoneId();
@@ -103,15 +101,12 @@ public class TimeRulerView extends View {
                 0,
                 offset);
 
-
         final int hour = ldt.getHour();
         final int minutes = ldt.getMinute();
         
         // Calculate vertical offset: (hour - startHour + minutes/60) * pixelsPerHour
         int finalHeight = (int) ((hour - mStartHour + minutes / 60f) * mHourHeight);
         
-        Log.d(TAG, "getTimeVerticalOffset: " + ldt + " (hour=" + hour + ", min=" + minutes + 
-              ") startHour=" + mStartHour + ", hourHeight=" + mHourHeight + " -> offset=" + finalHeight);
         return finalHeight;
     }
 

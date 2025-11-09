@@ -72,7 +72,7 @@ public class ScheduleFragment extends Fragment implements
         View.OnClickListener {
 
     private static final String TAG = "ScheduleFragment";
-    private static final boolean debug = true;
+    private static final boolean debug = false;
 
     /**
      * Flags used with {@link android.text.format.DateUtils#formatDateRange}.
@@ -114,8 +114,6 @@ public class ScheduleFragment extends Fragment implements
             START_DAYS.add(cal.getTimeInMillis());
             cal.add(Calendar.DAY_OF_MONTH, 1);
         }
-        
-        Log.d(TAG, "Generated " + START_DAYS.size() + " schedule days");
     }
 
     private static final int DISABLED_BLOCK_ALPHA = 100;
@@ -171,7 +169,6 @@ public class ScheduleFragment extends Fragment implements
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
-        Log.d(TAG, "=== onCreateView START ===");
         ViewGroup root = (ViewGroup) inflater.inflate(R.layout.fragment_schedule, container, false);
 
         mWorkspace = (Workspace) root.findViewById(R.id.workspace);
@@ -223,7 +220,6 @@ public class ScheduleFragment extends Fragment implements
 			return root;
 		}
 		
-		Log.d(TAG, "Setting up " + START_DAYS.size() + " days");
 		for (long day : START_DAYS) {
 			setupDay(inflater, day);
 		}
@@ -387,9 +383,7 @@ public class ScheduleFragment extends Fragment implements
     }
 
     private void requery() {
-        Log.d(TAG, "Requerying " + mDays.size() + " days");
         for (Day day : mDays) {
-            Log.d(TAG, "Querying day " + day.index + ": " + day.blocksUri);
             mHandler.startQuery(0, day, day.blocksUri, BlocksQuery.PROJECTION,
                     null, null, ScheduleContract.Blocks.DEFAULT_SORT);
         }
@@ -422,7 +416,6 @@ public class ScheduleFragment extends Fragment implements
         }
 
         Day day = (Day) cookie;
-        Log.d(TAG, "onQueryComplete for day " + day.index + ": " + cursor.getCount() + " blocks found");
 
         // Clear out any existing sessions before inserting again
         day.blocksView.removeAllBlocks();
@@ -435,8 +428,6 @@ public class ScheduleFragment extends Fragment implements
                 final String blockId = cursor.getString(BlocksQuery.BLOCK_ID);
                 final String title = cursor.getString(BlocksQuery.BLOCK_TITLE);
                 
-                Log.d(TAG, "Block type: '" + type + "' maps to column: " + column + " for block: " + blockId);
-                
                 // TODO: place random blocks at bottom of entire layout
                 if (column == null || column == -1)  {
                     Log.w(TAG, "SKIPPING block '" + title + "' because type '" + type + "' has no column mapping");
@@ -446,8 +437,6 @@ public class ScheduleFragment extends Fragment implements
                 final long start = cursor.getLong(BlocksQuery.BLOCK_START);
                 final long end = cursor.getLong(BlocksQuery.BLOCK_END);
                 final boolean containsStarred = cursor.getInt(BlocksQuery.CONTAINS_STARRED) != 0;
-                Log.d(TAG, "BlockData - Id: " + blockId + " title: " + title + " start: " +
-                        start + " end: " + end);
 
                 final BlockView blockView = new BlockView(getActivity(), blockId, title, start, end,
                         containsStarred, column);
