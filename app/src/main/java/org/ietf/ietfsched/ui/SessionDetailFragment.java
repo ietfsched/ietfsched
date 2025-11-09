@@ -498,24 +498,43 @@ public class SessionDetailFragment extends Fragment implements
         LayoutInflater inflater = getLayoutInflater(null);
 
         boolean hasLinks = false;
-        Log.d(TAG, "Links Indices: " + SessionsQuery.LINKS_INDICES.length);
+        boolean hasPresentationSlides = false;
         for (int i = 0; i < SessionsQuery.LINKS_INDICES.length; i++) {
             final String url = cursor.getString(SessionsQuery.LINKS_INDICES[i]);
             if (!TextUtils.isEmpty(url)) {
-                Log.d(TAG, "Links Indices loop, Url[" + i + "]: " + SessionsQuery.LINKS_INDICES[i] + " Title: " + SessionsQuery.LINKS_TITLES[i]);
                 hasLinks = true;
                 
                 // Special handling for PDF_URL (presentation slides) - can contain multiple entries separated by "::"
                 // Each entry is formatted as "title|||url"
-                if (i == SessionsQuery.PDF_URL) {
+                // Note: compare against the COLUMN INDEX (LINKS_INDICES[i]), not the loop index i
+                if (SessionsQuery.LINKS_INDICES[i] == SessionsQuery.PDF_URL) {
+                    // Add section header before presentation slides
+                    if (!hasPresentationSlides) {
+                        TextView sectionHeader = new TextView(getActivity());
+                        sectionHeader.setText("Presentation Slides");
+                        sectionHeader.setTextSize(14);
+                        sectionHeader.setTextColor(0xFFFFFFFF);  // White text
+                        
+                        // Create gradient background - left to right (darker to lighter gray)
+                        android.graphics.drawable.GradientDrawable gradient = new android.graphics.drawable.GradientDrawable(
+                            android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+                            new int[] {0xFF888888, 0xFFC0C0C0});
+                        sectionHeader.setBackground(gradient);
+                        
+                        sectionHeader.setPadding(20, 14, 16, 14);
+                        sectionHeader.setTypeface(null, android.graphics.Typeface.ITALIC);
+                        container.addView(sectionHeader);
+                        hasPresentationSlides = true;
+                    }
+                    
                     // Split by "::" separator to get individual slide entries
                     String[] slideEntries = url.split("::");
                     for (int j = 0; j < slideEntries.length; j++) {
                         final String slideEntry = slideEntries[j].trim();
-                        if (slideEntry.isEmpty()) continue; // Skip empty entries
+                        if (slideEntry.isEmpty()) continue;
                         
                         // Parse "title|||url" format
-                        String slideTitle;
+                        final String slideTitle;
                         final String slideUrl;
                         if (slideEntry.contains("|||")) {
                             String[] parts = slideEntry.split("\\|\\|\\|", 2);
@@ -524,8 +543,8 @@ public class SessionDetailFragment extends Fragment implements
                         } else {
                             // Fallback for old format (just URL without title)
                             slideTitle = slideEntries.length == 1 
-                                ? getString(R.string.session_link_pdf)  // Just "Presentation Slides" for single slide
-                                : getString(R.string.session_link_pdf) + " " + (j + 1);  // "Presentation Slides 1", etc.
+                                ? getString(R.string.session_link_pdf)
+                                : getString(R.string.session_link_pdf) + " " + (j + 1);
                             slideUrl = slideEntry;
                         }
                         

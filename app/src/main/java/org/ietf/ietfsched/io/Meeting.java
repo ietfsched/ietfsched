@@ -39,7 +39,7 @@ class UnScheduledMeetingException extends Exception {
 }
 
 class Meeting {
-	private static final boolean debug = true;
+	private static final boolean debug = false;
 	private static final String TAG = "Meeting";
 	// private final static SimpleDateFormat previousFormat = new SimpleDateFormat("yyyy-MM-dd HHmm"); // 2011-07-23 0900
 	//                                                        JSON time - Start - "2023-03-27T00:30:00Z
@@ -177,13 +177,13 @@ class Meeting {
 				Log.d(TAG, "First presentation object: " + pArray.getJSONObject(0).toString());
 			}
 			
-			// The presentations array contains objects with "url", "name", and "text" (title) fields
+			// The presentations array contains objects with "url", "name", and "title" fields
 			// Store as: "title|||url" so we can display the actual presentation title
 			for (int i = 0; i < pArray.length(); i++ ){
 				JSONObject presentation = pArray.getJSONObject(i);
 				
-				// Get the presentation title (try "text" first, fallback to "name")
-				String presentationTitle = presentation.optString("text", "");
+				// Get the presentation title (try "title" first, fallback to "name")
+				String presentationTitle = presentation.optString("title", "");
 				if (presentationTitle.isEmpty()) {
 					presentationTitle = presentation.optString("name", "Presentation " + (i+1));
 				}
