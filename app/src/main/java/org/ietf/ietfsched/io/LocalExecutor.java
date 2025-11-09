@@ -85,6 +85,9 @@ public class LocalExecutor {
 			mResolver.applyBatch(mAuthority, batch);
 			ArrayList<ContentProviderOperation> batchClean = purge(versionBuild);
 			mResolver.applyBatch(mAuthority, batchClean);
+			
+			// Explicitly notify observers that blocks have changed (for schedule rebuild)
+			mResolver.notifyChange(ScheduleContract.Blocks.CONTENT_URI, null);
 		}
 		catch (Exception e) {
 			e.printStackTrace();

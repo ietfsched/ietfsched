@@ -72,7 +72,7 @@ public class ScheduleFragment extends Fragment implements
         View.OnClickListener {
 
     private static final String TAG = "ScheduleFragment";
-    private static final boolean debug = true;
+    private static final boolean debug = false;
 
     /**
      * Flags used with {@link android.text.format.DateUtils#formatDateRange}.
@@ -320,6 +320,19 @@ public class ScheduleFragment extends Fragment implements
             return;
         }
         
+        // Restore conference dates from SharedPreferences if UIUtils lost them
+        if (UIUtils.getConferenceStart() == 0) {
+            android.content.SharedPreferences prefs = getActivity().getSharedPreferences("meeting_prefs", android.content.Context.MODE_PRIVATE);
+            long startMillis = prefs.getLong("meeting_start", 0);
+            long endMillis = prefs.getLong("meeting_end", 0);
+            String tzId = prefs.getString("meeting_timezone", "UTC");
+            
+            if (startMillis != 0) {
+                UIUtils.setConferenceTimeZone(java.util.TimeZone.getTimeZone(tzId));
+                UIUtils.setConferenceDates(startMillis, endMillis);
+            }
+        }
+        
         LayoutInflater inflater = getActivity().getLayoutInflater();
         
         // Generate START_DAYS based on now-available conference dates
@@ -353,7 +366,8 @@ public class ScheduleFragment extends Fragment implements
             }, true);
         }
         
-        Log.i(TAG, "Schedule tabs rebuilt with " + mDays.size() + " days");
+        // Query for blocks to populate the rebuilt schedule
+        requery();
     }
 
     @Override
@@ -372,6 +386,25 @@ public class ScheduleFragment extends Fragment implements
 
         getActivity().getContentResolver().registerContentObserver(
                 ScheduleContract.Sessions.CONTENT_URI, true, mSessionChangesObserver);
+        
+        // Also watch for block changes to trigger rebuild if schedule was opened before sync completed
+        getActivity().getContentResolver().registerContentObserver(
+                ScheduleContract.Blocks.CONTENT_URI, true, mBlockChangesObserver);
+        
+        // Check if blocks already exist (sync may have finished before observer was registered)
+        if (mDays.isEmpty()) {
+            android.database.Cursor cursor = getActivity().getContentResolver().query(
+                ScheduleContract.Blocks.CONTENT_URI,
+                new String[] {ScheduleContract.Blocks.BLOCK_ID},
+                null, null, null);
+            if (cursor != null) {
+                int count = cursor.getCount();
+                cursor.close();
+                if (count > 0) {
+                    rebuildScheduleTabs();
+                }
+            }
+        }
 
         // Start listening for time updates to adjust "now" bar. TIME_TICK is
         // triggered once per minute, which is how we move the bar over time.
@@ -404,6 +437,7 @@ public class ScheduleFragment extends Fragment implements
         super.onPause();
         getActivity().unregisterReceiver(mReceiver);
         getActivity().getContentResolver().unregisterContentObserver(mSessionChangesObserver);
+        getActivity().getContentResolver().unregisterContentObserver(mBlockChangesObserver);
     }
 
     /**
@@ -532,6 +566,18 @@ public class ScheduleFragment extends Fragment implements
         @Override
         public void onChange(boolean selfChange) {
             requery();
+        }
+    };
+    
+    private ContentObserver mBlockChangesObserver = new ContentObserver(new Handler()) {
+        @Override
+        public void onChange(boolean selfChange) {
+            // If schedule was opened before sync completed, rebuild when blocks arrive
+            if (mDays.isEmpty()) {
+                rebuildScheduleTabs();
+            } else {
+                requery();
+            }
         }
     };
 
