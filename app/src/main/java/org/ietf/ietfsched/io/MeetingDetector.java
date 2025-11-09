@@ -145,39 +145,38 @@ public class MeetingDetector {
             String jsonStr = remoteExecutor.executeGet(agendaUrl);
             
             if (jsonStr == null || jsonStr.trim().isEmpty()) {
-                if (DEBUG) Log.d(TAG, "Agenda at " + agendaUrl + ": empty response");
+                Log.w(TAG, "Agenda at " + agendaUrl + ": empty response");
                 return false;
             }
             
             JSONObject agenda = new JSONObject(jsonStr);
             
             if (agenda.length() == 0) {
-                if (DEBUG) Log.d(TAG, "Agenda at " + agendaUrl + ": empty JSON object");
+                Log.w(TAG, "Agenda at " + agendaUrl + ": empty JSON object");
                 return false;
             }
             
             String firstKey = agenda.keys().next();
             if (firstKey == null) {
-                if (DEBUG) Log.d(TAG, "Agenda at " + agendaUrl + ": no keys in JSON");
+                Log.w(TAG, "Agenda at " + agendaUrl + ": no keys in JSON");
                 return false;
             }
             
             Object value = agenda.opt(firstKey);
             if (!(value instanceof JSONArray)) {
-                if (DEBUG) Log.d(TAG, "Agenda at " + agendaUrl + ": first key is not an array");
+                Log.w(TAG, "Agenda at " + agendaUrl + ": first key is not an array");
                 return false;
             }
             
             JSONArray meetings = (JSONArray) value;
             if (meetings.length() == 0) {
-                if (DEBUG) Log.d(TAG, "Agenda at " + agendaUrl + ": meetings array is empty");
+                Log.w(TAG, "Agenda at " + agendaUrl + ": meetings array is empty");
                 return false;
             }
             
-            if (DEBUG) Log.d(TAG, "Agenda available at " + agendaUrl + " (valid JSON with " + meetings.length() + " meetings)");
             return true;
         } catch (Exception e) {
-            if (DEBUG) Log.d(TAG, "Agenda check failed for " + agendaUrl + ": " + e.getMessage());
+            Log.w(TAG, "Agenda check failed for " + agendaUrl + ": " + e.getMessage());
             return false;
         }
     }
