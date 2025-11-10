@@ -18,18 +18,21 @@
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
     style="@style/ListItemContainer">
-    <!-- TODO: swap out with better star drawable when disabled -->
-    <ImageView android:id="@+id/star_button"
+    <!-- Star button for marking sessions as favorites -->
+    <CheckBox android:id="@+id/star_button"
         android:layout_gravity="top|right"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@drawable/indicator_starred" />
+        android:button="@drawable/btn_star"
+        android:background="@null"
+        android:clickable="false"
+        android:focusable="false" />
     <RelativeLayout android:id="@+id/list_item_session"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
+        android:paddingRight="48dp"
         style="@style/ListItemContent">
         <TextView android:id="@+id/session_title"
-            android:layout_toLeftOf="@id/star_button"
             android:layout_alignParentLeft="true"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
@@ -37,7 +40,6 @@
             />
         <TextView android:id="@+id/session_subtitle"
             android:layout_below="@id/session_title"
-            android:layout_toLeftOf="@id/star_button"
             android:layout_alignParentLeft="true"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
