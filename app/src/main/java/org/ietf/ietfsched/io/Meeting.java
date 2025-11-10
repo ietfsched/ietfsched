@@ -44,7 +44,7 @@ class Meeting {
 	// private final static SimpleDateFormat previousFormat = new SimpleDateFormat("yyyy-MM-dd HHmm"); // 2011-07-23 0900
 	//                                                        JSON time - Start - "2023-03-27T00:30:00Z
 	//                                                                   "start": "2023-11-06T14:30:00Z",
-	private final static SimpleDateFormat jsonDate = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+	private final static SimpleDateFormat jsonDate = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT);
 	// Hack: timezone format (Z) = +0800 where the ietfsched application expects +08:00.
 	private final static SimpleDateFormat afterFormat = ParserUtils.df;
 
@@ -98,7 +98,7 @@ class Meeting {
 		// Reject: canceled, resched, deleted  
 		if (status.equals("canceled") || status.equals("resched") || status.equals("deleted")) {
 			throw new UnScheduledMeetingException(
-					String.format(
+					String.format(Locale.ROOT,
 							"Unscheduled meeting(%s) status: %s",
 							mJSON.getString("name"),
 							status));
@@ -116,23 +116,23 @@ class Meeting {
 				durSplitInt[i] = Integer.parseInt(durSplit[i]);
 			}
 			// Parse the json duration represented as hour:min:sec to a time, 02:00:00 == 2am, effectively.
-			LocalTime lt = LocalTime.parse(String.format("%02d:%02d:%02d", (Object[]) durSplitInt));
+			LocalTime lt = LocalTime.parse(String.format(Locale.ROOT, "%02d:%02d:%02d", (Object[]) durSplitInt));
 			// Get a duration from between '00:00:00 today' and the previous.
 			Duration d = Duration.between(LocalTime.MIN, lt);
 			// Add the duration millis to the start date.
 			Instant tEndHour = jDay.toInstant().plusMillis(d.toMillis());
 			endHour = afterFormat.format(Date.from(tEndHour));
 			if (debug) {
-				Log.d(TAG, String.format("Start/Stop time for %s: %s / %s", title, startHour, endHour));
+				Log.d(TAG, String.format(Locale.ROOT, "Start/Stop time for %s: %s / %s", title, startHour, endHour));
 			}
 
 			// Validate that 'objtype' == 'session', else throw exception.
 			typeSession = mJSON.getString("objtype");
 			if (!typeSession.equals("session")) {
-			  throw new UnScheduledMeetingException(String.format("Not a session: %s", title));
+			  throw new UnScheduledMeetingException(String.format(Locale.ROOT, "Not a session: %s", title));
 			}
 			location = mJSON.getString("location");
-			key = String.format("%d", mJSON.getInt("session_id"));
+			key = String.format(Locale.ROOT, "%d", mJSON.getInt("session_id"));
 			hrefDetail = "";
 			try {
 				hrefDetail = mJSON.getString("agenda");
@@ -141,7 +141,7 @@ class Meeting {
 			}
 		} catch (JSONException e) {
 			throw new UnScheduledMeetingException(
-					String.format("Event(%s) is missing JSON element: %s", title, e.toString()));
+					String.format(Locale.ROOT, "Event(%s) is missing JSON element: %s", title, e.toString()));
 		}
 		// Parse the group sub element from the agenda, there are instances of meeting
 		// where parts of group are unset: IEPG has no parent, for instance.
@@ -150,7 +150,7 @@ class Meeting {
 			areaGroup = mJSON.getJSONObject("group");
 		} catch (JSONException e) {
 			throw new UnScheduledMeetingException(
-					String.format("Event(%s) is missing JSON element: %s", title, e.toString()));
+					String.format(Locale.ROOT, "Event(%s) is missing JSON element: %s", title, e.toString()));
 		}
 		// Do not throw an exception for missing parent/acronym.
 		try {
@@ -158,7 +158,7 @@ class Meeting {
 			group = areaGroup.getString("acronym");
 		} catch (JSONException e) {
 			if (debug) {
-				Log.d(TAG, String.format("Meeting %s is missing area or group.", title));
+				Log.d(TAG, String.format(Locale.ROOT, "Meeting %s is missing area or group.", title));
 			}
 		}
 		// Handle an unknown group/area a bit more gracefully.
@@ -203,7 +203,7 @@ class Meeting {
 				if (debug) Log.d(TAG, "Presentation: " + presentationTitle + " -> " + url);
 			}
 		} catch (JSONException e) {
-			if (debug) Log.d(TAG, String.format("NoPresentations for %s: %s", title, e.toString()));
+			if (debug) Log.d(TAG, String.format(Locale.ROOT, "NoPresentations for %s: %s", title, e.toString()));
 		}
 		if (debug) Log.d(TAG, "Agenda URL: " + hrefDetail);
 		if (debug && slides != null) {

@@ -44,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
 
 public class LocalExecutor {
 	private static final String TAG = "LocalExecutor";
@@ -161,8 +162,8 @@ public class LocalExecutor {
 		String blockId = Blocks.generateBlockId(startTime, endTime);
 		title = m.title;
 		blockType = ParserUtils.BLOCK_TYPE_UNKNOWN;
-		sessionType = m.typeSession.toLowerCase();
-		String titleLower = m.title.toLowerCase();
+		sessionType = m.typeSession.toLowerCase(Locale.ROOT);
+		String titleLower = m.title.toLowerCase(Locale.ROOT);
 
 		// Based on rough parsing of the agenda elements assign block TYPE.
 		// Check specific types FIRST before the generic "session" check
@@ -194,7 +195,7 @@ public class LocalExecutor {
 		}
 		else if (titleLower.contains("office hours")) {
 			// Only classify as office hours if from staff groups (iesg, ise, ietf-trust) or Liaison/Coordinator
-			String groupLower = m.group.toLowerCase();
+			String groupLower = m.group.toLowerCase(Locale.ROOT);
 			boolean isStaffGroup = groupLower.equals("iesg") || groupLower.equals("ise") || 
 				groupLower.equals("ietf-trust");
 			boolean isStaffOfficeHours = isStaffGroup || containsAny(titleLower, "coordinator", "liaison");
@@ -291,11 +292,11 @@ public class LocalExecutor {
 		final int MIN_PARALLEL_MEETINGS = 5;
 		
 		for (Meeting m : meetings) {
-			if (!m.typeSession.toLowerCase().contains("session")) {
+			if (!m.typeSession.toLowerCase(Locale.ROOT).contains("session")) {
 				continue;
 			}
 			
-			String titleLower = m.title.toLowerCase();
+			String titleLower = m.title.toLowerCase(Locale.ROOT);
 			// Skip special events - they shouldn't be numbered as sessions
 			if (containsAny(titleLower, "break", "breakfast", "registration", "office hours", 
 					"plenary", "hackathon", "reception", "social", "education", "outreach", 
@@ -342,7 +343,7 @@ public class LocalExecutor {
 	private String getDayKey(long timeMillis) {
 		java.util.Calendar cal = java.util.Calendar.getInstance(UIUtils.getConferenceTimeZone());
 		cal.setTimeInMillis(timeMillis);
-		return String.format("%04d-%03d", 
+		return String.format(Locale.ROOT, "%04d-%03d", 
 			cal.get(java.util.Calendar.YEAR), 
 			cal.get(java.util.Calendar.DAY_OF_YEAR));
 	}
@@ -401,7 +402,7 @@ public class LocalExecutor {
 			// Use the times for start/end as presented from the JSON, in UTC.
 			startTime = ParserUtils.parseTime(m.startHour);
 			endTime = ParserUtils.parseTime(m.endHour);
-			title = String.format("%s -%s%s - %s%s",
+			title = String.format(Locale.ROOT, "%s -%s%s - %s%s",
 					m.area,
 					(m.area.length() == 0 ? "" : " "),
 					m.group,

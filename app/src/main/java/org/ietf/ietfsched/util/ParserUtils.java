@@ -38,7 +38,7 @@ public class ParserUtils {
     private final static String TAG = "ParseUtils";
 
     public static final String BLOCK_TITLE_BREAKOUT_SESSIONS = "Breakout sessions";
-    public static final String BLOCK_TITLE_REGISTRATION = String.format("%n%nR%nE%nG%nI%nS%nT%nR%nA%nT%nI%nO%nN");
+    public static final String BLOCK_TITLE_REGISTRATION = String.format(java.util.Locale.ROOT, "%n%nR%nE%nG%nI%nS%nT%nR%nA%nT%nI%nO%nN");
 
     // Block types are used to map a session to the column in the application Schedule View.
     public static final String BLOCK_TYPE_FOOD = "food";
@@ -59,7 +59,7 @@ public class ParserUtils {
 
     static {
         //                        "2023-03-31 22:00:00GMT+0900"
-        df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssz");
+        df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssz", java.util.Locale.ROOT);
         df.setTimeZone(UIUtils.AGENDA_TIME_ZONE);
     }
 
@@ -88,12 +88,12 @@ public class ParserUtils {
             // Strip out all parenthetical statements when requested.
             input = sParenPattern.matcher(input).replaceAll("");
         }
-        return sSanitizePattern.matcher(input.toLowerCase()).replaceAll("");
+        return sSanitizePattern.matcher(input.toLowerCase(java.util.Locale.ROOT)).replaceAll("");
     }
 
     public static Long parseTime(String time) {
         try {
-            Log.d(TAG, String.format("parseTime time: %s || %s", time, df.parse(time).getTime()));
+            Log.d(TAG, String.format(java.util.Locale.ROOT, "parseTime time: %s || %s", time, df.parse(time).getTime()));
             return df.parse(time).getTime();
         } catch (Exception e) {
             e.printStackTrace();
