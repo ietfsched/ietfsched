@@ -508,8 +508,20 @@ public class SessionDetailFragment extends Fragment implements
                 // Each entry is formatted as "title|||url"
                 // Note: compare against the COLUMN INDEX (LINKS_INDICES[i]), not the loop index i
                 if (SessionsQuery.LINKS_INDICES[i] == SessionsQuery.PDF_URL) {
-                    // Add section header before presentation slides
-                    if (!hasPresentationSlides) {
+                    // Split by "::" separator to get individual slide entries
+                    String[] slideEntries = url.split("::");
+                    
+                    // First pass: check if there are any valid slides
+                    boolean hasValidSlides = false;
+                    for (String entry : slideEntries) {
+                        if (!entry.trim().isEmpty()) {
+                            hasValidSlides = true;
+                            break;
+                        }
+                    }
+                    
+                    // Only show section header if there are actual slides
+                    if (hasValidSlides && !hasPresentationSlides) {
                         TextView sectionHeader = new TextView(getActivity());
                         sectionHeader.setText(R.string.session_link_pdf);
                         sectionHeader.setTextSize(14);
@@ -528,8 +540,7 @@ public class SessionDetailFragment extends Fragment implements
                         hasPresentationSlides = true;
                     }
                     
-                    // Split by "::" separator to get individual slide entries
-                    String[] slideEntries = url.split("::");
+                    // Second pass: add the actual slide links
                     for (int j = 0; j < slideEntries.length; j++) {
                         final String slideEntry = slideEntries[j].trim();
                         if (slideEntry.isEmpty()) continue;

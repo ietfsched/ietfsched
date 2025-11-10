@@ -46,6 +46,7 @@
 
     <string name="title_search">Search</string>
     <string name="title_search_query">Search for \'<xliff:g id="query">%1$s</xliff:g>\'</string>
+    <string name="hint_search_sessions">Search sessions...</string>
 
     <string name="btn_schedule">Schedule</string>
     <string name="btn_map">Map</string>

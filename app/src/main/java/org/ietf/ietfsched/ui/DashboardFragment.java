@@ -65,10 +65,9 @@ public class DashboardFragment extends Fragment {
 					return;
 					}
 				fireTrackerEvent("Sessions");
-				// Launch sessions list
-				final Intent intent = new Intent(Intent.ACTION_VIEW, ScheduleContract.Tracks.CONTENT_URI);
-				intent.putExtra(Intent.EXTRA_TITLE, getString(R.string.title_session_tracks));
-				intent.putExtra(TracksFragment.EXTRA_NEXT_TYPE,	TracksFragment.NEXT_TYPE_SESSIONS);
+				// Launch all sessions list directly (skip tracks screen)
+				final Intent intent = new Intent(Intent.ACTION_VIEW, ScheduleContract.Sessions.CONTENT_URI);
+				intent.putExtra(Intent.EXTRA_TITLE, getString(R.string.title_sessions));
 				startActivity(intent);
 			}
 		});	
