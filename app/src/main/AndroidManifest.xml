@@ -86,19 +86,6 @@
             tools:ignore="Instantiatable" />
 
         <activity
-            android:name="org.ietf.ietfsched.ui.phone.TracksActivity"
-            android:hardwareAccelerated="false"
-            android:exported="true"
-            android:label="@string/title_tracks"
-            tools:ignore="Instantiatable">
-            <intent-filter tools:ignore="AppLinkUrlError">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="vnd.android.cursor.dir/vnd.ietfsched.track" />
-            </intent-filter>
-        </activity>
-
-        <activity
             android:name="org.ietf.ietfsched.ui.phone.SessionsActivity"
             android:hardwareAccelerated="false"
             android:exported="true"
