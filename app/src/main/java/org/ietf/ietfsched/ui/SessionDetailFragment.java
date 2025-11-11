@@ -425,6 +425,90 @@ public class SessionDetailFragment extends Fragment implements
         intent.putExtra(Intent.EXTRA_TITLE, mTitleString);
         startActivity(intent);
     }
+    
+    /**
+     * Helper method to create a gradient drawable
+     */
+    private android.graphics.drawable.GradientDrawable createGradient(int startColor, int endColor, float cornerRadius) {
+        android.graphics.drawable.GradientDrawable gradient = new android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+            new int[] {startColor, endColor});
+        gradient.setCornerRadius(cornerRadius);
+        return gradient;
+    }
+    
+    /**
+     * Helper method to create a section header with gradient background
+     */
+    private TextView createSectionHeader(int textResId) {
+        TextView header = new TextView(getActivity());
+        header.setText(textResId);
+        header.setTextSize(14);
+        header.setTextColor(0xFFFFFFFF);  // White text
+        header.setBackground(createGradient(0xFF888888, 0xFFC0C0C0, 0));  // Gray gradient
+        header.setPadding(20, 14, 16, 14);
+        header.setTypeface(null, android.graphics.Typeface.ITALIC);
+        return header;
+    }
+    
+    /**
+     * Helper method to create a separator view
+     */
+    private View createSeparator() {
+        View separator = new ImageView(getActivity());
+        separator.setLayoutParams(new ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.FILL_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT));
+        separator.setBackgroundResource(android.R.drawable.divider_horizontal_bright);
+        return separator;
+    }
+    
+    /**
+     * Helper method to create a thin separator line
+     */
+    private View createThinSeparator() {
+        View separator = new ImageView(getActivity());
+        separator.setLayoutParams(new ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, 1));
+        separator.setBackgroundColor(0xFFCCCCCC);
+        return separator;
+    }
+    
+    /**
+     * Helper method to create Meetecho button
+     */
+    private TextView createMeetechoButton(final String meetechoUrl) {
+        TextView button = new TextView(getActivity());
+        button.setText(R.string.session_link_meetecho);
+        button.setTextSize(14);
+        button.setTextColor(0xFFFFFFFF);  // White text
+        button.setTypeface(null, android.graphics.Typeface.BOLD);
+        button.setGravity(android.view.Gravity.CENTER);
+        button.setPadding(16, 12, 16, 12);
+        
+        // Green gradient background with rounded corners
+        button.setBackground(createGradient(0xFF388E3C, 0xFF66BB6A, 4));
+        
+        button.setClickable(true);
+        button.setFocusable(true);
+        button.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View view) {
+                fireLinkEvent(R.string.session_link_meetecho);
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(meetechoUrl));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
+                startActivity(intent);
+            }
+        });
+        
+        android.widget.LinearLayout.LayoutParams buttonParams = new android.widget.LinearLayout.LayoutParams(
+            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
+        buttonParams.leftMargin = 8;   // Small gap between agenda and button
+        buttonParams.rightMargin = 16; // Right padding to match left padding of agenda
+        button.setLayoutParams(buttonParams);
+        
+        return button;
+    }
 
     private void updateNotesTab() {
         final CatchNotesHelper helper = new CatchNotesHelper(getActivity());
@@ -496,6 +580,14 @@ public class SessionDetailFragment extends Fragment implements
                 .setContent(R.id.tab_session_links));
     }
 
+    /**
+     * Updates the Links tab with session links, agendas, and presentation slides.
+     * 
+     * Special handling for different link types:
+     * - PDF_URL: Can contain multiple slides (separated by "::"), shown with section header
+     * - SESSION_URL (Agenda): Paired with Meetecho button on the same row
+     * - Other links: Displayed as standard clickable items with separators
+     */
     private void updateLinksTab(Cursor cursor) {
         ViewGroup container = (ViewGroup) mRootView.findViewById(R.id.links_container);
 
@@ -509,6 +601,8 @@ public class SessionDetailFragment extends Fragment implements
 
         boolean hasLinks = false;
         boolean hasPresentationSlides = false;
+        
+        // Process each link type defined in SessionsQuery
         for (int i = 0; i < SessionsQuery.LINKS_INDICES.length; i++) {
             final String url = cursor.getString(SessionsQuery.LINKS_INDICES[i]);
             if (!TextUtils.isEmpty(url)) {
@@ -532,21 +626,7 @@ public class SessionDetailFragment extends Fragment implements
                     
                     // Only show section header if there are actual slides
                     if (hasValidSlides && !hasPresentationSlides) {
-                        TextView sectionHeader = new TextView(getActivity());
-                        sectionHeader.setText(R.string.session_link_pdf);
-                        sectionHeader.setTextSize(14);
-                        sectionHeader.setTextColor(0xFFFFFFFF);  // White text
-                        
-                        // Create gradient background - left to right (darker to lighter gray)
-                        android.graphics.drawable.GradientDrawable gradient = new android.graphics.drawable.GradientDrawable(
-                            android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
-                            new int[] {0xFF888888, 0xFFC0C0C0});
-                        sectionHeader.setBackground(gradient);
-                        
-                        sectionHeader.setPadding(20, 14, 16, 14);
-                        sectionHeader.setTypeface(null, android.graphics.Typeface.ITALIC);
-                        
-                        container.addView(sectionHeader);
+                        container.addView(createSectionHeader(R.string.session_link_pdf));
                         hasPresentationSlides = true;
                     }
                     
@@ -585,13 +665,7 @@ public class SessionDetailFragment extends Fragment implements
                         });
                         
                         container.addView(linkContainer);
-                        
-                        // Create separator
-                        View separatorView = new ImageView(getActivity());
-                        separatorView.setLayoutParams(
-                                new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1));
-                        separatorView.setBackgroundColor(0xFFCCCCCC);
-                        container.addView(separatorView);
+                        container.addView(createThinSeparator());
                     }
                 } else {
                     // Special handling for Agenda link (SESSION_URL) - place Meetecho button on same row
@@ -635,51 +709,10 @@ public class SessionDetailFragment extends Fragment implements
                             // Add Meetecho button on the right
                             int meetingNumber = org.ietf.ietfsched.util.MeetingPreferences.getCurrentMeetingNumber(getActivity());
                             final String meetechoUrl = "https://meetings.conf.meetecho.com/onsite" + meetingNumber + "/?group=" + groupAcronym;
-                            
-                            // Create button as TextView with gradient background
-                            TextView meetechoButton = new TextView(getActivity());
-                            meetechoButton.setText(R.string.session_link_meetecho);
-                            meetechoButton.setTextSize(14);
-                            meetechoButton.setTextColor(0xFFFFFFFF);  // White text
-                            meetechoButton.setTypeface(null, android.graphics.Typeface.BOLD);
-                            meetechoButton.setGravity(android.view.Gravity.CENTER);
-                            meetechoButton.setPadding(16, 12, 16, 12);
-                            
-                            // Green gradient background
-                            android.graphics.drawable.GradientDrawable greenGradient = new android.graphics.drawable.GradientDrawable(
-                                android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
-                                new int[] {0xFF388E3C, 0xFF66BB6A});
-                            greenGradient.setCornerRadius(4);  // Slightly rounded corners
-                            meetechoButton.setBackground(greenGradient);
-                            
-                            meetechoButton.setClickable(true);
-                            meetechoButton.setFocusable(true);
-                            meetechoButton.setOnClickListener(new View.OnClickListener() {
-                                public void onClick(View view) {
-                                    fireLinkEvent(R.string.session_link_meetecho);
-                                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(meetechoUrl));
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
-                                    startActivity(intent);
-                                }
-                            });
-                            
-                            android.widget.LinearLayout.LayoutParams buttonParams = new android.widget.LinearLayout.LayoutParams(
-                                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-                                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
-                            buttonParams.leftMargin = 8;  // Small gap between agenda and button
-                            buttonParams.rightMargin = 16;  // Right padding to match left padding of agenda
-                            meetechoButton.setLayoutParams(buttonParams);
-                            horizontalContainer.addView(meetechoButton);
+                            horizontalContainer.addView(createMeetechoButton(meetechoUrl));
                             
                             container.addView(horizontalContainer);
-                            
-                            // Create separator
-                            View separatorView = new ImageView(getActivity());
-                            separatorView.setLayoutParams(
-                                new ViewGroup.LayoutParams(ViewGroup.LayoutParams.FILL_PARENT,
-                                        ViewGroup.LayoutParams.WRAP_CONTENT));
-                            separatorView.setBackgroundResource(android.R.drawable.divider_horizontal_bright);
-                            container.addView(separatorView);
+                            container.addView(createSeparator());
                         } else {
                             // No group acronym, just add agenda link normally
                             ViewGroup linkContainer = (ViewGroup)
@@ -695,14 +728,7 @@ public class SessionDetailFragment extends Fragment implements
                             });
 
                             container.addView(linkContainer);
-
-                            // Create separator
-                            View separatorView = new ImageView(getActivity());
-                            separatorView.setLayoutParams(
-                                new ViewGroup.LayoutParams(ViewGroup.LayoutParams.FILL_PARENT,
-                                        ViewGroup.LayoutParams.WRAP_CONTENT));
-                            separatorView.setBackgroundResource(android.R.drawable.divider_horizontal_bright);
-                            container.addView(separatorView);
+                            container.addView(createSeparator());
                         }
                     } else {
                         // Normal handling for other link types (single URL)
@@ -721,14 +747,7 @@ public class SessionDetailFragment extends Fragment implements
                         });
 
                         container.addView(linkContainer);
-
-                        // Create separator
-                        View separatorView = new ImageView(getActivity());
-                        separatorView.setLayoutParams(
-                            new ViewGroup.LayoutParams(ViewGroup.LayoutParams.FILL_PARENT,
-                                    ViewGroup.LayoutParams.WRAP_CONTENT));
-                        separatorView.setBackgroundResource(android.R.drawable.divider_horizontal_bright);
-                        container.addView(separatorView);
+                        container.addView(createSeparator());
                     }
                 }
             } else {
