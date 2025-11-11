@@ -516,33 +516,10 @@ Internal identifiers and formats should use `Locale.ROOT` to be independent of u
 
 3. **No Settings Screen**:
    - Can't view current meeting info in UI
-   - No manual refresh trigger
 
 4. **Minimal Test Coverage**:
    - Heavy reliance on manual testing
    - No regression test suite
-
----
-
-## Future Roadmap
-
-### Short Term (Next Release)
-- Settings screen for meeting info
-- Manual meeting selector UI
-- Improved offline support
-- End-to-end UI tests
-
-### Medium Term
-- WorkManager for background sync
-- Retrofit for network layer
-- Room for database layer
-- MVVM architecture with ViewModels
-
-### Long Term
-- Kotlin migration
-- Coroutines for async operations
-- Compose UI
-- Multi-meeting support
 
 ---
 
