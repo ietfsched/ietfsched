@@ -35,23 +35,7 @@ import android.webkit.WebViewClient;
  * Links within the agenda open in an external browser.
  */
 public class AgendaFragment extends Fragment {
-    private static final String TAG = "AgendaFragment";
     private WebView mWebView;
-
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {

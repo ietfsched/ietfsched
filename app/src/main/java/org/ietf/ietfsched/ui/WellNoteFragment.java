@@ -36,23 +36,7 @@ import org.ietf.ietfsched.service.SyncService;
  * A fragment that shows the IETF Well Note.
  */
 public class WellNoteFragment extends Fragment {
-    private static final String TAG = "WellNoteFragment";
     private WebView mWebView;
-
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {

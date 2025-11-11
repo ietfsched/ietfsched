@@ -415,6 +415,16 @@ public class SessionDetailFragment extends Fragment implements
      */
     public void fireLinkEvent(int actionId) {
     }
+    
+    /**
+     * Helper method to open agenda in AgendaActivity
+     */
+    private void openAgendaInWebView(String url) {
+        Intent intent = new Intent(getActivity(), AgendaActivity.class);
+        intent.putExtra(AgendaActivity.EXTRA_AGENDA_URL, url);
+        intent.putExtra(Intent.EXTRA_TITLE, mTitleString);
+        startActivity(intent);
+    }
 
     private void updateNotesTab() {
         final CatchNotesHelper helper = new CatchNotesHelper(getActivity());
@@ -613,11 +623,7 @@ public class SessionDetailFragment extends Fragment implements
                             linkContainer.setOnClickListener(new View.OnClickListener() {
                                 public void onClick(View view) {
                                     fireLinkEvent(SessionsQuery.LINKS_TITLES[linkTitleIndex]);
-                                    // Open agenda in AgendaActivity (WebView with external links)
-                                    Intent intent = new Intent(getActivity(), AgendaActivity.class);
-                                    intent.putExtra(AgendaActivity.EXTRA_AGENDA_URL, url);
-                                    intent.putExtra(Intent.EXTRA_TITLE, mTitleString);
-                                    startActivity(intent);
+                                    openAgendaInWebView(url);
                                 }
                             });
                             
@@ -684,11 +690,7 @@ public class SessionDetailFragment extends Fragment implements
                             linkContainer.setOnClickListener(new View.OnClickListener() {
                                 public void onClick(View view) {
                                     fireLinkEvent(SessionsQuery.LINKS_TITLES[linkTitleIndex]);
-                                    // Open agenda in AgendaActivity (WebView with external links)
-                                    Intent intent = new Intent(getActivity(), AgendaActivity.class);
-                                    intent.putExtra(AgendaActivity.EXTRA_AGENDA_URL, url);
-                                    intent.putExtra(Intent.EXTRA_TITLE, mTitleString);
-                                    startActivity(intent);
+                                    openAgendaInWebView(url);
                                 }
                             });
 

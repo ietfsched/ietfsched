@@ -396,26 +396,10 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
 
             subtitleView.setText(subtitle);
 
-            final boolean starred = cursor.getInt(SessionsQuery.STARRED) != 0;
-            final android.widget.CheckBox starButton = (android.widget.CheckBox) view.findViewById(R.id.star_button);
-            starButton.setChecked(starred);
-
             // Set up star toggle functionality
+            final boolean starred = cursor.getInt(SessionsQuery.STARRED) != 0;
             final String sessionId = cursor.getString(SessionsQuery.SESSION_ID);
-            final Uri sessionUri = ScheduleContract.Sessions.buildSessionUri(sessionId);
-            
-            starButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    final android.widget.CheckBox checkbox = (android.widget.CheckBox) v;
-                    final boolean newStarredState = checkbox.isChecked();
-                    
-                    // Update database
-                    final android.content.ContentValues values = new android.content.ContentValues();
-                    values.put(ScheduleContract.Sessions.SESSION_STARRED, newStarredState ? 1 : 0);
-                    getActivity().getContentResolver().update(sessionUri, values, null, null);
-                }
-            });
+            setupStarButton(view, sessionId, starred);
 
             // Possibly indicate that the session has occurred in the past.
             UIUtils.setSessionTitleColor(blockEnd, titleView, subtitleView);
@@ -484,27 +468,33 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
             final Spannable styledSnippet = buildStyledSnippet(snippet);
             ((TextView) view.findViewById(R.id.session_subtitle)).setText(styledSnippet);
 
-            final boolean starred = cursor.getInt(SearchQuery.STARRED) != 0;
-            final android.widget.CheckBox starButton = (android.widget.CheckBox) view.findViewById(R.id.star_button);
-            starButton.setChecked(starred);
-
             // Set up star toggle functionality
+            final boolean starred = cursor.getInt(SearchQuery.STARRED) != 0;
             final String sessionId = cursor.getString(SearchQuery.SESSION_ID);
-            final Uri sessionUri = ScheduleContract.Sessions.buildSessionUri(sessionId);
-            
-            starButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    final android.widget.CheckBox checkbox = (android.widget.CheckBox) v;
-                    final boolean newStarredState = checkbox.isChecked();
-                    
-                    // Update database
-                    final android.content.ContentValues values = new android.content.ContentValues();
-                    values.put(ScheduleContract.Sessions.SESSION_STARRED, newStarredState ? 1 : 0);
-                    getActivity().getContentResolver().update(sessionUri, values, null, null);
-                }
-            });
+            setupStarButton(view, sessionId, starred);
         }
+    }
+
+    /**
+     * Helper method to set up star button for a session item
+     */
+    private void setupStarButton(View view, String sessionId, boolean starred) {
+        final android.widget.CheckBox starButton = (android.widget.CheckBox) view.findViewById(R.id.star_button);
+        starButton.setChecked(starred);
+        
+        final Uri sessionUri = ScheduleContract.Sessions.buildSessionUri(sessionId);
+        starButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                final android.widget.CheckBox checkbox = (android.widget.CheckBox) v;
+                final boolean newStarredState = checkbox.isChecked();
+                
+                // Update database
+                final android.content.ContentValues values = new android.content.ContentValues();
+                values.put(ScheduleContract.Sessions.SESSION_STARRED, newStarredState ? 1 : 0);
+                getActivity().getContentResolver().update(sessionUri, values, null, null);
+            }
+        });
     }
 
     private ContentObserver mSessionChangesObserver = new ContentObserver(new Handler()) {
