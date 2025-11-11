@@ -29,5 +29,19 @@ public class WellNoteActivity extends BaseSinglePaneActivity {
     protected void onPostCreate(Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
         getActivityHelper().setupSubActivity();
-    }    
+    }
+    
+    @Override
+    public void onBackPressed() {
+        // Check if the fragment can handle back press (WebView navigation)
+        Fragment fragment = getSupportFragmentManager().findFragmentById(org.ietf.ietfsched.R.id.root_container);
+        if (fragment instanceof WellNoteFragment) {
+            WellNoteFragment wellNoteFragment = (WellNoteFragment) fragment;
+            if (wellNoteFragment.onBackPressed()) {
+                return; // Fragment handled it
+            }
+        }
+        // Fragment didn't handle it, use default behavior
+        super.onBackPressed();
+    }
 }

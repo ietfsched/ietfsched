@@ -69,7 +69,7 @@ public class SyncService extends IntentService {
     private LocalExecutor mLocalExecutor;
     private RemoteExecutor mRemoteExecutor;
 
-	public static String noteWellString;
+	public static String noteWellString = "";
     public SyncService() {
         super(TAG);
     }
@@ -142,13 +142,11 @@ public class SyncService extends IntentService {
 		try {
 			String txt = mRemoteExecutor.executeGet(noteWellURL);
 			if (txt.length() > 0 ) {
-				// The notewell is markdown, wrap it in simple html/pre tags.
-				// (because handling the raw text is hard?
 				noteWellString = txt;
 				Log.d(TAG, "Retrieved the remote notewell");
 			}
 		} catch (Exception e) {
-			Log.d(TAG, "Failed to get remote notewell, using static content: %s", e);
+			Log.d(TAG, String.format(java.util.Locale.ROOT, "Failed to get remote notewell: %s", e));
 		}
 
 		try {

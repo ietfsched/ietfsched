@@ -83,10 +83,13 @@ public class DashboardFragment extends Fragment {
         root.findViewById(R.id.home_btn_announcements).setOnClickListener(
                 new View.OnClickListener() {
                     public void onClick(View view) {
-                        // splicing in tag streamer
-//                        fireTrackerEvent("Bulletin");
-                        Intent intent = new Intent(getActivity(), WellNoteActivity.class);
-                        startActivity(intent);
+                        HomeActivity activity = (HomeActivity) getActivity();
+                        if (activity.isRefreshing()) {
+                            Toast.makeText(activity, "Check/Upload new agenda, pls wait", Toast.LENGTH_LONG).show();
+                            return;
+                        }
+                        // fireTrackerEvent("Note Well");
+                        startActivity(new Intent(getActivity(), WellNoteActivity.class));
                     }
                 });
         return root;

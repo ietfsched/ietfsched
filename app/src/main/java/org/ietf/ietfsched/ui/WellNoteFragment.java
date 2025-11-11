@@ -21,15 +21,14 @@ import org.ietf.ietfsched.R;
 import android.os.Bundle;
 import androidx.fragment.app.Fragment;
 
-import android.content.Context;
-import android.text.Spanned;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
-import android.widget.ScrollView;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 
-import io.noties.markwon.Markwon;
+import org.commonmark.parser.Parser;
+import org.commonmark.renderer.html.HtmlRenderer;
 import org.ietf.ietfsched.service.SyncService;
 
 
@@ -38,12 +37,13 @@ import org.ietf.ietfsched.service.SyncService;
  */
 public class WellNoteFragment extends Fragment {
     private static final String noteWellURL = "https://www.ietf.org/media/documents/note-well.md";
-	// private static final String default_note = R.string.note_well_default;
-    public String default_note = String.valueOf(R.string.note_well_default);
     private static final String TAG = "WellNoteFragment";
+    private WebView mWebView;
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {super.onCreate(savedInstanceState); }
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+    }
 
     @Override
     public void onResume() {
@@ -57,18 +57,54 @@ public class WellNoteFragment extends Fragment {
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        String disp_text = default_note;
-        if (SyncService.noteWellString.length() > 0) {
-            disp_text = SyncService.noteWellString;
+        String markdownText;
+        
+        // Check if Note Well data has been downloaded
+        if (SyncService.noteWellString != null && SyncService.noteWellString.length() > 0) {
+            markdownText = SyncService.noteWellString;
+        } else {
+            // Not yet downloaded - show a message
+            markdownText = "Note Well text is being downloaded. Please check back in a moment or use the Refresh button.";
         }
-        // Create a ScrollView, add to that a TextView, stick the text in the TextView.
-		ScrollView scroller = new ScrollView(getActivity());
-		TextView text = new TextView(getActivity());
-        // Reformat the MD to useful Android formatted strings.
-        final Context context = getContext();
-        final Markwon mw = Markwon.create(context);
-        mw.setMarkdown(text, disp_text);
-		scroller.addView(text);
-        return scroller;
+        
+        // Convert markdown to HTML
+        Parser parser = Parser.builder().build();
+        HtmlRenderer renderer = HtmlRenderer.builder().build();
+        org.commonmark.node.Node document = parser.parse(markdownText);
+        String htmlContent = renderer.render(document);
+        
+        // Wrap HTML with basic styling
+        String styledHtml = "<!DOCTYPE html>" +
+                "<html><head>" +
+                "<meta name='viewport' content='width=device-width, initial-scale=1'>" +
+                "<style>" +
+                "body { font-family: sans-serif; padding: 16px; line-height: 1.6; }" +
+                "a { color: #0066cc; }" +
+                "ul { padding-left: 20px; }" +
+                "li { margin-bottom: 8px; }" +
+                "</style>" +
+                "</head><body>" +
+                htmlContent +
+                "</body></html>";
+        
+        // Create WebView
+        mWebView = new WebView(getActivity());
+        mWebView.setWebViewClient(new WebViewClient()); // Keep links within WebView
+        mWebView.getSettings().setJavaScriptEnabled(false); // No JS needed
+        mWebView.loadDataWithBaseURL(null, styledHtml, "text/html", "UTF-8", null);
+        
+        return mWebView;
+    }
+    
+    /**
+     * Handle back button press - navigate back in WebView if possible.
+     * @return true if WebView handled the back press, false otherwise
+     */
+    public boolean onBackPressed() {
+        if (mWebView != null && mWebView.canGoBack()) {
+            mWebView.goBack();
+            return true;
+        }
+        return false;
     }
 }

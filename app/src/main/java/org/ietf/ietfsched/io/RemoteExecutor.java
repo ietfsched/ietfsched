@@ -86,6 +86,7 @@ public class RemoteExecutor {
 				while ((line = reader.readLine()) != null) {
 					try {
 						result.append(line.trim());
+						result.append("\n");  // Preserve newlines for proper markdown formatting
 					} catch (Exception e){
 						e.printStackTrace();
 						break;
