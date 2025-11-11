@@ -33,9 +33,8 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 
 public class DashboardFragment extends Fragment {
-	private String TAG = "DashboardFragment";
-
     public void fireTrackerEvent(String label) {
+        // Placeholder for analytics tracking
     }
 
     @Override

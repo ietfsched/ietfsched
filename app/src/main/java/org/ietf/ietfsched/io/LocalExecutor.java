@@ -423,13 +423,12 @@ public class LocalExecutor {
 			builder.withValue(Sessions.SESSION_KEYWORDS, null);
 			builder.withValue(Sessions.BLOCK_ID, blockId);
 			builder.withValue(Sessions.ROOM_ID, roomId);
-			if (m.slides != null ) {
-				// TODO(morrowc): Set the session urls and make more than 1 button appear
-				//                if there's more than 1 slide url in the set.
-				builder.withValue(Sessions.SESSION_PDF_URL, TextUtils.join("::", m.slides));
-			} else {
-				builder.withValue(Sessions.SESSION_PDF_URL, "::");
-			}
+		if (m.slides != null ) {
+			// Store multiple slide URLs separated by "::"
+			builder.withValue(Sessions.SESSION_PDF_URL, TextUtils.join("::", m.slides));
+		} else {
+			builder.withValue(Sessions.SESSION_PDF_URL, "::");
+		}
 			
 			final Uri sessionUri = Sessions.buildSessionUri(sessionId);
 			final int starred = querySessionStarred(sessionUri, mResolver);
