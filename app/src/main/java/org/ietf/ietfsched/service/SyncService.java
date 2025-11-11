@@ -138,16 +138,18 @@ public class SyncService extends IntentService {
 			e.printStackTrace();
 		}
 
-		// Get the NoteWell text. It's convenient to get that here instead of in the WellNoteFragment.
-		try {
-			String txt = mRemoteExecutor.executeGet(noteWellURL);
-			if (txt.length() > 0 ) {
-				noteWellString = txt;
-				Log.d(TAG, "Retrieved the remote notewell");
-			}
-		} catch (Exception e) {
-			Log.d(TAG, String.format(java.util.Locale.ROOT, "Failed to get remote notewell: %s", e));
+	// Get the NoteWell text. It's convenient to get that here instead of in the WellNoteFragment.
+	try {
+		String txt = mRemoteExecutor.executeGet(noteWellURL);
+		if (txt.length() > 0 ) {
+			noteWellString = txt;
+			// Persist Note Well content across app restarts
+			prefs.edit().putString(Prefs.NOTE_WELL_CONTENT, txt).apply();
+			Log.d(TAG, String.format(java.util.Locale.ROOT, "Retrieved and saved the remote notewell (%d chars)", txt.length()));
 		}
+	} catch (Exception e) {
+		Log.d(TAG, String.format(java.util.Locale.ROOT, "Failed to get remote notewell: %s", e));
+	}
 
 		try {
 			if (debug) Log.d(TAG, aUrl);
@@ -178,5 +180,6 @@ public class SyncService extends IntentService {
         String LOCAL_VERSION = "local_version";
 		String LAST_LENGTH = "last_length";
 		String LAST_SYNC_TIME = "last_stime";
+		String NOTE_WELL_CONTENT = "note_well_content";
     }
 }
