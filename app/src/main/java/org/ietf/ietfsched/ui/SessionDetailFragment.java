@@ -822,7 +822,6 @@ public class SessionDetailFragment extends Fragment implements
 
         int[] LINKS_INDICES = {
                 SESSION_URL,
-                MODERATOR_URL,
                 YOUTUBE_URL,
                 PDF_URL,
                 FEEDBACK_URL,
@@ -831,7 +830,6 @@ public class SessionDetailFragment extends Fragment implements
 
         int[] LINKS_TITLES = {
                 R.string.session_link_main,
-                R.string.session_link_moderator,
                 R.string.session_link_youtube,
                 R.string.session_link_pdf,
                 R.string.session_link_feedback,

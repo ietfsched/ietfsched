@@ -59,7 +59,6 @@
 
     <string name="session_subtitle_room"><xliff:g id="time">%1$s</xliff:g> in <xliff:g id="room">%2$s</xliff:g></string>
 	<string name="session_subtitle_no_room"><xliff:g id="time">%1$s</xliff:g></string>
-    <string name="session_moderator_status"><xliff:g id="questions">%1$s</xliff:g> questions submitted and <xliff:g id="votes">%2$s</xliff:g> votes cast.</string>
 
     <string name="all_sandbox_title">All companies</string>
     <string name="all_sandbox_subtitle">Tap to filter by sandbox companies by pod.</string>
@@ -83,7 +82,6 @@
     
     <string name="session_link_main">Agenda</string>
     <string name="session_link_meetecho">Join Meeting On Site</string>
-    <string name="session_link_moderator">Ask questions</string>
     <string name="session_link_youtube">YouTube video</string>
     <string name="session_link_pdf">Presentation Slides</string>
     <string name="session_link_feedback">Feedback on this session</string>
@@ -99,14 +97,6 @@
     <string name="search_hint">Session keywords</string>
 
     <string name="share_template">Checking out \'<xliff:g id="title">%1$s</xliff:g>\' at <xliff:g id="hashtags">%2$s</xliff:g> <xliff:g id="url">%3$s</xliff:g></string>
-
-    <string name="moderator_header">Moderator</string>
-
-    <string name="dialog_moderator_title">Google Moderator</string>
-    <string name="dialog_moderator_message">The official Google Moderator app is available in Market, would you like to install it or continue using a normal browser?</string>
-
-    <string name="dialog_moderator_web">Use Browser</string>
-    <string name="dialog_moderator_market">Visit Market</string>
 
     <plurals name="whats_on_countdown_title">
         <item quantity="zero"><xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF meeting</item>

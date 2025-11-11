@@ -28,8 +28,6 @@
 
     <item type="id" name="dialog_discard_confirm" />
 
-    <item type="id" name="dialog_moderator" />
-
     <item type="id" name="blocks_ruler" />
     <item type="id" name="blocks_now" />
 </resources>
