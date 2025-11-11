@@ -23,6 +23,7 @@ import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.util.Objects;
 
@@ -42,7 +43,7 @@ public class RemoteExecutor {
     	URL url;
     	HttpURLConnection urlConnection = null;
     	try {
-    		url = new URL(urlString);
+    		url = new URI(urlString).toURL();
     		urlConnection = (HttpsURLConnection) url.openConnection();
 
     		int status = urlConnection.getResponseCode();
@@ -75,7 +76,7 @@ public class RemoteExecutor {
 	public String executeGet(String urlString) throws Exception {
 		HttpsURLConnection urlConnection = null;
 		try {
-			URL url = new URL(urlString);
+			URL url = new URI(urlString).toURL();
 			urlConnection = (HttpsURLConnection) url.openConnection();
 
 			int status = urlConnection.getResponseCode();
@@ -110,7 +111,7 @@ public class RemoteExecutor {
 		URL url;
 		HttpURLConnection urlConnection = null;
 		try {
-			url = new URL(urlString);
+			url = new URI(urlString).toURL();
 			urlConnection = (HttpsURLConnection) url.openConnection();
 
 			int status = urlConnection.getResponseCode();
