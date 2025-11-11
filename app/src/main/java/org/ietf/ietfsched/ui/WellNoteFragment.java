@@ -36,7 +36,6 @@ import org.ietf.ietfsched.service.SyncService;
  * A fragment that shows the IETF Well Note.
  */
 public class WellNoteFragment extends Fragment {
-    private static final String noteWellURL = "https://www.ietf.org/media/documents/note-well.md";
     private static final String TAG = "WellNoteFragment";
     private WebView mWebView;
 

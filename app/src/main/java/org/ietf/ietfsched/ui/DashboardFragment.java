@@ -88,7 +88,7 @@ public class DashboardFragment extends Fragment {
                             Toast.makeText(activity, "Check/Upload new agenda, pls wait", Toast.LENGTH_LONG).show();
                             return;
                         }
-                        // fireTrackerEvent("Note Well");
+                        fireTrackerEvent("Note Well");
                         startActivity(new Intent(getActivity(), WellNoteActivity.class));
                     }
                 });
