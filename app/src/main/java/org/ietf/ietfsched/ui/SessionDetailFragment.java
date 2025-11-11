@@ -613,8 +613,10 @@ public class SessionDetailFragment extends Fragment implements
                             linkContainer.setOnClickListener(new View.OnClickListener() {
                                 public void onClick(View view) {
                                     fireLinkEvent(SessionsQuery.LINKS_TITLES[linkTitleIndex]);
-                                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
+                                    // Open agenda in AgendaActivity (WebView with external links)
+                                    Intent intent = new Intent(getActivity(), AgendaActivity.class);
+                                    intent.putExtra(AgendaActivity.EXTRA_AGENDA_URL, url);
+                                    intent.putExtra(Intent.EXTRA_TITLE, mTitleString);
                                     startActivity(intent);
                                 }
                             });
@@ -682,8 +684,10 @@ public class SessionDetailFragment extends Fragment implements
                             linkContainer.setOnClickListener(new View.OnClickListener() {
                                 public void onClick(View view) {
                                     fireLinkEvent(SessionsQuery.LINKS_TITLES[linkTitleIndex]);
-                                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
+                                    // Open agenda in AgendaActivity (WebView with external links)
+                                    Intent intent = new Intent(getActivity(), AgendaActivity.class);
+                                    intent.putExtra(AgendaActivity.EXTRA_AGENDA_URL, url);
+                                    intent.putExtra(Intent.EXTRA_TITLE, mTitleString);
                                     startActivity(intent);
                                 }
                             });

@@ -69,6 +69,13 @@
             android:label="@string/title_well_note"
             tools:ignore="Instantiatable" />
 			
+        <activity
+            android:name="org.ietf.ietfsched.ui.AgendaActivity"
+            android:hardwareAccelerated="false"
+            android:exported="true"
+            android:label="Agenda"
+            tools:ignore="Instantiatable" />
+			
         <!-- Phone-only activities -->
 
         <activity
