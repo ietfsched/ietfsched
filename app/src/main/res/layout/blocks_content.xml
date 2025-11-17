@@ -26,8 +26,7 @@
         android:id="@+id/blocks"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:layerType="software"
-        iosched:columns="3">
+        iosched:columns="4">
         <view
             class="org.ietf.ietfsched.ui.widget.TimeRulerView"
             android:id="@id/blocks_ruler"

@@ -41,6 +41,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.provider.BaseColumns;
 import androidx.fragment.app.Fragment;
+import java.util.Calendar;
 import androidx.core.content.res.TypedArrayUtils;
 import android.text.format.DateUtils;
 import android.util.Log;
@@ -80,31 +81,38 @@ public class ScheduleFragment extends Fragment implements
             DateUtils.FORMAT_SHOW_WEEKDAY |
             DateUtils.FORMAT_ABBREV_WEEKDAY;
 
-    /*		ParseerUtils defines the time format:
-     *      df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:00.000", Locale.US);
-     *      NOTE: This covers the 1 week of IETF and the previous week as well.
+	/**
+     * START_DAYS is the start of each day of IETF to permit building the view.
+     * Generated dynamically based on detected meeting dates.
      */
-    private static ArrayList<Long> START_DAYS = new ArrayList<Long>();
-    private static final String year = "2024";
+    private ArrayList<Long> START_DAYS = new ArrayList<Long>();
 
-    /*
-     * 2wks of time is required here, Week prior to IETF and IETF week.
-     * Months are the month numbers over which the meeting will span.
-     * Days are the days of the month.
+    /**
+     * Generates the START_DAYS list based on the conference start/end dates.
+     * Creates tabs for each day of the meeting.
      */
-    private static final Integer[] months = new Integer[]{ 3 };
-    private static final Integer[] days = new Integer[]{
-    // SU  MO  TU  WE  TH  FR  SA                 
-                           14, 15,
-       16, 17, 18, 19, 20, 21, 22,
-    };
-    static {
-        for( int i = 0; i<months.length;i++) {
-            for (int j = 0; j<days.length; j++) {
-                START_DAYS.add(ParserUtils.parseTime(
-                        String.format("%s-%02d-%02d 00:00:00%s", year, months[i], days[j],
-                                UIUtils.CONFERENCE_TIME_ZONE.getID())));
-            }
+    private void generateStartDays() {
+        START_DAYS.clear();
+        
+        long conferenceStart = UIUtils.getConferenceStart();
+        long conferenceEnd = UIUtils.getConferenceEnd();
+        
+        if (conferenceStart == 0 || conferenceEnd == 0) {
+            Log.w(TAG, "Conference dates not set yet, cannot generate schedule days");
+            return;
+        }
+        
+        // Generate a day entry for each day of the conference
+        Calendar cal = Calendar.getInstance(UIUtils.getConferenceTimeZone());
+        cal.setTimeInMillis(conferenceStart);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        
+        while (cal.getTimeInMillis() <= conferenceEnd) {
+            START_DAYS.add(cal.getTimeInMillis());
+            cal.add(Calendar.DAY_OF_MONTH, 1);
         }
     }
 
@@ -201,11 +209,25 @@ public class ScheduleFragment extends Fragment implements
             }
         });
 
+		// Generate schedule days dynamically based on detected meeting
+		generateStartDays();
+		
+		// Handle case where conference dates aren't set yet (before first sync)
+		if (START_DAYS.isEmpty()) {
+			Log.w(TAG, "No schedule days available - meeting data may not be synced yet");
+			// We can't set up the schedule without meeting dates
+			// Return the root view, but it will be empty until data is synced
+			return root;
+		}
+		
 		for (long day : START_DAYS) {
 			setupDay(inflater, day);
-			}
+		}
 		
-        updateWorkspaceHeader(0);
+		// Find which day corresponds to "now" and start on that day
+		int initialDay = findCurrentDayIndex();
+        updateWorkspaceHeader(initialDay);
+        mWorkspace.setCurrentScreen(initialDay);
         mWorkspace.setOnScrollListener(new Workspace.OnScrollListener() {
             public void onScroll(float screenFraction) {
                 updateWorkspaceHeader(Math.round(screenFraction));
@@ -219,6 +241,11 @@ public class ScheduleFragment extends Fragment implements
         if (mTitleCurrentDayIndex == dayIndex) {
             return;
         }
+        
+        // Safety check - if no days are loaded yet, return early
+        if (mDays.isEmpty() || dayIndex >= mDays.size()) {
+            return;
+        }
 
         mTitleCurrentDayIndex = dayIndex;
         Day day = mDays.get(dayIndex);
@@ -230,6 +257,33 @@ public class ScheduleFragment extends Fragment implements
                 .setVisibility((dayIndex < mDays.size() - 1) ? View.VISIBLE : View.INVISIBLE);
     }
 
+    /**
+     * Finds the day index that corresponds to the current time.
+     * Returns 0 if before the conference, last day if after, or the matching day during.
+     */
+    private int findCurrentDayIndex() {
+        if (mDays.isEmpty()) {
+            return 0;
+        }
+        
+        final long now = UIUtils.getCurrentTime(getActivity());
+        
+        // Find the day that contains "now"
+        for (Day day : mDays) {
+            if (now >= day.timeStart && now <= day.timeEnd) {
+                return day.index;
+            }
+        }
+        
+        // If we're before the conference, return first day
+        if (now < mDays.get(0).timeStart) {
+            return 0;
+        }
+        
+        // If we're after the conference, return last day
+        return mDays.size() - 1;
+    }
+
     private void setupDay(LayoutInflater inflater, long startMillis) {
         Day day = new Day();
         if (debug) Log.d(TAG, "Setup day");
@@ -239,7 +293,8 @@ public class ScheduleFragment extends Fragment implements
         day.timeEnd = startMillis + DateUtils.DAY_IN_MILLIS;
         day.blocksUri = ScheduleContract.Blocks.buildBlocksBetweenDirUri(
                 day.timeStart, day.timeEnd);
-        if (debug) Log.d(TAG, "day block uri " + day.blocksUri);
+        if (debug) Log.d(TAG, "Day " + day.index + " range: " + day.timeStart + " to " + day.timeEnd + 
+                " (" + new java.util.Date(day.timeStart) + " to " + new java.util.Date(day.timeEnd) + ")");
 
         // Setup views
         day.rootView = (ViewGroup) inflater.inflate(R.layout.blocks_content, null);
@@ -250,16 +305,80 @@ public class ScheduleFragment extends Fragment implements
         day.blocksView = (BlocksLayout) day.rootView.findViewById(R.id.blocks);
         day.nowView = day.rootView.findViewById(R.id.blocks_now);
 
-        TimeZone.setDefault(UIUtils.CONFERENCE_TIME_ZONE);
+        TimeZone.setDefault(UIUtils.getConferenceTimeZone());
         day.label = DateUtils.formatDateTime(getActivity(), startMillis, TIME_FLAGS);
 
         mWorkspace.addView(day.rootView);
         mDays.add(day);
     }
 
+    /**
+     * Rebuilds schedule tabs when data becomes available after initial view creation.
+     */
+    private void rebuildScheduleTabs() {
+        if (getActivity() == null) {
+            return;
+        }
+        
+        // Restore conference dates from SharedPreferences if UIUtils lost them
+        if (UIUtils.getConferenceStart() == 0) {
+            android.content.SharedPreferences prefs = getActivity().getSharedPreferences("meeting_prefs", android.content.Context.MODE_PRIVATE);
+            long startMillis = prefs.getLong("meeting_start", 0);
+            long endMillis = prefs.getLong("meeting_end", 0);
+            String tzId = prefs.getString("meeting_timezone", "UTC");
+            
+            if (startMillis != 0) {
+                UIUtils.setConferenceTimeZone(java.util.TimeZone.getTimeZone(tzId));
+                UIUtils.setConferenceDates(startMillis, endMillis);
+            }
+        }
+        
+        LayoutInflater inflater = getActivity().getLayoutInflater();
+        
+        // Generate START_DAYS based on now-available conference dates
+        generateStartDays();
+        
+        if (START_DAYS.isEmpty()) {
+            Log.w(TAG, "Still no conference dates available");
+            return;
+        }
+        
+        // Clear any existing workspace views
+        if (mWorkspace != null) {
+            mWorkspace.removeAllViews();
+        }
+        mDays.clear();
+        
+        // Create tabs for each day
+        for (long day : START_DAYS) {
+            setupDay(inflater, day);
+        }
+        
+        // Update header and scroll listener
+        if (!mDays.isEmpty()) {
+            int initialDay = findCurrentDayIndex();
+            updateWorkspaceHeader(initialDay);
+            mWorkspace.setCurrentScreen(initialDay);
+            mWorkspace.setOnScrollListener(new Workspace.OnScrollListener() {
+                public void onScroll(float screenFraction) {
+                    updateWorkspaceHeader(Math.round(screenFraction));
+                }
+            }, true);
+        }
+        
+        // Query for blocks to populate the rebuilt schedule
+        requery();
+    }
+
     @Override
     public void onResume() {
         super.onResume();
+
+        // Check if we need to rebuild tabs (in case view was created before data was available)
+        if (mDays.isEmpty() && UIUtils.getConferenceStart() != 0) {
+            Log.i(TAG, "Conference data now available, rebuilding schedule tabs");
+            rebuildScheduleTabs();
+        }
 
         // Since we build our views manually instead of using an adapter, we
         // need to manually requery every time launched.
@@ -267,6 +386,25 @@ public class ScheduleFragment extends Fragment implements
 
         getActivity().getContentResolver().registerContentObserver(
                 ScheduleContract.Sessions.CONTENT_URI, true, mSessionChangesObserver);
+        
+        // Also watch for block changes to trigger rebuild if schedule was opened before sync completed
+        getActivity().getContentResolver().registerContentObserver(
+                ScheduleContract.Blocks.CONTENT_URI, true, mBlockChangesObserver);
+        
+        // Check if blocks already exist (sync may have finished before observer was registered)
+        if (mDays.isEmpty()) {
+            android.database.Cursor cursor = getActivity().getContentResolver().query(
+                ScheduleContract.Blocks.CONTENT_URI,
+                new String[] {ScheduleContract.Blocks.BLOCK_ID},
+                null, null, null);
+            if (cursor != null) {
+                int count = cursor.getCount();
+                cursor.close();
+                if (count > 0) {
+                    rebuildScheduleTabs();
+                }
+            }
+        }
 
         // Start listening for time updates to adjust "now" bar. TIME_TICK is
         // triggered once per minute, which is how we move the bar over time.
@@ -299,6 +437,7 @@ public class ScheduleFragment extends Fragment implements
         super.onPause();
         getActivity().unregisterReceiver(mReceiver);
         getActivity().getContentResolver().unregisterContentObserver(mSessionChangesObserver);
+        getActivity().getContentResolver().unregisterContentObserver(mBlockChangesObserver);
     }
 
     /**
@@ -319,18 +458,19 @@ public class ScheduleFragment extends Fragment implements
             while (cursor.moveToNext()) {
                 final String type = cursor.getString(BlocksQuery.BLOCK_TYPE);
                 final Integer column = sTypeColumnMap.get(type);
+                
+                final String blockId = cursor.getString(BlocksQuery.BLOCK_ID);
+                final String title = cursor.getString(BlocksQuery.BLOCK_TITLE);
+                
                 // TODO: place random blocks at bottom of entire layout
                 if (column == null || column == -1)  {
+                    Log.w(TAG, "SKIPPING block '" + title + "' because type '" + type + "' has no column mapping");
                     continue;
                 }
 
-                final String blockId = cursor.getString(BlocksQuery.BLOCK_ID);
-                final String title = cursor.getString(BlocksQuery.BLOCK_TITLE);
                 final long start = cursor.getLong(BlocksQuery.BLOCK_START);
                 final long end = cursor.getLong(BlocksQuery.BLOCK_END);
                 final boolean containsStarred = cursor.getInt(BlocksQuery.CONTAINS_STARRED) != 0;
-                Log.d(TAG, "BlockData - Id: " + blockId + " title: " + title + " start: " +
-                        start + " end: " + end);
 
                 final BlockView blockView = new BlockView(getActivity(), blockId, title, start, end,
                         containsStarred, column);
@@ -426,6 +566,18 @@ public class ScheduleFragment extends Fragment implements
         @Override
         public void onChange(boolean selfChange) {
             requery();
+        }
+    };
+    
+    private ContentObserver mBlockChangesObserver = new ContentObserver(new Handler()) {
+        @Override
+        public void onChange(boolean selfChange) {
+            // If schedule was opened before sync completed, rebuild when blocks arrive
+            if (mDays.isEmpty()) {
+                rebuildScheduleTabs();
+            } else {
+                requery();
+            }
         }
     };
 

@@ -32,7 +32,9 @@ import org.ietf.ietfsched.R;
 import org.ietf.ietfsched.util.UIUtils;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.TimeZone;
 
 /**
  * Custom view that draws a vertical time "ruler" representing the chronological
@@ -88,23 +90,23 @@ public class TimeRulerView extends View {
      * milliseconds since epoch). This should be the child/count * mHourHeight, perhaps?
      */
     public int getTimeVerticalOffset(long timeMillis, int count, boolean start) {
-        Log.d(TAG, "getTimeVerticalOffset timeMillis: " + timeMillis + " Count: " + count);
+        // Get the conference timezone and convert to ZoneId for proper handling
+        TimeZone tz = UIUtils.getConferenceTimeZone();
+        ZoneId zoneId = tz.toZoneId();
+        
+        // Get the offset at the specific time (accounts for DST)
+        ZoneOffset offset = zoneId.getRules().getOffset(java.time.Instant.ofEpochMilli(timeMillis));
+        
         LocalDateTime ldt = LocalDateTime.ofEpochSecond((long) timeMillis / 1000,
                 0,
-                // Attempting a time offset here may be incorrect.
-                // Meetings get stored with the CONFERENCE_TIME_ZONE at stora/collection time.
-                ZoneOffset.of(UIUtils.CONFERENCE_TIME_ZONE.getID()
-                                .replaceAll("^GMT", "")
-                                .replaceAll(":", "")
-                ));
+                offset);
 
-
+        final int hour = ldt.getHour();
         final int minutes = ldt.getMinute();
-        int isStart = 1;
-        if (!start) { isStart = 0; }
-        // int finalHeight = ((count + isStart) * mHourHeight) + ((minutes * mHourHeight) / 60);
-        int finalHeight = (minutes * mHourHeight) / 60;
-        Log.d(TAG,"Start: " + isStart + " Count: " + count + " TimeMillis: " + timeMillis + " LDT: " + ldt + " Minutes: " + minutes + " - height - " + finalHeight);
+        
+        // Calculate vertical offset: (hour - startHour + minutes/60) * pixelsPerHour
+        int finalHeight = (int) ((hour - mStartHour + minutes / 60f) * mHourHeight);
+        
         return finalHeight;
     }
 

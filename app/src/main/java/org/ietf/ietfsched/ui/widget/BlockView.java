@@ -61,6 +61,9 @@ public class BlockView extends Button {
         mColumn = column;
 
         setText(mTitle);
+        
+        // Use smaller text size to prevent overflow in narrow columns
+        setTextSize(11); // sp units
 
         // TODO: turn into color state list with layers?
         int textColor = Color.WHITE;
@@ -97,7 +100,7 @@ public class BlockView extends Button {
     }
 
     public String getBlockTimeString() {
-        TimeZone.setDefault(UIUtils.CONFERENCE_TIME_ZONE);
+        TimeZone.setDefault(UIUtils.getConferenceTimeZone());
         return DateUtils.formatDateTime(getContext(), mStartTime, TIME_STRING_FLAGS);
     }
 

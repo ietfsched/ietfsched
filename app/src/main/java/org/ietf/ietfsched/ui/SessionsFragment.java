@@ -132,7 +132,13 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
         if (!mHasSetEmptyText) {
             // Could be a bug, but calling this twice makes it become visible when it shouldn't
             // be visible.
-            setEmptyText(getString(R.string.empty_sessions));
+            // Note: setEmptyText() only works with default ListFragment layout.
+            // For custom layout (with search box), the empty view is defined in fragment_sessions_with_search.xml
+            View searchBox = getView() != null ? getView().findViewById(R.id.search_box) : null;
+            if (searchBox == null) {
+                // Using default layout without search box, can use setEmptyText()
+                setEmptyText(getString(R.string.empty_sessions));
+            }
             mHasSetEmptyText = true;
         }
     }
@@ -249,12 +255,109 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
         }
     }
 
+    @Override
+    public View onCreateView(android.view.LayoutInflater inflater, android.view.ViewGroup container, Bundle savedInstanceState) {
+        // Check if we're showing all sessions (needs search) or a filtered block view (no search needed)
+        final Intent intent = BaseActivity.fragmentArgumentsToIntent(getArguments());
+        final Uri sessionsUri = intent != null ? intent.getData() : null;
+        
+        // Only show search box for the full sessions list (Sessions.CONTENT_URI)
+        // Don't show it for block-specific views (Blocks.buildSessionsUri)
+        boolean isFullSessionsList = sessionsUri != null && 
+                sessionsUri.toString().equals(ScheduleContract.Sessions.CONTENT_URI.toString());
+        
+        if (isFullSessionsList) {
+            // Use custom layout with search box
+            return inflater.inflate(R.layout.fragment_sessions_with_search, container, false);
+        } else {
+            // Use default ListFragment layout (no search box)
+            return super.onCreateView(inflater, container, savedInstanceState);
+        }
+    }
+
+    @Override
+    public void onViewCreated(View view, Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        
+        // Find the search box from our custom layout (may not exist for block views)
+        final android.widget.EditText searchBox = (android.widget.EditText) view.findViewById(R.id.search_box);
+        
+        if (searchBox != null) {
+            // Add text change listener for filtering
+            searchBox.addTextChangedListener(new android.text.TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    filterSessions(s.toString());
+                }
+
+                @Override
+                public void afterTextChanged(android.text.Editable s) {
+                }
+            });
+            
+            // Request focus on the search box to show keyboard
+            searchBox.post(new Runnable() {
+                @Override
+                public void run() {
+                    searchBox.requestFocus();
+                    android.view.inputmethod.InputMethodManager imm = 
+                        (android.view.inputmethod.InputMethodManager) getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+                    if (imm != null) {
+                        imm.showSoftInput(searchBox, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+                    }
+                }
+            });
+        }
+    }
+
+    private void filterSessions(String query) {
+        if (mAdapter == null) return;
+        
+        if (query == null || query.trim().isEmpty()) {
+            // No filter - show all sessions
+            if (mAdapter.getFilterQueryProvider() != null) {
+                mAdapter.getFilter().filter(null);
+            }
+        } else {
+            // Apply filter
+            mAdapter.getFilter().filter(query);
+        }
+    }
+
     /**
      * {@link CursorAdapter} that renders a {@link SessionsQuery}.
      */
     private class SessionsAdapter extends CursorAdapter {
         public SessionsAdapter(Context context) {
             super(context, null);
+            
+            // Set up filter to search session titles
+            setFilterQueryProvider(new android.widget.FilterQueryProvider() {
+                @Override
+                public Cursor runQuery(CharSequence constraint) {
+                    if (constraint == null || constraint.length() == 0) {
+                        // No filter - return all sessions
+                        return getActivity().getContentResolver().query(
+                            ScheduleContract.Sessions.CONTENT_URI,
+                            SessionsQuery.PROJECTION,
+                            null, null,
+                            ScheduleContract.Sessions.DEFAULT_SORT);
+                    } else {
+                        // Filter by session title
+                        String selection = ScheduleContract.Sessions.SESSION_TITLE + " LIKE ?";
+                        String[] selectionArgs = new String[] {"%" + constraint.toString() + "%"};
+                        return getActivity().getContentResolver().query(
+                            ScheduleContract.Sessions.CONTENT_URI,
+                            SessionsQuery.PROJECTION,
+                            selection, selectionArgs,
+                            ScheduleContract.Sessions.DEFAULT_SORT);
+                    }
+                }
+            });
         }
         
         @Override
@@ -293,9 +396,10 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
 
             subtitleView.setText(subtitle);
 
+            // Set up star toggle functionality
             final boolean starred = cursor.getInt(SessionsQuery.STARRED) != 0;
-            view.findViewById(R.id.star_button).setVisibility(
-                    starred ? View.VISIBLE : View.INVISIBLE);
+            final String sessionId = cursor.getString(SessionsQuery.SESSION_ID);
+            setupStarButton(view, sessionId, starred);
 
             // Possibly indicate that the session has occurred in the past.
             UIUtils.setSessionTitleColor(blockEnd, titleView, subtitleView);
@@ -308,6 +412,30 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
     private class SearchAdapter extends CursorAdapter {
         public SearchAdapter(Context context) {
             super(context, null);
+            
+            // Set up filter for search results
+            setFilterQueryProvider(new android.widget.FilterQueryProvider() {
+                @Override
+                public Cursor runQuery(CharSequence constraint) {
+                    if (constraint == null || constraint.length() == 0) {
+                        // No filter - return original search results
+                        return getActivity().getContentResolver().query(
+                            ScheduleContract.Sessions.CONTENT_URI,
+                            SearchQuery.PROJECTION,
+                            null, null,
+                            ScheduleContract.Sessions.DEFAULT_SORT);
+                    } else {
+                        // Filter search results by session title
+                        String selection = ScheduleContract.Sessions.SESSION_TITLE + " LIKE ?";
+                        String[] selectionArgs = new String[] {"%" + constraint.toString() + "%"};
+                        return getActivity().getContentResolver().query(
+                            ScheduleContract.Sessions.CONTENT_URI,
+                            SearchQuery.PROJECTION,
+                            selection, selectionArgs,
+                            ScheduleContract.Sessions.DEFAULT_SORT);
+                    }
+                }
+            });
         }
         
         @Override
@@ -340,10 +468,33 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
             final Spannable styledSnippet = buildStyledSnippet(snippet);
             ((TextView) view.findViewById(R.id.session_subtitle)).setText(styledSnippet);
 
+            // Set up star toggle functionality
             final boolean starred = cursor.getInt(SearchQuery.STARRED) != 0;
-            view.findViewById(R.id.star_button).setVisibility(
-                    starred ? View.VISIBLE : View.INVISIBLE);
+            final String sessionId = cursor.getString(SearchQuery.SESSION_ID);
+            setupStarButton(view, sessionId, starred);
         }
+    }
+
+    /**
+     * Helper method to set up star button for a session item
+     */
+    private void setupStarButton(View view, String sessionId, boolean starred) {
+        final android.widget.CheckBox starButton = (android.widget.CheckBox) view.findViewById(R.id.star_button);
+        starButton.setChecked(starred);
+        
+        final Uri sessionUri = ScheduleContract.Sessions.buildSessionUri(sessionId);
+        starButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                final android.widget.CheckBox checkbox = (android.widget.CheckBox) v;
+                final boolean newStarredState = checkbox.isChecked();
+                
+                // Update database
+                final android.content.ContentValues values = new android.content.ContentValues();
+                values.put(ScheduleContract.Sessions.SESSION_STARRED, newStarredState ? 1 : 0);
+                getActivity().getContentResolver().update(sessionUri, values, null, null);
+            }
+        });
     }
 
     private ContentObserver mSessionChangesObserver = new ContentObserver(new Handler()) {

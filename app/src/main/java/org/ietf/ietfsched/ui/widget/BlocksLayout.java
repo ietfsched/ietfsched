@@ -110,21 +110,16 @@ public class BlocksLayout extends ViewGroup {
         rulerView.layout(0, 0, getWidth(), getHeight());
 
         final int count = getChildCount();
-        // Agenda times are UTC, conference times are not, between json parsing and display
-        // convert from Agenda to Conference TZ.
-        final int tzOffset = UIUtils.CONFERENCE_TIME_ZONE.getRawOffset();
-        Log.d(TAG, "Children to add to ruler: " + count);
         for (int i = 0; i < count; i++) {
             final View child = getChildAt(i);
             if (child.getVisibility() == GONE) continue;
 
             if (child instanceof BlockView) {
                 final BlockView blockView = (BlockView) child;
-                // Convert the times before display to the user.
-                final long startTime = blockView.getStartTime() + tzOffset;
-                final long endTime = blockView.getEndTime() + tzOffset;
-                Log.d(TAG, "Mtg: " + blockView.getBlockId() +  " Orig: " + blockView.getStartTime() / 1000 + " Adjusted: " + startTime / 1000 + " via tzoffset: " + tzOffset);
-                Log.d(TAG, "Mtg: " + blockView.getBlockId() + " Orig: " + blockView.getEndTime() / 1000 + " Adjusted: " + endTime / 1000 + "  via tzoffset: " + tzOffset);
+                // Times are already stored in conference timezone (fixed in MeetingMetadata)
+                // No conversion needed!
+                final long startTime = blockView.getStartTime();
+                final long endTime = blockView.getEndTime();
                 final int top = rulerView.getTimeVerticalOffset(startTime, i, true);
                 final int bottom = rulerView.getTimeVerticalOffset(endTime, i, false);
                 final int left = headerWidth + (blockView.getColumn() * columnWidth);

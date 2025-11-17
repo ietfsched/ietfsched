@@ -22,6 +22,7 @@ import org.ietf.ietfsched.util.DetachableResultReceiver;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import androidx.fragment.app.Fragment;
@@ -30,6 +31,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
+import java.util.Random;
 
 /**
  * Front-door {@link Activity} that displays high-level features the schedule application offers to
@@ -40,36 +42,32 @@ import android.widget.Toast;
  */
 public class HomeActivity extends BaseActivity {
     private static final String TAG = "HomeActivity";
+    private static final String PREFS_NAME = "ietfsched_prefs";
+    private static final String PREF_LAST_SYNC = "last_sync_millis";
+    private static final long CACHE_DURATION_MS = 60 * 60 * 1000; // 1 hour
+    private static final long CACHE_JITTER_MS = 20 * 60 * 1000;   // ±20 minutes
 
-//    private TagStreamFragment mTagStreamFragment;
     private SyncStatusUpdaterFragment mSyncStatusUpdaterFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-/*        if (!EulaHelper.hasAcceptedEula(this)) {
-            EulaHelper.showEula(false, this);
-        }
-
-        AnalyticsUtils.getInstance(this).trackPageView("/Home");
-*/	
-
         setContentView(R.layout.activity_home);
         getActivityHelper().setupActionBar(null, 0);
 
         FragmentManager fm = getSupportFragmentManager();
 
-//        mTagStreamFragment = (TagStreamFragment) fm.findFragmentById(R.id.fragment_tag_stream);
-
         mSyncStatusUpdaterFragment = (SyncStatusUpdaterFragment) fm.findFragmentByTag(SyncStatusUpdaterFragment.TAG);
         if (mSyncStatusUpdaterFragment == null) {
             mSyncStatusUpdaterFragment = new SyncStatusUpdaterFragment();
             fm.beginTransaction().add(mSyncStatusUpdaterFragment,  SyncStatusUpdaterFragment.TAG).commit();
-//            triggerRefresh();
         }
-	   triggerRefresh();
-		
+        
+        // Only refresh if cache is stale (>1 hour with jitter)
+        if (isCacheStale()) {
+            triggerRefresh();
+        }
     }
 
 
@@ -89,27 +87,49 @@ public class HomeActivity extends BaseActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.menu_refresh) {
+            // Manual refresh always forces a sync, bypassing cache
+            Toast.makeText(this, "Refreshing schedule data...", Toast.LENGTH_SHORT).show();
             triggerRefresh();
             return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
+    /**
+     * Check if cached data is stale and needs refresh.
+     * Uses 1 hour + random jitter (±20 minutes) to avoid thundering herd.
+     */
+    private boolean isCacheStale() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        long lastSync = prefs.getLong(PREF_LAST_SYNC, 0);
+        
+        if (lastSync == 0) {
+            return true; // Never synced before
+        }
+        
+        long now = System.currentTimeMillis();
+        long age = now - lastSync;
+        
+        // Add random jitter (±20 minutes) to cache duration
+        Random random = new Random();
+        long jitter = (long) (random.nextDouble() * 2 * CACHE_JITTER_MS - CACHE_JITTER_MS);
+        long threshold = CACHE_DURATION_MS + jitter;
+        
+        return age > threshold;
+    }
+
     private void triggerRefresh() {
-	
         final Intent intent = new Intent(Intent.ACTION_SYNC, null, this, SyncService.class);
         intent.putExtra(SyncService.EXTRA_STATUS_RECEIVER, mSyncStatusUpdaterFragment.mReceiver);
-		Log.d(TAG, "Start Sync service");
         startService(intent);
-
-/*        if (mTagStreamFragment != null) {
-            mTagStreamFragment.refresh();
-        }
-*/	
+    }
+    
+    private void recordSyncTime() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().putLong(PREF_LAST_SYNC, System.currentTimeMillis()).apply();
     }
 
     private void updateRefreshStatus(boolean refreshing) {
-		Log.d(TAG, "Sync pending ? " + refreshing);
         getActivityHelper().setRefreshActionButtonCompatState(refreshing);
     }
 
@@ -125,21 +145,18 @@ public class HomeActivity extends BaseActivity {
             implements DetachableResultReceiver.Receiver {
         public static final String TAG = SyncStatusUpdaterFragment.class.getName();
 
-        private boolean mSyncing = true;
+        private boolean mSyncing = false;  // Start as false, will be set to true when sync actually starts
         private DetachableResultReceiver mReceiver;
 			
 		public SyncStatusUpdaterFragment() {
 			mReceiver = new DetachableResultReceiver(new Handler());
 			mReceiver.setReceiver(this);
-//			Log.d(TAG, "New SyncStatusUpdaterFragment()");
-			}
+		}
 
         @Override
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
             setRetainInstance(true);
-//            mReceiver = new DetachableResultReceiver(new Handler()); 
-//            mReceiver.setReceiver(this);
         }
 
 
@@ -156,6 +173,8 @@ public class HomeActivity extends BaseActivity {
                 }
                 case SyncService.STATUS_FINISHED: {
                     mSyncing = false;
+                    activity.recordSyncTime(); // Cache the sync timestamp
+                    Toast.makeText(activity, "Schedule updated", Toast.LENGTH_SHORT).show();
                     break;
                 }
                 case SyncService.STATUS_ERROR: {
@@ -174,7 +193,6 @@ public class HomeActivity extends BaseActivity {
         @Override
         public void onActivityCreated(Bundle savedInstanceState) {
             super.onActivityCreated(savedInstanceState);
-//			Log.d(TAG, "SyncStatusUpdaterFragment() / OnActivityCreated. sync ?" + mSyncing);
             ((HomeActivity) getActivity()).updateRefreshStatus(mSyncing);
         }
     }

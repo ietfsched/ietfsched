@@ -39,14 +39,17 @@ class UnScheduledMeetingException extends Exception {
 }
 
 class Meeting {
-	private static final boolean debug = true;
+	private static final boolean debug = false;
 	private static final String TAG = "Meeting";
 	// private final static SimpleDateFormat previousFormat = new SimpleDateFormat("yyyy-MM-dd HHmm"); // 2011-07-23 0900
 	//                                                        JSON time - Start - "2023-03-27T00:30:00Z
 	//                                                                   "start": "2023-11-06T14:30:00Z",
-	private final static SimpleDateFormat jsonDate = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+	private final static SimpleDateFormat jsonDate = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT);
 	// Hack: timezone format (Z) = +0800 where the ietfsched application expects +08:00.
 	private final static SimpleDateFormat afterFormat = ParserUtils.df;
+
+	// Meeting number is set dynamically by LocalExecutor before parsing
+	private static int sMeetingNumber = 0;
 
 	String startHour; //2010-05-19 10:45:00
 	String endHour; // 2010-05-19 11:45:00
@@ -59,9 +62,17 @@ class Meeting {
 	String key; // unique identifier
 	String[] slides; // The list of slides urls.
 
+	/**
+	 * Sets the current meeting number. Must be called before creating Meeting objects.
+	 */
+	static void setMeetingNumber(int meetingNumber) {
+		sMeetingNumber = meetingNumber;
+	}
+
 	static {
 		jsonDate.setTimeZone((UIUtils.AGENDA_TIME_ZONE));
-		afterFormat.setTimeZone(UIUtils.CONFERENCE_TIME_ZONE);
+		// Note: afterFormat is ParserUtils.df, which gets its timezone set by
+		// ParserUtils static initializer and updated by ParserUtils.updateTimezone()
 	}
 
 	// Handle parsing each line of the agenda.
@@ -71,17 +82,23 @@ class Meeting {
 		} catch (JSONException e) {
 		    throw new UnScheduledMeetingException("Missing title for event");
 		}
-		// Validate that the agenda item is a 'status' == 'sched'.
+		// Validate that the agenda item has a valid status.
+		// For past meetings, accept sessions even without explicit status since the
+		// meeting has already happened and data quality may vary.
 		String status = "";
 		try {
 			status = mJSON.getString("status");
 		} catch (JSONException e) {
-		  throw new UnScheduledMeetingException("Non Status event");
+			// No status field - accept it (common for historical/past meetings)
+			status = "nostatus";
+			if (debug) Log.d(TAG, "Session without status field, accepting: " + mJSON.optString("name"));
 		}
-		// To permit use before the final agenda is published, permit 'schedw' status.
-		if (!status.equals("sched") && !status.equals("schedw")) {
+		
+		// Accept: sched, schedw (scheduled), and sessions without status
+		// Reject: canceled, resched, deleted  
+		if (status.equals("canceled") || status.equals("resched") || status.equals("deleted")) {
 			throw new UnScheduledMeetingException(
-					String.format(
+					String.format(Locale.ROOT,
 							"Unscheduled meeting(%s) status: %s",
 							mJSON.getString("name"),
 							status));
@@ -99,23 +116,23 @@ class Meeting {
 				durSplitInt[i] = Integer.parseInt(durSplit[i]);
 			}
 			// Parse the json duration represented as hour:min:sec to a time, 02:00:00 == 2am, effectively.
-			LocalTime lt = LocalTime.parse(String.format("%02d:%02d:%02d", (Object[]) durSplitInt));
+			LocalTime lt = LocalTime.parse(String.format(Locale.ROOT, "%02d:%02d:%02d", (Object[]) durSplitInt));
 			// Get a duration from between '00:00:00 today' and the previous.
 			Duration d = Duration.between(LocalTime.MIN, lt);
 			// Add the duration millis to the start date.
 			Instant tEndHour = jDay.toInstant().plusMillis(d.toMillis());
 			endHour = afterFormat.format(Date.from(tEndHour));
 			if (debug) {
-				Log.d(TAG, String.format("Start/Stop time for %s: %s / %s", title, startHour, endHour));
+				Log.d(TAG, String.format(Locale.ROOT, "Start/Stop time for %s: %s / %s", title, startHour, endHour));
 			}
 
 			// Validate that 'objtype' == 'session', else throw exception.
 			typeSession = mJSON.getString("objtype");
 			if (!typeSession.equals("session")) {
-			  throw new UnScheduledMeetingException(String.format("Not a session: %s", title));
+			  throw new UnScheduledMeetingException(String.format(Locale.ROOT, "Not a session: %s", title));
 			}
 			location = mJSON.getString("location");
-			key = String.format("%d", mJSON.getInt("session_id"));
+			key = String.format(Locale.ROOT, "%d", mJSON.getInt("session_id"));
 			hrefDetail = "";
 			try {
 				hrefDetail = mJSON.getString("agenda");
@@ -124,7 +141,7 @@ class Meeting {
 			}
 		} catch (JSONException e) {
 			throw new UnScheduledMeetingException(
-					String.format("Event(%s) is missing JSON element: %s", title, e.toString()));
+					String.format(Locale.ROOT, "Event(%s) is missing JSON element: %s", title, e.toString()));
 		}
 		// Parse the group sub element from the agenda, there are instances of meeting
 		// where parts of group are unset: IEPG has no parent, for instance.
@@ -133,7 +150,7 @@ class Meeting {
 			areaGroup = mJSON.getJSONObject("group");
 		} catch (JSONException e) {
 			throw new UnScheduledMeetingException(
-					String.format("Event(%s) is missing JSON element: %s", title, e.toString()));
+					String.format(Locale.ROOT, "Event(%s) is missing JSON element: %s", title, e.toString()));
 		}
 		// Do not throw an exception for missing parent/acronym.
 		try {
@@ -141,7 +158,7 @@ class Meeting {
 			group = areaGroup.getString("acronym");
 		} catch (JSONException e) {
 			if (debug) {
-				Log.d(TAG, String.format("Meeting %s is missing area or group.", title));
+				Log.d(TAG, String.format(Locale.ROOT, "Meeting %s is missing area or group.", title));
 			}
 		}
 		// Handle an unknown group/area a bit more gracefully.
@@ -149,26 +166,44 @@ class Meeting {
 			group = title;
 		}
 
-		// Extract the presentation urls, if there are any.
+		// Extract the presentation urls and titles, if there are any.
 		try {
 			JSONArray pArray =  (JSONArray) mJSON.get("presentations");
 			if (pArray == null) throw new UnScheduledMeetingException("No presentations");
 			slides = new String[pArray.length()];
-			// Meeting BASE_URL - SyncService.BASE_URL - is:
-			//   https://datatracker.ietf.org/meeting/116
-			// Meeting materials are urls like:
-			//   https://datatracker.ietf.org/meeting/116/materials/slides-116-mpls-clarify-bootstrapping-bfd-over-mpls-lsp
-			// Agenda url:
-			//   https://datatracker.ietf.org/meeting/116/materials/agenda-116-mpls-00
-			// Presentation name == file-name in URL: slides-116-mpls-clarify-bootstrapping-bfd-over-mpls-lsp
-			if (debug) Log.d(TAG, String.format("PRESENTATION LEN: %d", pArray.length()));
+			
+			// DEBUG: Log the entire presentation object to understand structure
+			if (pArray.length() > 0) {
+				Log.d(TAG, "First presentation object: " + pArray.getJSONObject(0).toString());
+			}
+			
+			// The presentations array contains objects with "url", "name", and "title" fields
+			// Store as: "title|||url" so we can display the actual presentation title
 			for (int i = 0; i < pArray.length(); i++ ){
-                String tURL = SyncService.BASE_URL + "materials/" +
-						pArray.getJSONObject(i).getString("name");
-				slides[i] = tURL;
+				JSONObject presentation = pArray.getJSONObject(i);
+				
+				// Get the presentation title (try "title" first, fallback to "name")
+				String presentationTitle = presentation.optString("title", "");
+				if (presentationTitle.isEmpty()) {
+					presentationTitle = presentation.optString("name", "Presentation " + (i+1));
+				}
+				
+				// Get the URL (preferred from API, fallback to construct)
+				String url = presentation.optString("url", null);
+				if (url == null || url.isEmpty()) {
+					// Fallback: construct URL from name
+					String name = presentation.getString("name");
+					String baseUrl = "https://datatracker.ietf.org/meeting/" + sMeetingNumber + "/";
+					url = baseUrl + "materials/" + name;
+					Log.w(TAG, "No URL in presentation, constructed: " + url);
+				}
+				
+				// Store as "title|||url" (using ||| as separator since :: separates multiple presentations)
+				slides[i] = presentationTitle + "|||" + url;
+				if (debug) Log.d(TAG, "Presentation: " + presentationTitle + " -> " + url);
 			}
 		} catch (JSONException e) {
-			if (debug) Log.d(TAG, String.format("NoPresentations for %s: %s", title, e.toString()));
+			if (debug) Log.d(TAG, String.format(Locale.ROOT, "NoPresentations for %s: %s", title, e.toString()));
 		}
 		if (debug) Log.d(TAG, "Agenda URL: " + hrefDetail);
 		if (debug && slides != null) {

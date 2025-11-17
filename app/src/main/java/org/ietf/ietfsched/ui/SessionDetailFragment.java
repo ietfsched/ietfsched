@@ -415,6 +415,100 @@ public class SessionDetailFragment extends Fragment implements
      */
     public void fireLinkEvent(int actionId) {
     }
+    
+    /**
+     * Helper method to open agenda in AgendaActivity
+     */
+    private void openAgendaInWebView(String url) {
+        Intent intent = new Intent(getActivity(), AgendaActivity.class);
+        intent.putExtra(AgendaActivity.EXTRA_AGENDA_URL, url);
+        intent.putExtra(Intent.EXTRA_TITLE, mTitleString);
+        startActivity(intent);
+    }
+    
+    /**
+     * Helper method to create a gradient drawable
+     */
+    private android.graphics.drawable.GradientDrawable createGradient(int startColor, int endColor, float cornerRadius) {
+        android.graphics.drawable.GradientDrawable gradient = new android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+            new int[] {startColor, endColor});
+        gradient.setCornerRadius(cornerRadius);
+        return gradient;
+    }
+    
+    /**
+     * Helper method to create a section header with gradient background
+     */
+    private TextView createSectionHeader(int textResId) {
+        TextView header = new TextView(getActivity());
+        header.setText(textResId);
+        header.setTextSize(14);
+        header.setTextColor(0xFFFFFFFF);  // White text
+        header.setBackground(createGradient(0xFF888888, 0xFFC0C0C0, 0));  // Gray gradient
+        header.setPadding(20, 14, 16, 14);
+        header.setTypeface(null, android.graphics.Typeface.ITALIC);
+        return header;
+    }
+    
+    /**
+     * Helper method to create a separator view
+     */
+    private View createSeparator() {
+        View separator = new ImageView(getActivity());
+        separator.setLayoutParams(new ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.FILL_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT));
+        separator.setBackgroundResource(android.R.drawable.divider_horizontal_bright);
+        return separator;
+    }
+    
+    /**
+     * Helper method to create a thin separator line
+     */
+    private View createThinSeparator() {
+        View separator = new ImageView(getActivity());
+        separator.setLayoutParams(new ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, 1));
+        separator.setBackgroundColor(0xFFCCCCCC);
+        return separator;
+    }
+    
+    /**
+     * Helper method to create Meetecho button
+     */
+    private TextView createMeetechoButton(final String meetechoUrl) {
+        TextView button = new TextView(getActivity());
+        button.setText(R.string.session_link_meetecho);
+        button.setTextSize(14);
+        button.setTextColor(0xFFFFFFFF);  // White text
+        button.setTypeface(null, android.graphics.Typeface.BOLD);
+        button.setGravity(android.view.Gravity.CENTER);
+        button.setPadding(16, 12, 16, 12);
+        
+        // Green gradient background with rounded corners
+        button.setBackground(createGradient(0xFF388E3C, 0xFF66BB6A, 4));
+        
+        button.setClickable(true);
+        button.setFocusable(true);
+        button.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View view) {
+                fireLinkEvent(R.string.session_link_meetecho);
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(meetechoUrl));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
+                startActivity(intent);
+            }
+        });
+        
+        android.widget.LinearLayout.LayoutParams buttonParams = new android.widget.LinearLayout.LayoutParams(
+            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
+        buttonParams.leftMargin = 8;   // Small gap between agenda and button
+        buttonParams.rightMargin = 16; // Right padding to match left padding of agenda
+        button.setLayoutParams(buttonParams);
+        
+        return button;
+    }
 
     private void updateNotesTab() {
         final CatchNotesHelper helper = new CatchNotesHelper(getActivity());
@@ -486,6 +580,14 @@ public class SessionDetailFragment extends Fragment implements
                 .setContent(R.id.tab_session_links));
     }
 
+    /**
+     * Updates the Links tab with session links, agendas, and presentation slides.
+     * 
+     * Special handling for different link types:
+     * - PDF_URL: Can contain multiple slides (separated by "::"), shown with section header
+     * - SESSION_URL (Agenda): Paired with Meetecho button on the same row
+     * - Other links: Displayed as standard clickable items with separators
+     */
     private void updateLinksTab(Cursor cursor) {
         ViewGroup container = (ViewGroup) mRootView.findViewById(R.id.links_container);
 
@@ -498,36 +600,156 @@ public class SessionDetailFragment extends Fragment implements
         LayoutInflater inflater = getLayoutInflater(null);
 
         boolean hasLinks = false;
-        Log.d(TAG, "Links Indices: " + SessionsQuery.LINKS_INDICES.length);
+        boolean hasPresentationSlides = false;
+        
+        // Process each link type defined in SessionsQuery
         for (int i = 0; i < SessionsQuery.LINKS_INDICES.length; i++) {
             final String url = cursor.getString(SessionsQuery.LINKS_INDICES[i]);
             if (!TextUtils.isEmpty(url)) {
-                Log.d(TAG, "Links Indices loop, Url[" + i + "]: " + SessionsQuery.LINKS_INDICES[i] + " Title: " + SessionsQuery.LINKS_TITLES[i]);
                 hasLinks = true;
-                ViewGroup linkContainer = (ViewGroup)
-                        inflater.inflate(R.layout.list_item_session_link, container, false);
-                ((TextView) linkContainer.findViewById(R.id.link_text)).setText(
-                        SessionsQuery.LINKS_TITLES[i]);
-                final int linkTitleIndex = i;
-                linkContainer.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View view) {
-                        fireLinkEvent(SessionsQuery.LINKS_TITLES[linkTitleIndex]);
-                    	Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
-                        startActivity(intent);
-                        
+                
+                // Special handling for PDF_URL (presentation slides) - can contain multiple entries separated by "::"
+                // Each entry is formatted as "title|||url"
+                // Note: compare against the COLUMN INDEX (LINKS_INDICES[i]), not the loop index i
+                if (SessionsQuery.LINKS_INDICES[i] == SessionsQuery.PDF_URL) {
+                    // Split by "::" separator to get individual slide entries
+                    String[] slideEntries = url.split("::");
+                    
+                    // First pass: check if there are any valid slides
+                    boolean hasValidSlides = false;
+                    for (String entry : slideEntries) {
+                        if (!entry.trim().isEmpty()) {
+                            hasValidSlides = true;
+                            break;
+                        }
                     }
-                });
+                    
+                    // Only show section header if there are actual slides
+                    if (hasValidSlides && !hasPresentationSlides) {
+                        container.addView(createSectionHeader(R.string.session_link_pdf));
+                        hasPresentationSlides = true;
+                    }
+                    
+                    // Second pass: add the actual slide links
+                    for (int j = 0; j < slideEntries.length; j++) {
+                        final String slideEntry = slideEntries[j].trim();
+                        if (slideEntry.isEmpty()) continue;
+                        
+                        // Parse "title|||url" format
+                        final String slideTitle;
+                        final String slideUrl;
+                        if (slideEntry.contains("|||")) {
+                            String[] parts = slideEntry.split("\\|\\|\\|", 2);
+                            slideTitle = parts[0].trim();
+                            slideUrl = parts[1].trim();
+                        } else {
+                            // Fallback for old format (just URL without title)
+                            slideTitle = slideEntries.length == 1 
+                                ? getString(R.string.session_link_pdf)
+                                : getString(R.string.session_link_pdf) + " " + (j + 1);
+                            slideUrl = slideEntry;
+                        }
+                        
+                        ViewGroup linkContainer = (ViewGroup)
+                                inflater.inflate(R.layout.list_item_session_link, container, false);
+                        
+                        ((TextView) linkContainer.findViewById(R.id.link_text)).setText(slideTitle);
+                        
+                        linkContainer.setOnClickListener(new View.OnClickListener() {
+                            public void onClick(View view) {
+                                fireLinkEvent(R.string.session_link_pdf);
+                                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(slideUrl));
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
+                                startActivity(intent);
+                            }
+                        });
+                        
+                        container.addView(linkContainer);
+                        container.addView(createThinSeparator());
+                    }
+                } else {
+                    // Special handling for Agenda link (SESSION_URL) - place Meetecho button on same row
+                    if (SessionsQuery.LINKS_INDICES[i] == SessionsQuery.SESSION_URL) {
+                        // Extract group acronym from session title (format: "area - group - title")
+                        String groupAcronym = null;
+                        if (mTitleString != null && mTitleString.contains(" - ")) {
+                            String[] parts = mTitleString.split(" - ", 3);
+                            if (parts.length >= 2) {
+                                groupAcronym = parts[1].toLowerCase(java.util.Locale.ROOT).trim();
+                            }
+                        }
+                        
+                        if (groupAcronym != null && !groupAcronym.isEmpty()) {
+                            // Create horizontal container for Agenda link + Meetecho button
+                            android.widget.LinearLayout horizontalContainer = new android.widget.LinearLayout(getActivity());
+                            horizontalContainer.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+                            horizontalContainer.setGravity(android.view.Gravity.CENTER_VERTICAL);  // Vertically center all children
+                            horizontalContainer.setLayoutParams(new android.widget.LinearLayout.LayoutParams(
+                                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT));
+                            
+                            // Add Agenda link on the left
+                            ViewGroup linkContainer = (ViewGroup)
+                                    inflater.inflate(R.layout.list_item_session_link, container, false);
+                            ((TextView) linkContainer.findViewById(R.id.link_text)).setText(
+                                    SessionsQuery.LINKS_TITLES[i]);
+                            final int linkTitleIndex = i;
+                            linkContainer.setOnClickListener(new View.OnClickListener() {
+                                public void onClick(View view) {
+                                    fireLinkEvent(SessionsQuery.LINKS_TITLES[linkTitleIndex]);
+                                    openAgendaInWebView(url);
+                                }
+                            });
+                            
+                            android.widget.LinearLayout.LayoutParams agendaParams = new android.widget.LinearLayout.LayoutParams(
+                                0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+                            linkContainer.setLayoutParams(agendaParams);
+                            horizontalContainer.addView(linkContainer);
+                            
+                            // Add Meetecho button on the right
+                            int meetingNumber = org.ietf.ietfsched.util.MeetingPreferences.getCurrentMeetingNumber(getActivity());
+                            final String meetechoUrl = "https://meetings.conf.meetecho.com/onsite" + meetingNumber + "/?group=" + groupAcronym;
+                            horizontalContainer.addView(createMeetechoButton(meetechoUrl));
+                            
+                            container.addView(horizontalContainer);
+                            container.addView(createSeparator());
+                        } else {
+                            // No group acronym, just add agenda link normally
+                            ViewGroup linkContainer = (ViewGroup)
+                                    inflater.inflate(R.layout.list_item_session_link, container, false);
+                            ((TextView) linkContainer.findViewById(R.id.link_text)).setText(
+                                    SessionsQuery.LINKS_TITLES[i]);
+                            final int linkTitleIndex = i;
+                            linkContainer.setOnClickListener(new View.OnClickListener() {
+                                public void onClick(View view) {
+                                    fireLinkEvent(SessionsQuery.LINKS_TITLES[linkTitleIndex]);
+                                    openAgendaInWebView(url);
+                                }
+                            });
 
-                container.addView(linkContainer);
+                            container.addView(linkContainer);
+                            container.addView(createSeparator());
+                        }
+                    } else {
+                        // Normal handling for other link types (single URL)
+                        ViewGroup linkContainer = (ViewGroup)
+                                inflater.inflate(R.layout.list_item_session_link, container, false);
+                        ((TextView) linkContainer.findViewById(R.id.link_text)).setText(
+                                SessionsQuery.LINKS_TITLES[i]);
+                        final int linkTitleIndex = i;
+                        linkContainer.setOnClickListener(new View.OnClickListener() {
+                            public void onClick(View view) {
+                                fireLinkEvent(SessionsQuery.LINKS_TITLES[linkTitleIndex]);
+                                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
+                                startActivity(intent);
+                            }
+                        });
 
-                // Create separator
-                View separatorView = new ImageView(getActivity());
-                separatorView.setLayoutParams(
-                        new ViewGroup.LayoutParams(ViewGroup.LayoutParams.FILL_PARENT,
-                                ViewGroup.LayoutParams.WRAP_CONTENT));
-                separatorView.setBackgroundResource(android.R.drawable.divider_horizontal_bright);
-                container.addView(separatorView);
+                        container.addView(linkContainer);
+                        container.addView(createSeparator());
+                    }
+                }
             } else {
                 Log.d(TAG, "NOT URL - Links Indices loop, Url[" + i + "]: " + SessionsQuery.LINKS_INDICES[i] + " Title: " + SessionsQuery.LINKS_TITLES[i]);
             }
@@ -600,7 +822,6 @@ public class SessionDetailFragment extends Fragment implements
 
         int[] LINKS_INDICES = {
                 SESSION_URL,
-                MODERATOR_URL,
                 YOUTUBE_URL,
                 PDF_URL,
                 FEEDBACK_URL,
@@ -609,7 +830,6 @@ public class SessionDetailFragment extends Fragment implements
 
         int[] LINKS_TITLES = {
                 R.string.session_link_main,
-                R.string.session_link_moderator,
                 R.string.session_link_youtube,
                 R.string.session_link_pdf,
                 R.string.session_link_feedback,

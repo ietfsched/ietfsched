@@ -15,8 +15,8 @@
   limitations under the License.
   -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="app_name">IETF 123</string>
-    <string name="description_logo">IETF 123</string>
+    <string name="app_name">IETF Schedule</string>
+    <string name="description_logo">IETF Schedule</string>
     <string name="description_home">Home</string>
     <string name="description_search">Search</string>
     <string name="description_map">Map</string>
@@ -46,6 +46,7 @@
 
     <string name="title_search">Search</string>
     <string name="title_search_query">Search for \'<xliff:g id="query">%1$s</xliff:g>\'</string>
+    <string name="hint_search_sessions">Search sessions...</string>
 
     <string name="btn_schedule">Schedule</string>
     <string name="btn_map">Map</string>
@@ -58,7 +59,6 @@
 
     <string name="session_subtitle_room"><xliff:g id="time">%1$s</xliff:g> in <xliff:g id="room">%2$s</xliff:g></string>
 	<string name="session_subtitle_no_room"><xliff:g id="time">%1$s</xliff:g></string>
-    <string name="session_moderator_status"><xliff:g id="questions">%1$s</xliff:g> questions submitted and <xliff:g id="votes">%2$s</xliff:g> votes cast.</string>
 
     <string name="all_sandbox_title">All companies</string>
     <string name="all_sandbox_subtitle">Tap to filter by sandbox companies by pod.</string>
@@ -81,7 +81,7 @@
     <string name="tag_stream">Realtime stream for</string>
     
     <string name="session_link_main">Agenda</string>
-    <string name="session_link_moderator">Ask questions</string>
+    <string name="session_link_meetecho">Join Meeting On Site</string>
     <string name="session_link_youtube">YouTube video</string>
     <string name="session_link_pdf">Presentation Slides</string>
     <string name="session_link_feedback">Feedback on this session</string>
@@ -98,25 +98,17 @@
 
     <string name="share_template">Checking out \'<xliff:g id="title">%1$s</xliff:g>\' at <xliff:g id="hashtags">%2$s</xliff:g> <xliff:g id="url">%3$s</xliff:g></string>
 
-    <string name="moderator_header">Moderator</string>
-
-    <string name="dialog_moderator_title">Google Moderator</string>
-    <string name="dialog_moderator_message">The official Google Moderator app is available in Market, would you like to install it or continue using a normal browser?</string>
-
-    <string name="dialog_moderator_web">Use Browser</string>
-    <string name="dialog_moderator_market">Visit Market</string>
-
     <plurals name="whats_on_countdown_title">
-        <item quantity="zero"><xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF 123</item>
-        <item quantity="one"><xliff:g id="number_of_days">%1$s</xliff:g> day, <xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF 123</item>
-        <item quantity="other"><xliff:g id="number_of_days">%1$s</xliff:g> days, <xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF 123</item>
+        <item quantity="zero"><xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF meeting</item>
+        <item quantity="one"><xliff:g id="number_of_days">%1$s</xliff:g> day, <xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF meeting</item>
+        <item quantity="other"><xliff:g id="number_of_days">%1$s</xliff:g> days, <xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF meeting</item>
     </plurals>
 
     <string name="whats_on_stream_title">Realtime\nStream</string>
     <string name="whats_on_now_playing_title">Now Playing</string>
-	<string name="whats_on_thank_you_title">See you at IETF 123</string>
+	<string name="whats_on_thank_you_title">See you at the next IETF meeting</string>
     <string name="permission_write">Modify IETF schedule data</string>
-    <string name="toast_now_not_visible">Press this button during IETF 123 to show the current time.</string>
+    <string name="toast_now_not_visible">Press this button during an IETF meeting to show the current time.</string>
 
 
     <!-- Notes integration -->
@@ -128,29 +120,4 @@
     <string name="toast_notes_error_invoking">Error invoking Catch Notes.</string>
 
     <string name="note_template">Session: <xliff:g id="title">%1$s</xliff:g>\n\n\n\n__________\nTags: <xliff:g id="hashtags">%2$s</xliff:g></string>
-
-    <string name="note_well_default">
-    "Any submission to the IETF intended by the Contributor for publication as all or part of an IETF Internet-Draft
-	or RFC and any statement made within the context of an IETF activity is considered an \"IETF Contribution\".
-
-    Such statements include oral statements in IETF sessions, as well as written and electronic communications made at any time or place, which are addressed to:
-
-        * The IETF plenary session
-        * The IESG, or any member thereof on behalf of the IESG
-        * Any IETF mailing list, including the IETF list itself, any working group or design team list, or any other list functioning under IETF auspices
-        * Any IETF working group or portion thereof
-        * Any Birds of a Feather (BOF) session
-        * The IAB or any member thereof on behalf of the IAB
-        * The RFC Editor or the Internet-Drafts function
-
-
-	All IETF Contributions are subject to the rules of RFC 5378 and RFC 3979 (updated by RFC 4879).
-
-	Statements made outside of an IETF session, mailing list or other function, that are clearly not intended to be input to an IETF activity, group or function, are not IETF Contributions in the context of this notice.
-
-	Please consult RFC 5378 and RFC 3979 for details.
-
-	A participant in any IETF activity is deemed to accept all IETF rules of process, as documented in Best Current Practices RFCs and IESG Statements.
-	A participant in any IETF activity acknowledges that written, audio and video records of meetings may be made and may be available to the public."
-    </string>
 </resources>

@@ -21,7 +21,6 @@ import org.ietf.ietfsched.R;
 import org.ietf.ietfsched.provider.ScheduleContract;
 import org.ietf.ietfsched.ui.phone.ScheduleActivity;
 import org.ietf.ietfsched.ui.tablet.ScheduleMultiPaneActivity;
-import org.ietf.ietfsched.ui.tablet.SessionsMultiPaneActivity;
 import org.ietf.ietfsched.util.UIUtils;
 
 import android.content.Intent;
@@ -33,9 +32,8 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 
 public class DashboardFragment extends Fragment {
-	private String TAG = "DashboardFragment";
-
     public void fireTrackerEvent(String label) {
+        // Placeholder for analytics tracking
     }
 
     @Override
@@ -65,10 +63,9 @@ public class DashboardFragment extends Fragment {
 					return;
 					}
 				fireTrackerEvent("Sessions");
-				// Launch sessions list
-				final Intent intent = new Intent(Intent.ACTION_VIEW, ScheduleContract.Tracks.CONTENT_URI);
-				intent.putExtra(Intent.EXTRA_TITLE, getString(R.string.title_session_tracks));
-				intent.putExtra(TracksFragment.EXTRA_NEXT_TYPE,	TracksFragment.NEXT_TYPE_SESSIONS);
+				// Launch all sessions list directly (skip tracks screen)
+				final Intent intent = new Intent(Intent.ACTION_VIEW, ScheduleContract.Sessions.CONTENT_URI);
+				intent.putExtra(Intent.EXTRA_TITLE, getString(R.string.title_sessions));
 				startActivity(intent);
 			}
 		});	
@@ -84,10 +81,13 @@ public class DashboardFragment extends Fragment {
         root.findViewById(R.id.home_btn_announcements).setOnClickListener(
                 new View.OnClickListener() {
                     public void onClick(View view) {
-                        // splicing in tag streamer
-//                        fireTrackerEvent("Bulletin");
-                        Intent intent = new Intent(getActivity(), WellNoteActivity.class);
-                        startActivity(intent);
+                        HomeActivity activity = (HomeActivity) getActivity();
+                        if (activity.isRefreshing()) {
+                            Toast.makeText(activity, "Check/Upload new agenda, pls wait", Toast.LENGTH_LONG).show();
+                            return;
+                        }
+                        fireTrackerEvent("Note Well");
+                        startActivity(new Intent(getActivity(), WellNoteActivity.class));
                     }
                 });
         return root;
