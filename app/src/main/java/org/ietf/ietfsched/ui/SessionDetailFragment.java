@@ -17,6 +17,7 @@
 package org.ietf.ietfsched.ui;
 
 import org.ietf.ietfsched.R;
+import org.ietf.ietfsched.io.RemoteExecutor;
 import org.ietf.ietfsched.provider.ScheduleContract;
 import org.ietf.ietfsched.util.ActivityHelper;
 import org.ietf.ietfsched.util.FractionalTouchDelegate;
@@ -451,6 +452,11 @@ public class SessionDetailFragment extends Fragment implements
             @Override
             public void onPageStop(GeckoSession session, boolean success) {
                 Log.d(TAG, "GeckoView page load completed, success: " + success);
+                
+                // If page load failed, show error message
+                if (!success) {
+                    showNotesError("Unable to load notes page. The notes may not be available for this session.");
+                }
             }
         });
 
@@ -574,6 +580,56 @@ public class SessionDetailFragment extends Fragment implements
         return button;
     }
 
+    /**
+     * Show a custom error message in the notes tab when notes are not available.
+     */
+    private void showNotesError(String errorMessage) {
+        if (mGeckoSession == null) {
+            return;
+        }
+        
+        String errorHtml = "<!DOCTYPE html>" +
+                "<html><head>" +
+                "<meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
+                "<style>" +
+                "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; " +
+                "       padding: 32px 16px; margin: 0; background: #f5f5f5; }" +
+                ".error-container { max-width: 600px; margin: 0 auto; background: white; " +
+                "                  padding: 24px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }" +
+                "h2 { color: #d32f2f; margin-top: 0; }" +
+                "p { color: #666; line-height: 1.5; }" +
+                "</style></head><body>" +
+                "<div class='error-container'>" +
+                "<h2>Notes Not Available</h2>" +
+                "<p>" + escapeHtml(errorMessage) + "</p>" +
+                "</div></body></html>";
+        
+        try {
+            // Encode only the necessary characters, preserving spaces and most HTML
+            // Use Base64 encoding for data URI to avoid URL encoding issues
+            byte[] htmlBytes = errorHtml.getBytes("UTF-8");
+            String base64Html = android.util.Base64.encodeToString(htmlBytes, android.util.Base64.NO_WRAP);
+            String dataUri = "data:text/html;charset=utf-8;base64," + base64Html;
+            mGeckoSession.loadUri(dataUri);
+        } catch (java.io.UnsupportedEncodingException e) {
+            Log.e(TAG, "Failed to encode error HTML", e);
+        }
+    }
+    
+    /**
+     * Escape HTML special characters to prevent XSS.
+     */
+    private String escapeHtml(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.replace("&", "&amp;")
+                   .replace("<", "&lt;")
+                   .replace(">", "&gt;")
+                   .replace("\"", "&quot;")
+                   .replace("'", "&#39;");
+    }
+
     private void updateNotesTab() {
         if (mTitleString == null) {
             return;
@@ -598,24 +654,65 @@ public class SessionDetailFragment extends Fragment implements
         // Construct HedgeDoc URL: https://notes.ietf.org/notes-ietf-{meetingNumber}-{groupAcronym}?view
         if (groupAcronym != null && !groupAcronym.isEmpty()) {
             int meetingNumber = org.ietf.ietfsched.util.MeetingPreferences.getCurrentMeetingNumber(getActivity());
-            String hedgedocUrl = "https://notes.ietf.org/notes-ietf-" + meetingNumber + "-" + groupAcronym + "?view";
-            if (mGeckoSession != null) {
-                mGeckoSession.loadUri(hedgedocUrl);
-            }
+            final String hedgedocUrl = "https://notes.ietf.org/notes-ietf-" + meetingNumber + "-" + groupAcronym + "?view";
+            
+            // Check HTTP status before loading to detect missing pages
+            // Non-existent pages redirect (302) to home page, which we can detect
+            new Thread(() -> {
+                try {
+                    java.net.URL url = new java.net.URI(hedgedocUrl).toURL();
+                    java.net.HttpURLConnection conn = (javax.net.ssl.HttpsURLConnection) url.openConnection();
+                    conn.setRequestMethod("HEAD");
+                    conn.setInstanceFollowRedirects(false); // Don't follow redirects automatically
+                    
+                    int status = conn.getResponseCode();
+                    String location = conn.getHeaderField("Location");
+                    
+                    // If it redirects to home page, the notes page doesn't exist
+                    if (status == java.net.HttpURLConnection.HTTP_MOVED_TEMP && 
+                        location != null && location.equals("https://notes.ietf.org/")) {
+                        Log.d(TAG, "Notes page redirects to home, page doesn't exist: " + hedgedocUrl);
+                        if (getActivity() != null) {
+                            getActivity().runOnUiThread(() -> {
+                                showNotesError("Notes are not available for this session.");
+                            });
+                        }
+                        conn.disconnect();
+                        return;
+                    }
+                    
+                    // If status is 200 OK, page exists - load it
+                    if (status == java.net.HttpURLConnection.HTTP_OK) {
+                        if (getActivity() != null && mGeckoSession != null) {
+                            getActivity().runOnUiThread(() -> {
+                                if (mGeckoSession != null) {
+                                    mGeckoSession.loadUri(hedgedocUrl);
+                                }
+                            });
+                        }
+                    } else {
+                        // Other status codes - show error
+                        Log.d(TAG, "Notes page returned status " + status + " for " + hedgedocUrl);
+                        if (getActivity() != null) {
+                            getActivity().runOnUiThread(() -> {
+                                showNotesError("Notes are not available for this session.");
+                            });
+                        }
+                    }
+                    conn.disconnect();
+                } catch (Exception e) {
+                    // Network error or other exception
+                    Log.d(TAG, "Notes page check failed for " + hedgedocUrl + ": " + e.getMessage());
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            showNotesError("Notes are not available for this session.");
+                        });
+                    }
+                }
+            }).start();
         } else {
             // No group acronym found, show error message
-            String errorHtml = "<html><body style='padding:16px;font-family:sans-serif;'>" +
-                    "<p>Unable to determine session group. Please ensure the session title follows the format: \"area - group - title\"</p>" +
-                    "</body></html>";
-            if (mGeckoSession != null) {
-                try {
-                    String dataUri = "data:text/html;charset=utf-8," + 
-                        java.net.URLEncoder.encode(errorHtml, "UTF-8");
-                    mGeckoSession.loadUri(dataUri);
-                } catch (java.io.UnsupportedEncodingException e) {
-                    Log.e(TAG, "Failed to encode error HTML", e);
-                }
-            }
+            showNotesError("Unable to determine session group. Please ensure the session title follows the format: \"area - group - title\"");
         }
     }
 
