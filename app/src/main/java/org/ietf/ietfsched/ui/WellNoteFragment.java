@@ -21,11 +21,15 @@ import org.ietf.ietfsched.R;
 import android.os.Bundle;
 import androidx.fragment.app.Fragment;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
+import org.mozilla.geckoview.AllowOrDeny;
+import org.mozilla.geckoview.GeckoResult;
+import org.mozilla.geckoview.GeckoRuntime;
+import org.mozilla.geckoview.GeckoSession;
+import org.mozilla.geckoview.GeckoView;
 
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
@@ -36,10 +40,55 @@ import org.ietf.ietfsched.service.SyncService;
  * A fragment that shows the IETF Well Note.
  */
 public class WellNoteFragment extends Fragment {
-    private WebView mWebView;
+    private static final String TAG = "WellNoteFragment";
+    private GeckoView mGeckoView;
+    private GeckoSession mGeckoSession;
+    private static GeckoRuntime sGeckoRuntime;
+    private MyNavigationDelegate mNavigationDelegate = new MyNavigationDelegate();
+    
+    /**
+     * NavigationDelegate that allows all navigation within GeckoView.
+     */
+    private static class MyNavigationDelegate implements GeckoSession.NavigationDelegate {
+        @Override
+        public GeckoResult<AllowOrDeny> onLoadRequest(GeckoSession session, GeckoSession.NavigationDelegate.LoadRequest request) {
+            // Allow all navigation within GeckoView
+            return GeckoResult.allow();
+        }
+    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        // Create GeckoView
+        mGeckoView = new GeckoView(getActivity());
+        
+        // Initialize GeckoRuntime using the same pattern as SessionDetailFragment
+        if (sGeckoRuntime == null) {
+            sGeckoRuntime = GeckoRuntime.create(getActivity());
+        }
+        
+        // Create GeckoSession and attach navigation delegate
+        mGeckoSession = new GeckoSession();
+        mGeckoSession.setNavigationDelegate(mNavigationDelegate);
+        
+        // Open session and attach to view
+        mGeckoSession.open(sGeckoRuntime);
+        mGeckoView.setSession(mGeckoSession);
+        
+        // Load Note Well content
+        loadNoteWellContent();
+        
+        return mGeckoView;
+    }
+    
+    /**
+     * Load Note Well content into GeckoView.
+     */
+    private void loadNoteWellContent() {
+        if (mGeckoSession == null || getActivity() == null) {
+            return;
+        }
+        
         String markdownText;
         
         // Check if Note Well data is available in memory
@@ -80,24 +129,14 @@ public class WellNoteFragment extends Fragment {
                 htmlContent +
                 "</body></html>";
         
-        // Create WebView
-        mWebView = new WebView(getActivity());
-        mWebView.setWebViewClient(new WebViewClient()); // Keep links within WebView
-        mWebView.getSettings().setJavaScriptEnabled(false); // No JS needed
-        mWebView.loadDataWithBaseURL(null, styledHtml, "text/html", "UTF-8", null);
-        
-        return mWebView;
-    }
-    
-    /**
-     * Handle back button press - navigate back in WebView if possible.
-     * @return true if WebView handled the back press, false otherwise
-     */
-    public boolean onBackPressed() {
-        if (mWebView != null && mWebView.canGoBack()) {
-            mWebView.goBack();
-            return true;
+        // Load HTML using Base64 encoding (same approach as SessionDetailFragment)
+        try {
+            byte[] htmlBytes = styledHtml.getBytes("UTF-8");
+            String base64Html = android.util.Base64.encodeToString(htmlBytes, android.util.Base64.NO_WRAP);
+            String dataUri = "data:text/html;charset=utf-8;base64," + base64Html;
+            mGeckoSession.loadUri(dataUri);
+        } catch (java.io.UnsupportedEncodingException e) {
+            Log.e(TAG, "Failed to encode Note Well HTML", e);
         }
-        return false;
     }
 }
