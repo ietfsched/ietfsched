@@ -19,7 +19,6 @@ package org.ietf.ietfsched.ui;
 import org.ietf.ietfsched.R;
 import org.ietf.ietfsched.provider.ScheduleContract;
 import org.ietf.ietfsched.util.ActivityHelper;
-import org.ietf.ietfsched.util.CatchNotesHelper;
 import org.ietf.ietfsched.util.FractionalTouchDelegate;
 import org.ietf.ietfsched.util.NotifyingAsyncQueryHandler;
 import org.ietf.ietfsched.util.UIUtils;
@@ -47,6 +46,11 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import org.mozilla.geckoview.AllowOrDeny;
+import org.mozilla.geckoview.GeckoResult;
+import org.mozilla.geckoview.GeckoRuntime;
+import org.mozilla.geckoview.GeckoSession;
+import org.mozilla.geckoview.GeckoView;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.TabHost;
@@ -91,6 +95,10 @@ public class SessionDetailFragment extends Fragment implements
     
     private TextView mAbstract;
     private TextView mRequirements;
+
+    private GeckoView mNotesWebView;
+    private GeckoSession mGeckoSession;
+    private static GeckoRuntime sGeckoRuntime;
 
     private NotifyingAsyncQueryHandler mHandler;
 
@@ -386,15 +394,71 @@ public class SessionDetailFragment extends Fragment implements
      * Build and add "notes" tab.
      */
     private void setupNotesTab() {
-        // Make powered-by clickable
-        ((TextView) mRootView.findViewById(R.id.notes_powered_by)).setMovementMethod(
-                LinkMovementMethod.getInstance());
-
         // Setup tab
         mTabHost.addTab(mTabHost.newTabSpec(TAG_NOTES)
                 .setIndicator(buildIndicator(R.string.session_notes))
                 .setContent(R.id.tab_session_notes));
+        
+        // WebView will be configured lazily in updateNotesTab() when we have session data
     }
+    
+    /**
+     * Initialize and configure the GeckoView for HedgeDoc.
+     * Called lazily when we have session data to avoid NullPointerException.
+     */
+    private void ensureWebViewInitialized() {
+        if (mNotesWebView != null) {
+            return; // Already initialized
+        }
+
+        // Try multiple ways to find the GeckoView
+        mNotesWebView = (GeckoView) mRootView.findViewById(R.id.notes_webview);
+
+        if (mNotesWebView == null) {
+            // Fallback: the included layout's root might be the GeckoView itself
+            View tabContent = mRootView.findViewById(R.id.tab_session_notes);
+            if (tabContent instanceof GeckoView) {
+                mNotesWebView = (GeckoView) tabContent;
+            }
+        }
+
+        if (mNotesWebView == null) {
+            Log.e(TAG, "Failed to find GeckoView in notes tab layout");
+            return;
+        }
+
+        // Initialize GeckoRuntime if needed
+        if (sGeckoRuntime == null) {
+            sGeckoRuntime = GeckoRuntime.create(getActivity());
+        }
+
+        // Create GeckoSession
+        mGeckoSession = new GeckoSession();
+
+        // Configure GeckoSession for navigation handling
+        mGeckoSession.setNavigationDelegate(new GeckoSession.NavigationDelegate() {
+            @Override
+            public GeckoResult<AllowOrDeny> onLoadRequest(GeckoSession session, GeckoSession.NavigationDelegate.LoadRequest request) {
+                String url = request.uri;
+                Log.d(TAG, "GeckoView navigation to: " + url);
+                // Allow all navigation within GeckoView to keep authentication flow inside the app
+                // This ensures IdP redirects work correctly and user stays in the app
+                return GeckoResult.allow();
+            }
+        });
+
+        mGeckoSession.setProgressDelegate(new GeckoSession.ProgressDelegate() {
+            @Override
+            public void onPageStop(GeckoSession session, boolean success) {
+                Log.d(TAG, "GeckoView page load completed, success: " + success);
+            }
+        });
+
+        // Open session and attach to view
+        mGeckoSession.open(sGeckoRuntime);
+        mNotesWebView.setSession(mGeckoSession);
+    }
+    
 
     /*
      * Event structure:
@@ -511,63 +575,48 @@ public class SessionDetailFragment extends Fragment implements
     }
 
     private void updateNotesTab() {
-        final CatchNotesHelper helper = new CatchNotesHelper(getActivity());
-        final boolean notesInstalled = helper.isNotesInstalledAndMinimumVersion();
-
-        final Intent marketIntent = helper.notesMarketIntent();
-        final Intent newIntent = helper.createNoteIntent(
-                getString(R.string.note_template, mTitleString, getHashtagsString()));
+        if (mTitleString == null) {
+            return;
+        }
         
-        final Intent viewIntent = helper.viewNotesIntent(getHashtagsString());
-
-        // Set icons and click listeners
-        ((ImageView) mRootView.findViewById(R.id.notes_catch_market_icon)).setImageDrawable(
-                UIUtils.getIconForIntent(getActivity(), marketIntent));
-        ((ImageView) mRootView.findViewById(R.id.notes_catch_new_icon)).setImageDrawable(
-                UIUtils.getIconForIntent(getActivity(), newIntent));
-        ((ImageView) mRootView.findViewById(R.id.notes_catch_view_icon)).setImageDrawable(
-                UIUtils.getIconForIntent(getActivity(), viewIntent));
-
-        // Set click listeners
-        mRootView.findViewById(R.id.notes_catch_market_link).setOnClickListener(
-                new View.OnClickListener() {
-                    public void onClick(View view) {
-                        startActivity(marketIntent);
-                        fireNotesEvent(R.string.notes_catch_market_title);
-                    }
-                });
-
-        mRootView.findViewById(R.id.notes_catch_new_link).setOnClickListener(
-                new View.OnClickListener() {
-                    public void onClick(View view) {
-                        startActivity(newIntent);
-                        fireNotesEvent(R.string.notes_catch_new_title);
-                    }
-                });
-
-        mRootView.findViewById(R.id.notes_catch_view_link).setOnClickListener(
-                new View.OnClickListener() {
-                    public void onClick(View view) {
-                        startActivity(viewIntent);
-                        fireNotesEvent(R.string.notes_catch_view_title);
-                    }
-                });
-
-        // Show/hide elements
-        mRootView.findViewById(R.id.notes_catch_market_link).setVisibility(
-                notesInstalled ? View.GONE : View.VISIBLE);
-        mRootView.findViewById(R.id.notes_catch_market_separator).setVisibility(
-                notesInstalled ? View.GONE : View.VISIBLE);
-
-        mRootView.findViewById(R.id.notes_catch_new_link).setVisibility(
-                !notesInstalled ? View.GONE : View.VISIBLE);
-        mRootView.findViewById(R.id.notes_catch_new_separator).setVisibility(
-                !notesInstalled ? View.GONE : View.VISIBLE);
-
-        mRootView.findViewById(R.id.notes_catch_view_link).setVisibility(
-                !notesInstalled ? View.GONE : View.VISIBLE);
-        mRootView.findViewById(R.id.notes_catch_view_separator).setVisibility(
-                !notesInstalled ? View.GONE : View.VISIBLE);
+        // Initialize WebView lazily (after view is attached)
+        ensureWebViewInitialized();
+        
+        if (mNotesWebView == null) {
+            return;
+        }
+        
+        // Extract group acronym from session title (format: "area - group - title")
+        String groupAcronym = null;
+        if (mTitleString.contains(" - ")) {
+            String[] parts = mTitleString.split(" - ", 3);
+            if (parts.length >= 2) {
+                groupAcronym = parts[1].toLowerCase(java.util.Locale.ROOT).trim();
+            }
+        }
+        
+        // Construct HedgeDoc URL: https://notes.ietf.org/notes-ietf-{meetingNumber}-{groupAcronym}?view
+        if (groupAcronym != null && !groupAcronym.isEmpty()) {
+            int meetingNumber = org.ietf.ietfsched.util.MeetingPreferences.getCurrentMeetingNumber(getActivity());
+            String hedgedocUrl = "https://notes.ietf.org/notes-ietf-" + meetingNumber + "-" + groupAcronym + "?view";
+            if (mGeckoSession != null) {
+                mGeckoSession.loadUri(hedgedocUrl);
+            }
+        } else {
+            // No group acronym found, show error message
+            String errorHtml = "<html><body style='padding:16px;font-family:sans-serif;'>" +
+                    "<p>Unable to determine session group. Please ensure the session title follows the format: \"area - group - title\"</p>" +
+                    "</body></html>";
+            if (mGeckoSession != null) {
+                try {
+                    String dataUri = "data:text/html;charset=utf-8," + 
+                        java.net.URLEncoder.encode(errorHtml, "UTF-8");
+                    mGeckoSession.loadUri(dataUri);
+                } catch (java.io.UnsupportedEncodingException e) {
+                    Log.e(TAG, "Failed to encode error HTML", e);
+                }
+            }
+        }
     }
 
     /**

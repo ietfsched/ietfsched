@@ -15,5 +15,9 @@ allprojects {
         google()
         // Pick up the Markwon library.
         maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
+        // GeckoView Maven repository
+        maven {
+            url "https://maven.mozilla.org/maven2/"
+        }
     }
 }

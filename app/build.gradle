@@ -1,11 +1,11 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 35
+    compileSdkVersion 36
     defaultConfig {
         applicationId "org.ietf.ietfsched"
-        minSdkVersion 21
-        targetSdkVersion 35
+        minSdkVersion 26
+        targetSdkVersion 36
     }
     buildTypes {
         release {
@@ -20,8 +20,8 @@ android {
     //   replace the deprecated apache HttpClient with the new HttpURLConnection.
     useLibrary 'org.apache.http.legacy'
     compileOptions {
-        sourceCompatibility = 1.8
-        targetCompatibility = 1.8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     lint {
         checkReleaseBuilds false
@@ -32,4 +32,6 @@ android {
 dependencies {
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation "org.commonmark:commonmark:0.21.0"
+    // GeckoView for better WebView compatibility
+    implementation "org.mozilla.geckoview:geckoview:145.0.20251118022223"
 }
