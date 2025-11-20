@@ -21,6 +21,7 @@ import org.ietf.ietfsched.io.RemoteExecutor;
 import org.ietf.ietfsched.provider.ScheduleContract;
 import org.ietf.ietfsched.util.ActivityHelper;
 import org.ietf.ietfsched.util.FractionalTouchDelegate;
+import org.ietf.ietfsched.util.GeckoRuntimeHelper;
 import org.ietf.ietfsched.util.NotifyingAsyncQueryHandler;
 import org.ietf.ietfsched.util.UIUtils;
 
@@ -99,7 +100,6 @@ public class SessionDetailFragment extends Fragment implements
 
     private GeckoView mNotesWebView;
     private GeckoSession mGeckoSession;
-    private static GeckoRuntime sGeckoRuntime;
 
     private NotifyingAsyncQueryHandler mHandler;
 
@@ -428,9 +428,11 @@ public class SessionDetailFragment extends Fragment implements
             return;
         }
 
-        // Initialize GeckoRuntime if needed
-        if (sGeckoRuntime == null) {
-            sGeckoRuntime = GeckoRuntime.create(getActivity());
+        // Get shared GeckoRuntime instance
+        GeckoRuntime runtime = GeckoRuntimeHelper.getRuntime(getActivity());
+        if (runtime == null) {
+            Log.e(TAG, "Failed to get GeckoRuntime");
+            return;
         }
 
         // Create GeckoSession
@@ -446,7 +448,7 @@ public class SessionDetailFragment extends Fragment implements
         });
 
         // Open session and attach to view
-        mGeckoSession.open(sGeckoRuntime);
+        mGeckoSession.open(runtime);
         mNotesWebView.setSession(mGeckoSession);
     }
     

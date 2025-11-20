@@ -34,6 +34,7 @@ import org.mozilla.geckoview.GeckoView;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
 import org.ietf.ietfsched.service.SyncService;
+import org.ietf.ietfsched.util.GeckoRuntimeHelper;
 
 
 /**
@@ -43,7 +44,6 @@ public class WellNoteFragment extends Fragment {
     private static final String TAG = "WellNoteFragment";
     private GeckoView mGeckoView;
     private GeckoSession mGeckoSession;
-    private static GeckoRuntime sGeckoRuntime;
     private MyNavigationDelegate mNavigationDelegate = new MyNavigationDelegate();
     
     /**
@@ -62,9 +62,11 @@ public class WellNoteFragment extends Fragment {
         // Create GeckoView
         mGeckoView = new GeckoView(getActivity());
         
-        // Initialize GeckoRuntime using the same pattern as SessionDetailFragment
-        if (sGeckoRuntime == null) {
-            sGeckoRuntime = GeckoRuntime.create(getActivity());
+        // Get shared GeckoRuntime instance
+        GeckoRuntime runtime = GeckoRuntimeHelper.getRuntime(getActivity());
+        if (runtime == null) {
+            Log.e(TAG, "Failed to get GeckoRuntime");
+            return mGeckoView; // Return view even if runtime failed
         }
         
         // Create GeckoSession and attach navigation delegate
@@ -72,7 +74,7 @@ public class WellNoteFragment extends Fragment {
         mGeckoSession.setNavigationDelegate(mNavigationDelegate);
         
         // Open session and attach to view
-        mGeckoSession.open(sGeckoRuntime);
+        mGeckoSession.open(runtime);
         mGeckoView.setSession(mGeckoSession);
         
         // Load Note Well content

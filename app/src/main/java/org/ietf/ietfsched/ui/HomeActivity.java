@@ -21,8 +21,10 @@ import org.ietf.ietfsched.service.SyncService;
 import org.ietf.ietfsched.util.DetachableResultReceiver;
 
 import android.app.Activity;
+import android.app.BackgroundServiceStartNotAllowedException;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import androidx.fragment.app.Fragment;
@@ -121,7 +123,16 @@ public class HomeActivity extends BaseActivity {
     private void triggerRefresh() {
         final Intent intent = new Intent(Intent.ACTION_SYNC, null, this, SyncService.class);
         intent.putExtra(SyncService.EXTRA_STATUS_RECEIVER, mSyncStatusUpdaterFragment.mReceiver);
-        startService(intent);
+        try {
+            startService(intent);
+        } catch (BackgroundServiceStartNotAllowedException e) {
+            // On Android 12+, if we can't start the service immediately, skip auto-refresh
+            // User can manually refresh from the menu when the activity is fully visible
+            Log.w(TAG, "Cannot start service in background, skipping auto-refresh", e);
+        } catch (IllegalStateException e) {
+            // Handle other service start exceptions
+            Log.w(TAG, "Cannot start service", e);
+        }
     }
     
     private void recordSyncTime() {
