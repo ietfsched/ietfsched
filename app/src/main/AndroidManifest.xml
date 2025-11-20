@@ -68,6 +68,7 @@
             android:hardwareAccelerated="false"
             android:exported="true"
             android:label="@string/title_well_note"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize"
             tools:ignore="Instantiatable" />
 			
         <activity
@@ -103,6 +104,7 @@
         <activity android:name="org.ietf.ietfsched.ui.phone.SessionDetailActivity"
             android:hardwareAccelerated="false"
             android:exported="true"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize"
             tools:ignore="Instantiatable">
             <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />

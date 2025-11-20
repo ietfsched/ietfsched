@@ -100,12 +100,14 @@ public class SessionDetailFragment extends Fragment implements
 
     private GeckoView mNotesWebView;
     private GeckoSession mGeckoSession;
+    private String mCurrentTabTag; // Retained tab selection
 
     private NotifyingAsyncQueryHandler mHandler;
 
     private boolean mSessionCursor = false;
     private boolean mSpeakersCursor = false;
     private boolean mHasSummaryContent = false;
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -119,12 +121,15 @@ public class SessionDetailFragment extends Fragment implements
         }
         
         mSessionId = ScheduleContract.Sessions.getSessionId(mSessionUri);
+        
+        // Retain fragment instance across configuration changes to preserve GeckoView state and tab selection
+        setRetainInstance(true);
 
         setHasOptionsMenu(true);
     }
-
+    
     @Override
-   	public void onResume() {	
+    public void onResume() {	
         super.onResume();
         updateNotesTab();
 
@@ -142,6 +147,16 @@ public class SessionDetailFragment extends Fragment implements
     public void onPause() {
         super.onPause();
         getActivity().unregisterReceiver(mPackageChangesReceiver);
+    }
+    
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        
+        // Save current tab selection
+        if (mTabHost != null) {
+            outState.putString("current_tab", mTabHost.getCurrentTabTag());
+        }
     }
 
     @Override
@@ -169,6 +184,39 @@ public class SessionDetailFragment extends Fragment implements
         mRootView = (ViewGroup) inflater.inflate(R.layout.fragment_session_detail, container, false);
         mTabHost = (TabHost) mRootView.findViewById(android.R.id.tabhost);
         mTabHost.setup();
+        
+        // Restore tab selection from retained instance or savedInstanceState
+        final String savedTab;
+        if (mCurrentTabTag != null) {
+            savedTab = mCurrentTabTag;
+        } else if (savedInstanceState != null) {
+            savedTab = savedInstanceState.getString("current_tab");
+        } else {
+            savedTab = null;
+        }
+        
+        if (savedTab != null) {
+            // Set tab after setup is complete - use post to ensure tabs are ready
+            mTabHost.post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        mTabHost.setCurrentTabByTag(savedTab);
+                        // mCurrentTabTag is already set from savedTab, no need to update again
+                    } catch (Exception e) {
+                        Log.e(TAG, "Failed to restore tab selection", e);
+                    }
+                }
+            });
+        }
+        
+        // Set up tab change listener to track current tab
+        mTabHost.setOnTabChangedListener(new TabHost.OnTabChangeListener() {
+            @Override
+            public void onTabChanged(String tabId) {
+                mCurrentTabTag = tabId;
+            }
+        });
 
         mTitle = (TextView) mRootView.findViewById(R.id.session_title);
         mSubtitle = (TextView) mRootView.findViewById(R.id.session_subtitle);
@@ -408,7 +456,11 @@ public class SessionDetailFragment extends Fragment implements
      * Called lazily when we have session data to avoid NullPointerException.
      */
     private void ensureWebViewInitialized() {
-        if (mNotesWebView != null) {
+        if (mNotesWebView != null && mGeckoSession != null) {
+            // Ensure session is still attached to view (important after rotation)
+            if (mNotesWebView.getSession() != mGeckoSession) {
+                mNotesWebView.setSession(mGeckoSession);
+            }
             return; // Already initialized
         }
 
@@ -438,14 +490,28 @@ public class SessionDetailFragment extends Fragment implements
         // Create GeckoSession
         mGeckoSession = new GeckoSession();
 
-        // Configure GeckoSession for navigation handling - allow all navigation
+        // Configure GeckoSession for navigation handling
         mGeckoSession.setNavigationDelegate(new GeckoSession.NavigationDelegate() {
             @Override
             public GeckoResult<AllowOrDeny> onLoadRequest(GeckoSession session, GeckoSession.NavigationDelegate.LoadRequest request) {
-                // Allow all navigation within GeckoView to keep authentication flow inside the app
+                Log.d(TAG, "Navigation request: " + request.uri);
+                // Allow all navigation within GeckoView
                 return GeckoResult.allow();
             }
+            
+            @Override
+            public GeckoResult<GeckoSession> onNewSession(GeckoSession session, String uri) {
+                Log.d(TAG, "New session requested for: " + uri);
+                // Load the URL in the current session instead of creating a new window
+                session.loadUri(uri);
+                // Return null to deny new session creation
+                return GeckoResult.fromValue((GeckoSession) null);
+            }
         });
+        
+        // Ensure GeckoView can receive touch events
+        mNotesWebView.setFocusable(true);
+        mNotesWebView.setFocusableInTouchMode(true);
 
         // Open session and attach to view
         mGeckoSession.open(runtime);

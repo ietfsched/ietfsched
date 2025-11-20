@@ -18,7 +18,9 @@ package org.ietf.ietfsched.ui.phone;
 
 import org.ietf.ietfsched.ui.BaseSinglePaneActivity;
 import org.ietf.ietfsched.ui.SessionDetailFragment;
+import org.ietf.ietfsched.util.GeckoRuntimeHelper;
 
+import android.content.res.Configuration;
 import android.os.Bundle;
 import androidx.fragment.app.Fragment;
 
@@ -32,5 +34,15 @@ public class SessionDetailActivity extends BaseSinglePaneActivity {
     protected void onPostCreate(Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
         getActivityHelper().setupSubActivity();
+    }
+    
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        // Notify GeckoRuntime of configuration change (required when using configChanges)
+        org.mozilla.geckoview.GeckoRuntime runtime = GeckoRuntimeHelper.getRuntime(this);
+        if (runtime != null) {
+            runtime.configurationChanged(newConfig);
+        }
     }
 }

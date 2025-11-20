@@ -16,8 +16,6 @@
 
 package org.ietf.ietfsched.ui;
 
-import org.ietf.ietfsched.R;
-
 import android.os.Bundle;
 import androidx.fragment.app.Fragment;
 
@@ -58,7 +56,23 @@ public class WellNoteFragment extends Fragment {
     }
 
     @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        // Retain fragment instance across configuration changes to preserve GeckoView state
+        setRetainInstance(true);
+    }
+    
+    @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        // Reuse existing GeckoView if available (from retained instance)
+        if (mGeckoView != null) {
+            ViewGroup parent = (ViewGroup) mGeckoView.getParent();
+            if (parent != null) {
+                parent.removeView(mGeckoView);
+            }
+            return mGeckoView;
+        }
+        
         // Create GeckoView
         mGeckoView = new GeckoView(getActivity());
         
