@@ -18,19 +18,61 @@ package org.ietf.ietfsched.ui;
 
 import android.content.res.Configuration;
 import android.os.Bundle;
+import androidx.activity.OnBackPressedCallback;
 import androidx.fragment.app.Fragment;
 import org.ietf.ietfsched.util.GeckoRuntimeHelper;
 
 public class WellNoteActivity extends BaseSinglePaneActivity {
+    private OnBackPressedCallback mBackCallback;
+    
     @Override
     protected Fragment onCreatePane() {
         return new WellNoteFragment();
     }
 
     @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        
+        // Set up back button handling for Android 13+ (API 33+) using OnBackPressedCallback
+        // For older versions, onBackPressed() will be called
+        mBackCallback = new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                Fragment fragment = getSupportFragmentManager().findFragmentById(org.ietf.ietfsched.R.id.root_container);
+                if (fragment instanceof WellNoteFragment) {
+                    WellNoteFragment wellNoteFragment = (WellNoteFragment) fragment;
+                    if (wellNoteFragment.onBackPressed()) {
+                        return; // Fragment handled it
+                    }
+                }
+                // Fragment didn't handle it, disable callback and use default behavior
+                setEnabled(false);
+                getOnBackPressedDispatcher().onBackPressed();
+                setEnabled(true);
+            }
+        };
+        getOnBackPressedDispatcher().addCallback(this, mBackCallback);
+    }
+
+    @Override
     protected void onPostCreate(Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
         getActivityHelper().setupSubActivity();
+    }
+    
+    @Override
+    public void finish() {
+        // Fallback: intercept finish() to check if GeckoView can navigate back instead.
+        // This handles cases where finish() might be called directly (e.g., older Android versions).
+        Fragment fragment = getSupportFragmentManager().findFragmentById(org.ietf.ietfsched.R.id.root_container);
+        if (fragment instanceof WellNoteFragment) {
+            WellNoteFragment wellNoteFragment = (WellNoteFragment) fragment;
+            if (wellNoteFragment.onBackPressed()) {
+                return; // Fragment handled it, don't finish
+            }
+        }
+        super.finish();
     }
     
     @Override
@@ -41,5 +83,21 @@ public class WellNoteActivity extends BaseSinglePaneActivity {
         if (runtime != null) {
             runtime.configurationChanged(newConfig);
         }
+    }
+    
+    @Override
+    @Deprecated
+    public void onBackPressed() {
+        // For older Android versions (API < 33) or as fallback
+        // Note: This is deprecated on API 33+ but may still be called
+        Fragment fragment = getSupportFragmentManager().findFragmentById(org.ietf.ietfsched.R.id.root_container);
+        if (fragment instanceof WellNoteFragment) {
+            WellNoteFragment wellNoteFragment = (WellNoteFragment) fragment;
+            if (wellNoteFragment.onBackPressed()) {
+                return; // Fragment handled it
+            }
+        }
+        // Fragment didn't handle it, use default behavior
+        super.onBackPressed();
     }
 }

@@ -42,16 +42,32 @@ public class WellNoteFragment extends Fragment {
     private static final String TAG = "WellNoteFragment";
     private GeckoView mGeckoView;
     private GeckoSession mGeckoSession;
+    private boolean mCanGoBack = false;
     private MyNavigationDelegate mNavigationDelegate = new MyNavigationDelegate();
     
     /**
      * NavigationDelegate that allows all navigation within GeckoView.
+     * GeckoView has built-in history management - we just allow navigation and let it work.
      */
-    private static class MyNavigationDelegate implements GeckoSession.NavigationDelegate {
+    private class MyNavigationDelegate implements GeckoSession.NavigationDelegate {
         @Override
         public GeckoResult<AllowOrDeny> onLoadRequest(GeckoSession session, GeckoSession.NavigationDelegate.LoadRequest request) {
-            // Allow all navigation within GeckoView
+            // Allow all navigation - GeckoView handles history automatically
             return GeckoResult.allow();
+        }
+        
+        @Override
+        public void onCanGoBack(GeckoSession session, boolean canGoBack) {
+            WellNoteFragment.this.mCanGoBack = canGoBack;
+        }
+        
+        @Override
+        public GeckoResult<GeckoSession> onNewSession(GeckoSession session, String uri) {
+            Log.d(TAG, "New session requested for: " + uri);
+            // Load the URI in the current session
+            session.loadUri(uri);
+            // Return null to deny new session creation
+            return GeckoResult.fromValue((GeckoSession) null);
         }
     }
 
@@ -154,5 +170,17 @@ public class WellNoteFragment extends Fragment {
         } catch (java.io.UnsupportedEncodingException e) {
             Log.e(TAG, "Failed to encode Note Well HTML", e);
         }
+    }
+    
+    /**
+     * Handle back button press - navigate back in GeckoView if possible.
+     * @return true if GeckoView handled the back press, false otherwise
+     */
+    public boolean onBackPressed() {
+        if (mGeckoSession != null && mCanGoBack) {
+            mGeckoSession.goBack();
+            return true;
+        }
+        return false;
     }
 }

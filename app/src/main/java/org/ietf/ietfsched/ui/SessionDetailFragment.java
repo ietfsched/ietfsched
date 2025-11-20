@@ -100,6 +100,7 @@ public class SessionDetailFragment extends Fragment implements
 
     private GeckoView mNotesWebView;
     private GeckoSession mGeckoSession;
+    private boolean mCanGoBack = false;
     private String mCurrentTabTag; // Retained tab selection
 
     private NotifyingAsyncQueryHandler mHandler;
@@ -491,18 +492,24 @@ public class SessionDetailFragment extends Fragment implements
         mGeckoSession = new GeckoSession();
 
         // Configure GeckoSession for navigation handling
+        // GeckoView has built-in history management - we just allow navigation and let it work
         mGeckoSession.setNavigationDelegate(new GeckoSession.NavigationDelegate() {
             @Override
             public GeckoResult<AllowOrDeny> onLoadRequest(GeckoSession session, GeckoSession.NavigationDelegate.LoadRequest request) {
                 Log.d(TAG, "Navigation request: " + request.uri);
-                // Allow all navigation within GeckoView
+                // Allow all navigation - GeckoView handles history automatically
                 return GeckoResult.allow();
+            }
+            
+            @Override
+            public void onCanGoBack(GeckoSession session, boolean canGoBack) {
+                mCanGoBack = canGoBack;
             }
             
             @Override
             public GeckoResult<GeckoSession> onNewSession(GeckoSession session, String uri) {
                 Log.d(TAG, "New session requested for: " + uri);
-                // Load the URL in the current session instead of creating a new window
+                // Load the URI in the current session
                 session.loadUri(uri);
                 // Return null to deny new session creation
                 return GeckoResult.fromValue((GeckoSession) null);
@@ -981,5 +988,20 @@ public class SessionDetailFragment extends Fragment implements
         int SPEAKER_COMPANY = 2;
         int SPEAKER_ABSTRACT = 3;
         int SPEAKER_URL = 4;
+    }
+    
+    /**
+     * Handle back button press - navigate back in GeckoView if Notes tab is active and can go back.
+     * @return true if GeckoView handled the back press, false otherwise
+     */
+    public boolean onBackPressed() {
+        // Only handle back if Notes tab is currently selected and GeckoSession can go back
+        if (mTabHost != null && TAG_NOTES.equals(mTabHost.getCurrentTabTag())) {
+            if (mGeckoSession != null && mCanGoBack) {
+                mGeckoSession.goBack();
+                return true;
+            }
+        }
+        return false;
     }
 }
