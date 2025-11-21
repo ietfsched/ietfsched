@@ -46,7 +46,7 @@ public class DashboardFragment extends Fragment {
             public void onClick(View view) {
 				HomeActivity activity = (HomeActivity) getActivity();
 				if (activity.isRefreshing()) {
-                    Toast.makeText(activity, "Check/Upload new agenda, pls wait", Toast.LENGTH_LONG).show();
+                    Toast.makeText(activity, "Check/Upload new agenda, please wait", Toast.LENGTH_LONG).show();
 					return;
 					}
                 fireTrackerEvent("Schedule");
@@ -59,7 +59,7 @@ public class DashboardFragment extends Fragment {
 			public void onClick(View view) {
 				HomeActivity activity = (HomeActivity) getActivity();
 				if (activity.isRefreshing()) {
-                    Toast.makeText(activity, "Check/Upload new agenda, pls wait", Toast.LENGTH_LONG).show();
+                    Toast.makeText(activity, "Check/Upload new agenda, please wait", Toast.LENGTH_LONG).show();
 					return;
 					}
 				fireTrackerEvent("Sessions");
@@ -83,7 +83,7 @@ public class DashboardFragment extends Fragment {
                     public void onClick(View view) {
                         HomeActivity activity = (HomeActivity) getActivity();
                         if (activity.isRefreshing()) {
-                            Toast.makeText(activity, "Check/Upload new agenda, pls wait", Toast.LENGTH_LONG).show();
+                            Toast.makeText(activity, "Check/Upload new agenda, please wait", Toast.LENGTH_LONG).show();
                             return;
                         }
                         fireTrackerEvent("Note Well");

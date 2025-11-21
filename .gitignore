@@ -10,3 +10,4 @@ gradle/
 Wearable/
 third_party/
 gcm-server/
+*.hprof

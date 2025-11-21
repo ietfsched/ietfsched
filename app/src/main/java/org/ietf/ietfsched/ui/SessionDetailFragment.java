@@ -17,10 +17,11 @@
 package org.ietf.ietfsched.ui;
 
 import org.ietf.ietfsched.R;
+import org.ietf.ietfsched.io.RemoteExecutor;
 import org.ietf.ietfsched.provider.ScheduleContract;
 import org.ietf.ietfsched.util.ActivityHelper;
-import org.ietf.ietfsched.util.CatchNotesHelper;
 import org.ietf.ietfsched.util.FractionalTouchDelegate;
+import org.ietf.ietfsched.util.GeckoRuntimeHelper;
 import org.ietf.ietfsched.util.NotifyingAsyncQueryHandler;
 import org.ietf.ietfsched.util.UIUtils;
 
@@ -47,6 +48,11 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import org.mozilla.geckoview.AllowOrDeny;
+import org.mozilla.geckoview.GeckoResult;
+import org.mozilla.geckoview.GeckoRuntime;
+import org.mozilla.geckoview.GeckoSession;
+import org.mozilla.geckoview.GeckoView;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.TabHost;
@@ -92,11 +98,17 @@ public class SessionDetailFragment extends Fragment implements
     private TextView mAbstract;
     private TextView mRequirements;
 
+    private GeckoView mNotesWebView;
+    private GeckoSession mGeckoSession;
+    private boolean mCanGoBack = false;
+    private String mCurrentTabTag; // Retained tab selection
+
     private NotifyingAsyncQueryHandler mHandler;
 
     private boolean mSessionCursor = false;
     private boolean mSpeakersCursor = false;
     private boolean mHasSummaryContent = false;
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -110,12 +122,15 @@ public class SessionDetailFragment extends Fragment implements
         }
         
         mSessionId = ScheduleContract.Sessions.getSessionId(mSessionUri);
+        
+        // Retain fragment instance across configuration changes to preserve GeckoView state and tab selection
+        setRetainInstance(true);
 
         setHasOptionsMenu(true);
     }
-
+    
     @Override
-   	public void onResume() {	
+    public void onResume() {	
         super.onResume();
         updateNotesTab();
 
@@ -133,6 +148,16 @@ public class SessionDetailFragment extends Fragment implements
     public void onPause() {
         super.onPause();
         getActivity().unregisterReceiver(mPackageChangesReceiver);
+    }
+    
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        
+        // Save current tab selection
+        if (mTabHost != null) {
+            outState.putString("current_tab", mTabHost.getCurrentTabTag());
+        }
     }
 
     @Override
@@ -160,6 +185,39 @@ public class SessionDetailFragment extends Fragment implements
         mRootView = (ViewGroup) inflater.inflate(R.layout.fragment_session_detail, container, false);
         mTabHost = (TabHost) mRootView.findViewById(android.R.id.tabhost);
         mTabHost.setup();
+        
+        // Restore tab selection from retained instance or savedInstanceState
+        final String savedTab;
+        if (mCurrentTabTag != null) {
+            savedTab = mCurrentTabTag;
+        } else if (savedInstanceState != null) {
+            savedTab = savedInstanceState.getString("current_tab");
+        } else {
+            savedTab = null;
+        }
+        
+        if (savedTab != null) {
+            // Set tab after setup is complete - use post to ensure tabs are ready
+            mTabHost.post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        mTabHost.setCurrentTabByTag(savedTab);
+                        // mCurrentTabTag is already set from savedTab, no need to update again
+                    } catch (Exception e) {
+                        Log.e(TAG, "Failed to restore tab selection", e);
+                    }
+                }
+            });
+        }
+        
+        // Set up tab change listener to track current tab
+        mTabHost.setOnTabChangedListener(new TabHost.OnTabChangeListener() {
+            @Override
+            public void onTabChanged(String tabId) {
+                mCurrentTabTag = tabId;
+            }
+        });
 
         mTitle = (TextView) mRootView.findViewById(R.id.session_title);
         mSubtitle = (TextView) mRootView.findViewById(R.id.session_subtitle);
@@ -177,7 +235,7 @@ public class SessionDetailFragment extends Fragment implements
 
         setupLinksTab();
         setupNotesTab();			
-        setupSummaryTab();		
+        setupSummaryTab();
 
         return mRootView;
     }
@@ -386,15 +444,87 @@ public class SessionDetailFragment extends Fragment implements
      * Build and add "notes" tab.
      */
     private void setupNotesTab() {
-        // Make powered-by clickable
-        ((TextView) mRootView.findViewById(R.id.notes_powered_by)).setMovementMethod(
-                LinkMovementMethod.getInstance());
-
         // Setup tab
         mTabHost.addTab(mTabHost.newTabSpec(TAG_NOTES)
                 .setIndicator(buildIndicator(R.string.session_notes))
                 .setContent(R.id.tab_session_notes));
+        
+        // WebView will be configured lazily in updateNotesTab() when we have session data
     }
+    
+    /**
+     * Initialize and configure the GeckoView for HedgeDoc.
+     * Called lazily when we have session data to avoid NullPointerException.
+     */
+    private void ensureWebViewInitialized() {
+        if (mNotesWebView != null && mGeckoSession != null) {
+            // Ensure session is still attached to view (important after rotation)
+            if (mNotesWebView.getSession() != mGeckoSession) {
+                mNotesWebView.setSession(mGeckoSession);
+            }
+            return; // Already initialized
+        }
+
+        // Try multiple ways to find the GeckoView
+        mNotesWebView = (GeckoView) mRootView.findViewById(R.id.notes_webview);
+
+        if (mNotesWebView == null) {
+            // Fallback: the included layout's root might be the GeckoView itself
+            View tabContent = mRootView.findViewById(R.id.tab_session_notes);
+            if (tabContent instanceof GeckoView) {
+                mNotesWebView = (GeckoView) tabContent;
+            }
+        }
+
+        if (mNotesWebView == null) {
+            Log.e(TAG, "Failed to find GeckoView in notes tab layout");
+            return;
+        }
+
+        // Get shared GeckoRuntime instance
+        GeckoRuntime runtime = GeckoRuntimeHelper.getRuntime(getActivity());
+        if (runtime == null) {
+            Log.e(TAG, "Failed to get GeckoRuntime");
+            return;
+        }
+
+        // Create GeckoSession
+        mGeckoSession = new GeckoSession();
+
+        // Configure GeckoSession for navigation handling
+        // GeckoView has built-in history management - we just allow navigation and let it work
+        mGeckoSession.setNavigationDelegate(new GeckoSession.NavigationDelegate() {
+            @Override
+            public GeckoResult<AllowOrDeny> onLoadRequest(GeckoSession session, GeckoSession.NavigationDelegate.LoadRequest request) {
+                Log.d(TAG, "Navigation request: " + request.uri);
+                // Allow all navigation - GeckoView handles history automatically
+                return GeckoResult.allow();
+            }
+            
+            @Override
+            public void onCanGoBack(GeckoSession session, boolean canGoBack) {
+                mCanGoBack = canGoBack;
+            }
+            
+            @Override
+            public GeckoResult<GeckoSession> onNewSession(GeckoSession session, String uri) {
+                Log.d(TAG, "New session requested for: " + uri);
+                // Load the URI in the current session
+                session.loadUri(uri);
+                // Return null to deny new session creation
+                return GeckoResult.fromValue((GeckoSession) null);
+            }
+        });
+        
+        // Ensure GeckoView can receive touch events
+        mNotesWebView.setFocusable(true);
+        mNotesWebView.setFocusableInTouchMode(true);
+
+        // Open session and attach to view
+        mGeckoSession.open(runtime);
+        mNotesWebView.setSession(mGeckoSession);
+    }
+    
 
     /*
      * Event structure:
@@ -510,64 +640,54 @@ public class SessionDetailFragment extends Fragment implements
         return button;
     }
 
+    /**
+     * Escape HTML special characters to prevent XSS.
+     */
+    private String escapeHtml(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.replace("&", "&amp;")
+                   .replace("<", "&lt;")
+                   .replace(">", "&gt;")
+                   .replace("\"", "&quot;")
+                   .replace("'", "&#39;");
+    }
+    
     private void updateNotesTab() {
-        final CatchNotesHelper helper = new CatchNotesHelper(getActivity());
-        final boolean notesInstalled = helper.isNotesInstalledAndMinimumVersion();
-
-        final Intent marketIntent = helper.notesMarketIntent();
-        final Intent newIntent = helper.createNoteIntent(
-                getString(R.string.note_template, mTitleString, getHashtagsString()));
+        if (mTitleString == null) {
+            return;
+        }
         
-        final Intent viewIntent = helper.viewNotesIntent(getHashtagsString());
-
-        // Set icons and click listeners
-        ((ImageView) mRootView.findViewById(R.id.notes_catch_market_icon)).setImageDrawable(
-                UIUtils.getIconForIntent(getActivity(), marketIntent));
-        ((ImageView) mRootView.findViewById(R.id.notes_catch_new_icon)).setImageDrawable(
-                UIUtils.getIconForIntent(getActivity(), newIntent));
-        ((ImageView) mRootView.findViewById(R.id.notes_catch_view_icon)).setImageDrawable(
-                UIUtils.getIconForIntent(getActivity(), viewIntent));
-
-        // Set click listeners
-        mRootView.findViewById(R.id.notes_catch_market_link).setOnClickListener(
-                new View.OnClickListener() {
-                    public void onClick(View view) {
-                        startActivity(marketIntent);
-                        fireNotesEvent(R.string.notes_catch_market_title);
-                    }
-                });
-
-        mRootView.findViewById(R.id.notes_catch_new_link).setOnClickListener(
-                new View.OnClickListener() {
-                    public void onClick(View view) {
-                        startActivity(newIntent);
-                        fireNotesEvent(R.string.notes_catch_new_title);
-                    }
-                });
-
-        mRootView.findViewById(R.id.notes_catch_view_link).setOnClickListener(
-                new View.OnClickListener() {
-                    public void onClick(View view) {
-                        startActivity(viewIntent);
-                        fireNotesEvent(R.string.notes_catch_view_title);
-                    }
-                });
-
-        // Show/hide elements
-        mRootView.findViewById(R.id.notes_catch_market_link).setVisibility(
-                notesInstalled ? View.GONE : View.VISIBLE);
-        mRootView.findViewById(R.id.notes_catch_market_separator).setVisibility(
-                notesInstalled ? View.GONE : View.VISIBLE);
-
-        mRootView.findViewById(R.id.notes_catch_new_link).setVisibility(
-                !notesInstalled ? View.GONE : View.VISIBLE);
-        mRootView.findViewById(R.id.notes_catch_new_separator).setVisibility(
-                !notesInstalled ? View.GONE : View.VISIBLE);
-
-        mRootView.findViewById(R.id.notes_catch_view_link).setVisibility(
-                !notesInstalled ? View.GONE : View.VISIBLE);
-        mRootView.findViewById(R.id.notes_catch_view_separator).setVisibility(
-                !notesInstalled ? View.GONE : View.VISIBLE);
+        // Ensure view is created before initializing
+        if (mRootView == null) {
+            return;
+        }
+        
+        // Initialize WebView lazily (after view is attached)
+        ensureWebViewInitialized();
+        
+        if (mNotesWebView == null || mGeckoSession == null) {
+            return;
+        }
+        
+        // Extract group acronym from session title (format: "area - group - title")
+        String groupAcronym = null;
+        if (mTitleString.contains(" - ")) {
+            String[] parts = mTitleString.split(" - ", 3);
+            if (parts.length >= 2) {
+                groupAcronym = parts[1].toLowerCase(java.util.Locale.ROOT).trim();
+            }
+        }
+        
+        // Construct HedgeDoc URL: https://notes.ietf.org/notes-ietf-{meetingNumber}-{groupAcronym}?view
+        if (groupAcronym != null && !groupAcronym.isEmpty()) {
+            int meetingNumber = org.ietf.ietfsched.util.MeetingPreferences.getCurrentMeetingNumber(getActivity());
+            final String hedgedocUrl = "https://notes.ietf.org/notes-ietf-" + meetingNumber + "-" + groupAcronym + "?view";
+            
+            // Simply load the URL - GeckoView will handle everything naturally
+            mGeckoSession.loadUri(hedgedocUrl);
+        }
     }
 
     /**
@@ -868,5 +988,20 @@ public class SessionDetailFragment extends Fragment implements
         int SPEAKER_COMPANY = 2;
         int SPEAKER_ABSTRACT = 3;
         int SPEAKER_URL = 4;
+    }
+    
+    /**
+     * Handle back button press - navigate back in GeckoView if Notes tab is active and can go back.
+     * @return true if GeckoView handled the back press, false otherwise
+     */
+    public boolean onBackPressed() {
+        // Only handle back if Notes tab is currently selected and GeckoSession can go back
+        if (mTabHost != null && TAG_NOTES.equals(mTabHost.getCurrentTabTag())) {
+            if (mGeckoSession != null && mCanGoBack) {
+                mGeckoSession.goBack();
+                return true;
+            }
+        }
+        return false;
     }
 }

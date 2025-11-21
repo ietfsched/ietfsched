@@ -268,4 +268,28 @@ public class ScheduleDatabase extends SQLiteOpenHelper {
             onCreate(db);
         }
     }
+
+    @Override
+    public void onDowngrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        Log.w(TAG, "onDowngrade() from " + oldVersion + " to " + newVersion);
+        // Handle database downgrade by dropping and recreating tables
+        // This is safe since the app will re-sync data from the server
+        Log.w(TAG, "Destroying old data during downgrade");
+
+        db.execSQL("DROP TABLE IF EXISTS " + Tables.BLOCKS);
+        db.execSQL("DROP TABLE IF EXISTS " + Tables.TRACKS);
+        db.execSQL("DROP TABLE IF EXISTS " + Tables.ROOMS);
+        db.execSQL("DROP TABLE IF EXISTS " + Tables.SESSIONS);
+        db.execSQL("DROP TABLE IF EXISTS " + Tables.SESSIONS_TRACKS);
+
+        db.execSQL("DROP TRIGGER IF EXISTS " + Triggers.SESSIONS_SEARCH_INSERT);
+        db.execSQL("DROP TRIGGER IF EXISTS " + Triggers.SESSIONS_SEARCH_DELETE);
+        db.execSQL("DROP TRIGGER IF EXISTS " + Triggers.SESSIONS_SEARCH_UPDATE);
+        db.execSQL("DROP TRIGGER IF EXISTS " + Triggers.SESSIONS_TRACKS_DELETE);
+        db.execSQL("DROP TABLE IF EXISTS " + Tables.SESSIONS_SEARCH);
+
+        db.execSQL("DROP TABLE IF EXISTS " + Tables.SEARCH_SUGGEST);
+
+        onCreate(db);
+    }
 }

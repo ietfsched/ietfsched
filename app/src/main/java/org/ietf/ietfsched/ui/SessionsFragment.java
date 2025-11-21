@@ -71,8 +71,13 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
     public void reloadFromArguments(Bundle arguments) {
         // Teardown from previous arguments
         if (debug) Log.d(TAG, "reloadFromArguments" + mCheckedPosition);
-        if (mCursor != null) {
-            getActivity().stopManagingCursor(mCursor);
+        if (mCursor != null && getActivity() != null) {
+            try {
+                getActivity().stopManagingCursor(mCursor);
+            } catch (Exception e) {
+                // Ignore if cursor was already stopped or activity is being destroyed
+                if (debug) Log.d(TAG, "Error stopping cursor management in reloadFromArguments", e);
+            }
             mCursor = null;
         }
 
@@ -165,6 +170,12 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
      * Handle {@link SessionsQuery} {@link Cursor}.
      */
     private void onSessionOrSearchQueryComplete(Cursor cursor) {
+        if (cursor == null || getActivity() == null) {
+            if (cursor != null) {
+                cursor.close();
+            }
+            return;
+        }
         mCursor = cursor;
         if (debug) Log.d(TAG, "OnSessionOrSearchQueryComplete mCheckedPosition" + mCheckedPosition);
         getActivity().startManagingCursor(mCursor);
@@ -214,6 +225,20 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
         if (debug) Log.d(TAG, "onPause" + mCheckedPosition);
         mMessageQueueHandler.removeCallbacks(mRefreshSessionsRunnable);
         getActivity().getContentResolver().unregisterContentObserver(mSessionChangesObserver);
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        // Ensure cursor is properly stopped before Activity tries to deactivate it
+        if (mCursor != null && getActivity() != null) {
+            try {
+                getActivity().stopManagingCursor(mCursor);
+            } catch (Exception e) {
+                // Ignore if cursor was already stopped or activity is being destroyed
+                if (debug) Log.d(TAG, "Error stopping cursor management", e);
+            }
+        }
     }
 
     @Override
