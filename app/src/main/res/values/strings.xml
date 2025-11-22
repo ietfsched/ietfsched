@@ -54,6 +54,7 @@
     <string name="btn_starred">Starred</string>
     <string name="btn_vendors">Sandbox</string>
 	<string name="btn_announcements">Note Well</string>
+	<string name="feedback_and_support">Feedback and Support</string>
 
     <string name="toast_sync_error">Sync error: <xliff:g id="error">%1$s</xliff:g></string>
 

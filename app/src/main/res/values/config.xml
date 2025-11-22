@@ -15,4 +15,6 @@
   -->
 <resources>
     <integer name="fling_animation_duration">350</integer>
+    <string name="feedback_email">yaronf.ietf@gmail.com</string>
+    <string name="feedback_email_subject">IETF Schedule App Feedback</string>
 </resources>
