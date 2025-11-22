@@ -19,6 +19,9 @@ package org.ietf.ietfsched.ui;
 import org.ietf.ietfsched.R;
 import org.ietf.ietfsched.io.RemoteExecutor;
 import org.ietf.ietfsched.provider.ScheduleContract;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.ietf.ietfsched.util.ActivityHelper;
 import org.ietf.ietfsched.util.FractionalTouchDelegate;
 import org.ietf.ietfsched.util.GeckoRuntimeHelper;
@@ -31,6 +34,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
+import android.os.Handler;
+import android.os.Looper;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.net.Uri;
@@ -73,9 +78,10 @@ public class SessionDetailFragment extends Fragment implements
      */
     public static final String EXTRA_TRACK = "org.ietf.ietfsched.extra.TRACK";
 
-    private static final String TAG_SUMMARY = "summary";
+    private static final String TAG_CONTENT = "content";
     private static final String TAG_NOTES = "notes";
     private static final String TAG_LINKS = "links";
+    private static final String TAG_JOIN = "join";
 
     private static StyleSpan sBoldSpan = new StyleSpan(Typeface.BOLD);
 
@@ -86,7 +92,6 @@ public class SessionDetailFragment extends Fragment implements
     private String mTitleString;
     private String mHashtag;
     private String mUrl;
-    private TextView mTagDisplay;
     private String mRoomId;
 
     private ViewGroup mRootView;
@@ -95,15 +100,21 @@ public class SessionDetailFragment extends Fragment implements
     private TextView mSubtitle;
     private CompoundButton mStarred;
     
-    private TextView mAbstract;
-    private TextView mRequirements;
 
     private GeckoView mNotesWebView;
     private GeckoSession mGeckoSession;
     private boolean mCanGoBack = false;
     private String mCurrentTabTag; // Retained tab selection
+    // Track last loaded URL per GeckoView tab to avoid reloading unnecessarily
+    // Key: tab tag (e.g., TAG_NOTES), Value: last URL that should be loaded for that tab
+    private java.util.Map<String, String> mGeckoViewTabUrls = new java.util.HashMap<String, String>();
+    // Track consecutive back presses on GeckoView tabs to allow exit if stuck
+    private int mConsecutiveBackPresses = 0;
+    private long mLastBackPressTime = 0;
 
     private NotifyingAsyncQueryHandler mHandler;
+    private RemoteExecutor mRemoteExecutor;
+    private boolean mDraftsFetched = false; // Track if we've fetched drafts for this session
 
     private boolean mSessionCursor = false;
     private boolean mSpeakersCursor = false;
@@ -172,7 +183,7 @@ public class SessionDetailFragment extends Fragment implements
 //        final Uri speakersUri = ScheduleContract.Sessions.buildSpeakersDirUri(mSessionId);
 
         mHandler = new NotifyingAsyncQueryHandler(getActivity().getContentResolver(), this);
-        Log.d(TAG, "mSessionUri: " + mSessionUri);
+        mRemoteExecutor = new RemoteExecutor();
         mHandler.startQuery(SessionsQuery._TOKEN, mSessionUri, SessionsQuery.PROJECTION);
 //        mHandler.startQuery(TracksQuery._TOKEN, mTrackUri, TracksQuery.PROJECTION);
  //       mHandler.startQuery(SpeakersQuery._TOKEN, speakersUri, SpeakersQuery.PROJECTION);
@@ -211,11 +222,28 @@ public class SessionDetailFragment extends Fragment implements
             });
         }
         
-        // Set up tab change listener to track current tab
+        // Set up tab change listener to track current tab and fetch drafts when Content tab opens
         mTabHost.setOnTabChangedListener(new TabHost.OnTabChangeListener() {
             @Override
             public void onTabChanged(String tabId) {
                 mCurrentTabTag = tabId;
+                // Fetch drafts on-demand when Content tab is opened
+                if (TAG_CONTENT.equals(tabId) && !mDraftsFetched && mSessionId != null) {
+                    fetchDraftsOnDemand();
+                }
+                // Load GeckoView URL if a GeckoView tab is opened and URL was previously skipped
+                if (isGeckoViewTab(tabId) && mGeckoSession != null) {
+                    String pendingUrl = mGeckoViewTabUrls.get(tabId);
+                    if (pendingUrl != null) {
+                        Log.d(TAG, "onTabChanged: Loading pending URL for GeckoView tab " + tabId + ": " + pendingUrl);
+                        mGeckoSession.loadUri(pendingUrl);
+                        // URL is now loaded, so update the map to reflect current state
+                        mGeckoViewTabUrls.put(tabId, pendingUrl);
+                    }
+                    // Trigger update method for the specific tab to ensure it's current
+                    updateGeckoViewTab(tabId);
+                }
+                Log.d(TAG, "onTabChanged: tabId=" + tabId + ", mCanGoBack=" + mCanGoBack);
             }
         });
 
@@ -230,24 +258,315 @@ public class SessionDetailFragment extends Fragment implements
         final View starParent = mRootView.findViewById(R.id.header_session);
         FractionalTouchDelegate.setupDelegate(starParent, mStarred, new RectF(0.6f, 0f, 1f, 0.8f));
 
-        mAbstract = (TextView) mRootView.findViewById(R.id.session_abstract);
-//        mRequirements = (TextView) mRootView.findViewById(R.id.session_requirements);
-
         setupLinksTab();
-        setupNotesTab();			
-        setupSummaryTab();
+        setupJoinTab();
+        setupContentTab();
+        setupNotesTab();
 
         return mRootView;
     }
 
     /**
-     * Build and add "summary" tab.
+     * Build and add "content" tab.
      */
-    private void setupSummaryTab() {
-        // Summary content comes from existing layout
-        mTabHost.addTab(mTabHost.newTabSpec(TAG_SUMMARY)
-                .setIndicator(buildIndicator(R.string.session_summary))
+    private void setupContentTab() {
+        // Content tab includes slides and drafts
+        mTabHost.addTab(mTabHost.newTabSpec(TAG_CONTENT)
+                .setIndicator(buildIndicator(R.string.session_content))
                 .setContent(R.id.tab_session_summary));
+    }
+
+    /**
+     * Updates the Content tab with Internet drafts and presentation slides.
+     */
+    private void updateContentTab(Cursor cursor) {
+        // Find the included view first, then find the container inside it
+        View includedView = mRootView.findViewById(R.id.tab_session_summary);
+        ViewGroup container = null;
+        if (includedView != null) {
+            container = (ViewGroup) includedView.findViewById(R.id.summary_container);
+        }
+        if (container == null) {
+            // Fallback: try direct find
+            container = (ViewGroup) mRootView.findViewById(R.id.summary_container);
+        }
+        if (container == null) {
+            Log.e(TAG, "updateContentTab: summary_container not found!");
+            return;
+        }
+        // Remove all views from container (we'll add content below)
+        container.removeAllViews();
+        
+        // Ensure container is visible
+        container.setVisibility(View.VISIBLE);
+
+        LayoutInflater inflater = getLayoutInflater(null);
+        boolean hasContent = false;
+
+        // Note: cursor should already be at first position from onSessionQueryComplete
+        // But ensure it's valid
+        if (cursor == null) {
+            Log.e(TAG, "updateContentTab: cursor is null!");
+            return;
+        }
+
+        // First, add Presentation Slides section
+        final String pdfUrl = cursor.getString(SessionsQuery.PDF_URL);
+        if (!TextUtils.isEmpty(pdfUrl)) {
+            String[] slideEntries = pdfUrl.split("::");
+            boolean hasValidSlides = false;
+            for (String entry : slideEntries) {
+                if (!entry.trim().isEmpty()) {
+                    hasValidSlides = true;
+                    break;
+                }
+            }
+            
+            if (hasValidSlides) {
+                TextView slidesHeader = createSectionHeader(R.string.session_link_pdf);
+                // Add padding above the header
+                android.widget.LinearLayout.LayoutParams headerParams = 
+                    new android.widget.LinearLayout.LayoutParams(
+                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
+                headerParams.topMargin = getResources().getDimensionPixelSize(R.dimen.body_padding_medium);
+                slidesHeader.setLayoutParams(headerParams);
+                container.addView(slidesHeader);
+                hasContent = true;
+                
+                // Add slide links
+                for (int j = 0; j < slideEntries.length; j++) {
+                    final String slideEntry = slideEntries[j].trim();
+                    if (slideEntry.isEmpty()) continue;
+                    
+                    // Parse "title|||url" format
+                    final String slideTitle;
+                    final String slideUrl;
+                    if (slideEntry.contains("|||")) {
+                        String[] parts = slideEntry.split("\\|\\|\\|", 2);
+                        slideTitle = parts[0].trim();
+                        slideUrl = parts[1].trim();
+                    } else {
+                        // Fallback for old format (just URL without title)
+                        slideTitle = slideEntries.length == 1 
+                            ? getString(R.string.session_link_pdf)
+                            : getString(R.string.session_link_pdf) + " " + (j + 1);
+                        slideUrl = slideEntry;
+                    }
+                    
+                    ViewGroup linkContainer = (ViewGroup)
+                            inflater.inflate(R.layout.list_item_session_link, container, false);
+                    
+                    ((TextView) linkContainer.findViewById(R.id.link_text)).setText(slideTitle);
+                    
+                    linkContainer.setOnClickListener(new View.OnClickListener() {
+                        public void onClick(View view) {
+                            fireLinkEvent(R.string.session_link_pdf);
+                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(slideUrl));
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
+                            startActivity(intent);
+                        }
+                    });
+                    
+                    container.addView(linkContainer);
+                    container.addView(createThinSeparator());
+                }
+            }
+        }
+
+        // Then, add Internet Drafts section
+        final String draftsUrl = cursor.getString(SessionsQuery.DRAFTS_URL);
+        if (!TextUtils.isEmpty(draftsUrl)) {
+            String[] draftEntries = draftsUrl.split("::");
+            boolean hasValidDrafts = false;
+            for (String entry : draftEntries) {
+                if (!entry.trim().isEmpty()) {
+                    hasValidDrafts = true;
+                    break;
+                }
+            }
+            
+            if (hasValidDrafts) {
+                TextView draftsHeader = createSectionHeader(R.string.session_drafts);
+                // Add padding above the header
+                android.widget.LinearLayout.LayoutParams headerParams = 
+                    new android.widget.LinearLayout.LayoutParams(
+                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
+                headerParams.topMargin = getResources().getDimensionPixelSize(R.dimen.body_padding_medium);
+                draftsHeader.setLayoutParams(headerParams);
+                container.addView(draftsHeader);
+                hasContent = true;
+                
+                // Add draft links
+                for (int j = 0; j < draftEntries.length; j++) {
+                    final String draftEntry = draftEntries[j].trim();
+                    if (draftEntry.isEmpty()) continue;
+                    
+                    // Parse "title|||url" format (same as slides)
+                    final String draftTitle;
+                    final String draftUrl;
+                    if (draftEntry.contains("|||")) {
+                        String[] parts = draftEntry.split("\\|\\|\\|", 2);
+                        draftTitle = parts[0].trim();
+                        draftUrl = parts[1].trim();
+                    } else {
+                        // Fallback: treat as URL and extract filename
+                        draftUrl = draftEntry;
+                        String draftFileName = draftUrl.substring(draftUrl.lastIndexOf('/') + 1);
+                        if (draftFileName.endsWith("/")) {
+                            draftFileName = draftFileName.substring(0, draftFileName.length() - 1);
+                        }
+                        draftTitle = draftFileName;
+                    }
+                    
+                    ViewGroup linkContainer = (ViewGroup)
+                            inflater.inflate(R.layout.list_item_session_link, container, false);
+                    
+                    ((TextView) linkContainer.findViewById(R.id.link_text)).setText(draftTitle);
+                    
+                    linkContainer.setOnClickListener(new View.OnClickListener() {
+                        public void onClick(View view) {
+                            fireLinkEvent(R.string.session_drafts);
+                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(draftUrl));
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
+                            startActivity(intent);
+                        }
+                    });
+                    
+                    container.addView(linkContainer);
+                    container.addView(createThinSeparator());
+                }
+            }
+        }
+
+        // Show empty message if no content
+        if (!hasContent) {
+            TextView emptyView = new TextView(getActivity());
+            emptyView.setId(android.R.id.empty);
+            emptyView.setText(getString(R.string.empty_session_detail));
+            emptyView.setGravity(android.view.Gravity.CENTER);
+            emptyView.setTextAppearance(getActivity(), android.R.style.TextAppearance_Medium);
+            android.widget.LinearLayout.LayoutParams params = new android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT);
+            emptyView.setLayoutParams(params);
+            container.addView(emptyView);
+        }
+    }
+
+    /**
+     * Fetches drafts on-demand when Content tab is opened.
+     * This runs in the background and updates the database if successful.
+     * Slides will still display even if this fails (e.g., offline).
+     */
+    private void fetchDraftsOnDemand() {
+        if (mDraftsFetched || mSessionId == null || mRemoteExecutor == null || getActivity() == null) {
+            return;
+        }
+
+        // Check if drafts are already in database, and get session_res_uri
+        Cursor cursor = null;
+        String sessionResUri = null;
+        try {
+            cursor = getActivity().getContentResolver().query(
+                mSessionUri,
+                new String[]{ScheduleContract.Sessions.SESSION_DRAFTS_URL, ScheduleContract.Sessions.SESSION_RES_URI},
+                null, null, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                String draftsUrl = cursor.getString(0);
+                sessionResUri = cursor.getString(1);
+                if (!TextUtils.isEmpty(draftsUrl)) {
+                    // Drafts already exist in database, no need to fetch
+                    mDraftsFetched = true;
+                    return;
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "fetchDraftsOnDemand: Error checking database", e);
+            // Continue - slides should still display
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+
+        // Mark as fetched to prevent duplicate requests
+        mDraftsFetched = true;
+
+        // If no session_res_uri, can't fetch drafts
+        if (TextUtils.isEmpty(sessionResUri)) {
+            return;
+        }
+
+        // Fetch drafts in background thread
+        final String finalSessionResUri = sessionResUri;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    String detailUrl = "https://datatracker.ietf.org" + finalSessionResUri + "?format=json";
+                    JSONObject detailJson = mRemoteExecutor.executeJSONGet(detailUrl);
+                    if (detailJson != null) {
+                        JSONArray materialsArray = detailJson.optJSONArray("materials");
+                        if (materialsArray != null && materialsArray.length() > 0) {
+                            // Parse drafts from materials array
+                            java.util.List<String> draftList = parseDraftsFromMaterials(materialsArray);
+                            if (draftList != null && draftList.size() > 0) {
+                                // Update database with drafts
+                                ContentValues values = new ContentValues();
+                                values.put(ScheduleContract.Sessions.SESSION_DRAFTS_URL, TextUtils.join("::", draftList));
+                                getActivity().getContentResolver().update(mSessionUri, values, null, null);
+                                
+                                // Refresh Content tab on UI thread
+                                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        // Re-query to refresh the Content tab
+                                        mHandler.startQuery(SessionsQuery._TOKEN, mSessionUri, SessionsQuery.PROJECTION);
+                                    }
+                                });
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "fetchDraftsOnDemand: Failed to fetch drafts", e);
+                    // Don't throw - slides should still display
+                }
+            }
+        }).start();
+    }
+
+    /**
+     * Parse Internet drafts from a materials JSONArray.
+     * Returns a list of draft entries in "draft-name|||url" format, where draft-name is the raw draft identifier (e.g., "draft-ietf-6man-enhanced-vpn-vtn-id").
+     */
+    private java.util.List<String> parseDraftsFromMaterials(JSONArray materialsArray) {
+        java.util.List<String> draftList = new java.util.ArrayList<>();
+        if (materialsArray == null) return draftList;
+        
+        try {
+            for (int i = 0; i < materialsArray.length(); i++) {
+                String materialUri = materialsArray.getString(i);
+                // Materials are API endpoints like "/api/v1/doc/document/draft-richardson-emu-eap-onboarding/"
+                if (materialUri != null && materialUri.contains("/api/") && materialUri.contains("draft-")) {
+                    // Extract draft name from URI: /api/v1/doc/document/draft-name/ -> draft-name
+                    String[] parts = materialUri.split("/");
+                    for (String part : parts) {
+                        if (part.startsWith("draft-")) {
+                            // Construct URL to the draft document
+                            String draftUrl = "https://datatracker.ietf.org/doc/" + part + "/";
+                            // Use draft name as-is (e.g., "draft-ietf-6man-enhanced-vpn-vtn-id")
+                            draftList.add(part + "|||" + draftUrl);
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (JSONException e) {
+            Log.w(TAG, "Error parsing materials for drafts", e);
+        }
+        return draftList;
     }
 
     /**
@@ -258,10 +577,23 @@ public class SessionDetailFragment extends Fragment implements
      * @return View
      */
     private View buildIndicator(int textRes) {
+        return buildIndicator(textRes, R.drawable.tab_indicator);
+    }
+
+    /**
+     * Build a {@link View} to be used as a tab indicator, setting the requested string resource as
+     * its label and a custom background drawable.
+     *
+     * @param textRes
+     * @param backgroundRes
+     * @return View
+     */
+    private View buildIndicator(int textRes, int backgroundRes) {
         final TextView indicator = (TextView) getActivity().getLayoutInflater()
                 .inflate(R.layout.tab_indicator,
                         (ViewGroup) mRootView.findViewById(android.R.id.tabs), false);
         indicator.setText(textRes);
+        indicator.setBackgroundResource(backgroundRes);
         return indicator;
     }
 
@@ -323,28 +655,6 @@ public class SessionDetailFragment extends Fragment implements
             }
 
             mHashtag = cursor.getString(SessionsQuery.HASHTAG);
-            mTagDisplay = (TextView) mRootView.findViewById(R.id.session_tags_button);
-            if (!TextUtils.isEmpty(mHashtag)) {
-                // Create the button text
-                SpannableStringBuilder sb = new SpannableStringBuilder();
-                sb.append(getString(R.string.tag_stream) + " ");
-                int boldStart = sb.length();
-                sb.append(getHashtagsString());
-                sb.setSpan(sBoldSpan, boldStart, sb.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-
-                mTagDisplay.setText(sb);
-
-                mTagDisplay.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View v) {
-/*                        Intent intent = new Intent(getActivity(), TagStreamActivity.class);
-                        intent.putExtra(TagStreamFragment.EXTRA_QUERY, getHashtagsString());
-                        startActivity(intent);
-*/					Log.d(TAG, "on click mTagDisplay");
-                    }
-                });
-            } else {
-                mTagDisplay.setVisibility(View.GONE);
-            }
 
             mRoomId = cursor.getString(SessionsQuery.ROOM_ID);
 
@@ -354,24 +664,8 @@ public class SessionDetailFragment extends Fragment implements
             mStarred.setChecked(cursor.getInt(SessionsQuery.STARRED) != 0);
             mStarred.setOnCheckedChangeListener(this);
 
-            final String sessionAbstract = cursor.getString(SessionsQuery.ABSTRACT);
-            if (!TextUtils.isEmpty(sessionAbstract)) {
-                UIUtils.setTextMaybeHtml(mAbstract, sessionAbstract);
-                mAbstract.setVisibility(View.VISIBLE);
-                mHasSummaryContent = true;
-            } else {
-                mAbstract.setVisibility(View.GONE);
-            }
-
-            // Show empty message when all data is loaded, and nothing to show
-			if (!mHasSummaryContent) {
-					mRootView.findViewById(android.R.id.empty).setVisibility(View.VISIBLE);
-            }
-			else {
-				mTabHost.setCurrentTabByTag(TAG_SUMMARY);
-			}
-
             updateLinksTab(cursor);
+            updateContentTab(cursor);
             updateNotesTab();
 
         } finally {
@@ -453,6 +747,28 @@ public class SessionDetailFragment extends Fragment implements
     }
     
     /**
+     * Check if a tab uses GeckoView.
+     * @param tabId The tab tag identifier
+     * @return true if the tab uses GeckoView, false otherwise
+     */
+    private boolean isGeckoViewTab(String tabId) {
+        // Currently only Notes tab uses GeckoView, but more tabs may be added
+        return TAG_NOTES.equals(tabId);
+    }
+    
+    /**
+     * Update a GeckoView tab with its URL. This is a generic method that can be called
+     * for any GeckoView tab. Currently only handles Notes tab, but can be extended.
+     * @param tabId The tab tag identifier
+     */
+    private void updateGeckoViewTab(String tabId) {
+        if (TAG_NOTES.equals(tabId)) {
+            updateNotesTab();
+        }
+        // Add more GeckoView tabs here as they are added
+    }
+    
+    /**
      * Initialize and configure the GeckoView for HedgeDoc.
      * Called lazily when we have session data to avoid NullPointerException.
      */
@@ -460,19 +776,25 @@ public class SessionDetailFragment extends Fragment implements
         if (mNotesWebView != null && mGeckoSession != null) {
             // Ensure session is still attached to view (important after rotation)
             if (mNotesWebView.getSession() != mGeckoSession) {
+                Log.d(TAG, "ensureWebViewInitialized: Reattaching session to view");
                 mNotesWebView.setSession(mGeckoSession);
             }
             return; // Already initialized
         }
 
+        Log.d(TAG, "ensureWebViewInitialized: Initializing GeckoView, mRootView=" + (mRootView != null));
+        
         // Try multiple ways to find the GeckoView
         mNotesWebView = (GeckoView) mRootView.findViewById(R.id.notes_webview);
+        Log.d(TAG, "ensureWebViewInitialized: Found via findViewById(R.id.notes_webview): " + (mNotesWebView != null));
 
         if (mNotesWebView == null) {
             // Fallback: the included layout's root might be the GeckoView itself
             View tabContent = mRootView.findViewById(R.id.tab_session_notes);
+            Log.d(TAG, "ensureWebViewInitialized: tab_session_notes view: " + (tabContent != null) + ", type: " + (tabContent != null ? tabContent.getClass().getName() : "null"));
             if (tabContent instanceof GeckoView) {
                 mNotesWebView = (GeckoView) tabContent;
+                Log.d(TAG, "ensureWebViewInitialized: Found GeckoView as tab_session_notes root");
             }
         }
 
@@ -496,19 +818,22 @@ public class SessionDetailFragment extends Fragment implements
         mGeckoSession.setNavigationDelegate(new GeckoSession.NavigationDelegate() {
             @Override
             public GeckoResult<AllowOrDeny> onLoadRequest(GeckoSession session, GeckoSession.NavigationDelegate.LoadRequest request) {
-                Log.d(TAG, "Navigation request: " + request.uri);
                 // Allow all navigation - GeckoView handles history automatically
                 return GeckoResult.allow();
             }
             
             @Override
             public void onCanGoBack(GeckoSession session, boolean canGoBack) {
+                Log.d(TAG, "onCanGoBack: " + canGoBack + " (currentTab=" + (mTabHost != null ? mTabHost.getCurrentTabTag() : "null") + ")");
                 mCanGoBack = canGoBack;
+                // Reset consecutive back press counter when canGoBack becomes false
+                if (!canGoBack) {
+                    mConsecutiveBackPresses = 0;
+                }
             }
             
             @Override
             public GeckoResult<GeckoSession> onNewSession(GeckoSession session, String uri) {
-                Log.d(TAG, "New session requested for: " + uri);
                 // Load the URI in the current session
                 session.loadUri(uri);
                 // Return null to deny new session creation
@@ -525,7 +850,6 @@ public class SessionDetailFragment extends Fragment implements
         mNotesWebView.setSession(mGeckoSession);
     }
     
-
     /*
      * Event structure:
      * Category -> "Session Details"
@@ -655,12 +979,15 @@ public class SessionDetailFragment extends Fragment implements
     }
     
     private void updateNotesTab() {
+        Log.d(TAG, "updateNotesTab: mTitleString=" + mTitleString + ", mRootView=" + (mRootView != null));
         if (mTitleString == null) {
+            Log.w(TAG, "updateNotesTab: mTitleString is null, returning");
             return;
         }
         
         // Ensure view is created before initializing
         if (mRootView == null) {
+            Log.w(TAG, "updateNotesTab: mRootView is null, returning");
             return;
         }
         
@@ -668,36 +995,95 @@ public class SessionDetailFragment extends Fragment implements
         ensureWebViewInitialized();
         
         if (mNotesWebView == null || mGeckoSession == null) {
+            Log.w(TAG, "updateNotesTab: mNotesWebView=" + (mNotesWebView != null) + ", mGeckoSession=" + (mGeckoSession != null));
             return;
         }
         
-        // Extract group acronym from session title (format: "area - group - title")
+        // Extract group acronym from session title
+        // Title format: "{area} - {group} - {title}" or " -{group} - {title}" if area is empty
+        // We need to extract the group (middle part)
         String groupAcronym = null;
-        if (mTitleString.contains(" - ")) {
+        if (mTitleString != null && mTitleString.contains(" - ")) {
+            // Split on " - " to get parts
             String[] parts = mTitleString.split(" - ", 3);
+            Log.d(TAG, "updateNotesTab: Split title into " + parts.length + " parts");
+            for (int i = 0; i < parts.length; i++) {
+                Log.d(TAG, "updateNotesTab: parts[" + i + "] = '" + parts[i] + "'");
+            }
+            
+            // Group is typically the middle part (index 1)
+            // But if area is empty, format is " -{group} - {title}", so parts[0] might be empty
             if (parts.length >= 2) {
+                // Use the middle part (index 1) as the group
                 groupAcronym = parts[1].toLowerCase(java.util.Locale.ROOT).trim();
+                // Remove any leading dash if area was empty
+                if (groupAcronym.startsWith("-")) {
+                    groupAcronym = groupAcronym.substring(1).trim();
+                }
+            } else if (parts.length == 1 && mTitleString.startsWith(" -")) {
+                // Handle case where area is empty: " -{group} - {title}"
+                // Split on " -" (space-dash) instead
+                String[] altParts = mTitleString.split(" -", 3);
+                if (altParts.length >= 2) {
+                    groupAcronym = altParts[1].split(" -", 2)[0].toLowerCase(java.util.Locale.ROOT).trim();
+                }
             }
         }
         
+        Log.d(TAG, "updateNotesTab: Extracted groupAcronym='" + groupAcronym + "' from title='" + mTitleString + "'");
+        
         // Construct HedgeDoc URL: https://notes.ietf.org/notes-ietf-{meetingNumber}-{groupAcronym}?view
+        // Note: HedgeDoc may redirect to home page if the specific notes page doesn't exist
         if (groupAcronym != null && !groupAcronym.isEmpty()) {
             int meetingNumber = org.ietf.ietfsched.util.MeetingPreferences.getCurrentMeetingNumber(getActivity());
             final String hedgedocUrl = "https://notes.ietf.org/notes-ietf-" + meetingNumber + "-" + groupAcronym + "?view";
             
-            // Simply load the URL - GeckoView will handle everything naturally
-            mGeckoSession.loadUri(hedgedocUrl);
+            // Only load if URL has changed AND Notes tab is currently active
+            // This prevents adding unnecessary entries to GeckoView history when star is toggled
+            boolean notesTabActive = mTabHost != null && TAG_NOTES.equals(mTabHost.getCurrentTabTag());
+            String lastUrl = mGeckoViewTabUrls.get(TAG_NOTES);
+            boolean isFirstLoad = (lastUrl == null);
+            if (!hedgedocUrl.equals(lastUrl)) {
+                Log.d(TAG, "updateNotesTab: URL changed, notesTabActive=" + notesTabActive + ", isFirstLoad=" + isFirstLoad);
+                // Only load if Notes tab is active or if this is the first load
+                // This prevents reloading when star is toggled and Notes tab isn't visible
+                if (notesTabActive || isFirstLoad) {
+                    Log.d(TAG, "updateNotesTab: Loading URL: " + hedgedocUrl);
+                    mGeckoSession.loadUri(hedgedocUrl);
+                    mGeckoViewTabUrls.put(TAG_NOTES, hedgedocUrl);
+                } else {
+                    Log.d(TAG, "updateNotesTab: Skipping load - Notes tab not active, will load when tab is opened");
+                    // Store URL for later loading when Notes tab is opened
+                    mGeckoViewTabUrls.put(TAG_NOTES, hedgedocUrl);
+                }
+            } else {
+                Log.d(TAG, "updateNotesTab: URL unchanged, skipping reload: " + hedgedocUrl);
+            }
+        } else {
+            Log.w(TAG, "updateNotesTab: groupAcronym is null or empty, not loading URL");
+            mGeckoViewTabUrls.remove(TAG_NOTES);
         }
     }
 
     /**
-     * Build and add "summary" tab.
+     * Build and add "links" tab.
      */
     private void setupLinksTab() {
-        // Summary content comes from existing layout
+        // Links content comes from existing layout
         mTabHost.addTab(mTabHost.newTabSpec(TAG_LINKS)
                 .setIndicator(buildIndicator(R.string.session_links))
                 .setContent(R.id.tab_session_links));
+    }
+
+    /**
+     * Build and add "join" tab.
+     */
+    private void setupJoinTab() {
+        // Join content comes from existing layout
+        // Use green tab indicator to match "Join Meeting" button color
+        mTabHost.addTab(mTabHost.newTabSpec(TAG_JOIN)
+                .setIndicator(buildIndicator(R.string.session_join, R.drawable.tab_indicator_green))
+                .setContent(R.id.tab_session_join));
     }
 
     /**
@@ -720,74 +1106,21 @@ public class SessionDetailFragment extends Fragment implements
         LayoutInflater inflater = getLayoutInflater(null);
 
         boolean hasLinks = false;
-        boolean hasPresentationSlides = false;
         
         // Process each link type defined in SessionsQuery
+        // Skip PDF_URL (presentation slides) - those are now in Summary tab
         for (int i = 0; i < SessionsQuery.LINKS_INDICES.length; i++) {
+            // Skip PDF_URL - moved to Summary tab
+            if (SessionsQuery.LINKS_INDICES[i] == SessionsQuery.PDF_URL) {
+                continue;
+            }
+            
             final String url = cursor.getString(SessionsQuery.LINKS_INDICES[i]);
             if (!TextUtils.isEmpty(url)) {
                 hasLinks = true;
                 
-                // Special handling for PDF_URL (presentation slides) - can contain multiple entries separated by "::"
-                // Each entry is formatted as "title|||url"
-                // Note: compare against the COLUMN INDEX (LINKS_INDICES[i]), not the loop index i
-                if (SessionsQuery.LINKS_INDICES[i] == SessionsQuery.PDF_URL) {
-                    // Split by "::" separator to get individual slide entries
-                    String[] slideEntries = url.split("::");
-                    
-                    // First pass: check if there are any valid slides
-                    boolean hasValidSlides = false;
-                    for (String entry : slideEntries) {
-                        if (!entry.trim().isEmpty()) {
-                            hasValidSlides = true;
-                            break;
-                        }
-                    }
-                    
-                    // Only show section header if there are actual slides
-                    if (hasValidSlides && !hasPresentationSlides) {
-                        container.addView(createSectionHeader(R.string.session_link_pdf));
-                        hasPresentationSlides = true;
-                    }
-                    
-                    // Second pass: add the actual slide links
-                    for (int j = 0; j < slideEntries.length; j++) {
-                        final String slideEntry = slideEntries[j].trim();
-                        if (slideEntry.isEmpty()) continue;
-                        
-                        // Parse "title|||url" format
-                        final String slideTitle;
-                        final String slideUrl;
-                        if (slideEntry.contains("|||")) {
-                            String[] parts = slideEntry.split("\\|\\|\\|", 2);
-                            slideTitle = parts[0].trim();
-                            slideUrl = parts[1].trim();
-                        } else {
-                            // Fallback for old format (just URL without title)
-                            slideTitle = slideEntries.length == 1 
-                                ? getString(R.string.session_link_pdf)
-                                : getString(R.string.session_link_pdf) + " " + (j + 1);
-                            slideUrl = slideEntry;
-                        }
-                        
-                        ViewGroup linkContainer = (ViewGroup)
-                                inflater.inflate(R.layout.list_item_session_link, container, false);
-                        
-                        ((TextView) linkContainer.findViewById(R.id.link_text)).setText(slideTitle);
-                        
-                        linkContainer.setOnClickListener(new View.OnClickListener() {
-                            public void onClick(View view) {
-                                fireLinkEvent(R.string.session_link_pdf);
-                                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(slideUrl));
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
-                                startActivity(intent);
-                            }
-                        });
-                        
-                        container.addView(linkContainer);
-                        container.addView(createThinSeparator());
-                    }
-                } else {
+                // Special handling for Agenda link (SESSION_URL) - place Meetecho button on same row
+                if (SessionsQuery.LINKS_INDICES[i] == SessionsQuery.SESSION_URL) {
                     // Special handling for Agenda link (SESSION_URL) - place Meetecho button on same row
                     if (SessionsQuery.LINKS_INDICES[i] == SessionsQuery.SESSION_URL) {
                         // Extract group acronym from session title (format: "area - group - title")
@@ -870,8 +1203,6 @@ public class SessionDetailFragment extends Fragment implements
                         container.addView(createSeparator());
                     }
                 }
-            } else {
-                Log.d(TAG, "NOT URL - Links Indices loop, Url[" + i + "]: " + SessionsQuery.LINKS_INDICES[i] + " Title: " + SessionsQuery.LINKS_TITLES[i]);
             }
         }
 
@@ -884,8 +1215,6 @@ public class SessionDetailFragment extends Fragment implements
         } else {
             return TagStreamFragment.CONFERENCE_HASHTAG;
        }
-
-		Log.d(TAG, "Get hashtag/string method");
 */	
 		return ""; 
    }
@@ -916,6 +1245,8 @@ public class SessionDetailFragment extends Fragment implements
                 ScheduleContract.Sessions.SESSION_MODERATOR_URL,
                 ScheduleContract.Sessions.SESSION_YOUTUBE_URL,
                 ScheduleContract.Sessions.SESSION_PDF_URL,
+                ScheduleContract.Sessions.SESSION_DRAFTS_URL,
+                ScheduleContract.Sessions.SESSION_RES_URI,
                 ScheduleContract.Sessions.SESSION_FEEDBACK_URL,
                 ScheduleContract.Sessions.SESSION_NOTES_URL,
                 ScheduleContract.Sessions.ROOM_ID,
@@ -935,10 +1266,12 @@ public class SessionDetailFragment extends Fragment implements
         int MODERATOR_URL = 10;
         int YOUTUBE_URL = 11;
         int PDF_URL = 12;
-        int FEEDBACK_URL = 13;
-        int NOTES_URL = 14;
-        int ROOM_ID = 15;
-        int ROOM_NAME = 16;
+        int DRAFTS_URL = 13;
+        int RES_URI = 14;
+        int FEEDBACK_URL = 15;
+        int NOTES_URL = 16;
+        int ROOM_ID = 17;
+        int ROOM_NAME = 18;
 
         int[] LINKS_INDICES = {
                 SESSION_URL,
@@ -991,17 +1324,38 @@ public class SessionDetailFragment extends Fragment implements
     }
     
     /**
-     * Handle back button press - navigate back in GeckoView if Notes tab is active and can go back.
-     * @return true if GeckoView handled the back press, false otherwise
+     * Handle back button press - navigate back in GeckoView if a GeckoView tab is active and can go back.
+     * Otherwise, allow the activity to finish (exit the session).
+     * @return true if GeckoView handled the back press, false to allow activity to finish
      */
     public boolean onBackPressed() {
-        // Only handle back if Notes tab is currently selected and GeckoSession can go back
-        if (mTabHost != null && TAG_NOTES.equals(mTabHost.getCurrentTabTag())) {
-            if (mGeckoSession != null && mCanGoBack) {
-                mGeckoSession.goBack();
-                return true;
-            }
+        String currentTab = mTabHost != null ? mTabHost.getCurrentTabTag() : null;
+        boolean isGeckoTab = isGeckoViewTab(currentTab);
+        long currentTime = System.currentTimeMillis();
+        
+        // Reset counter if more than 2 seconds have passed since last back press
+        if (currentTime - mLastBackPressTime > 2000) {
+            mConsecutiveBackPresses = 0;
         }
+        mLastBackPressTime = currentTime;
+        
+        Log.d(TAG, "onBackPressed: currentTab=" + currentTab + ", isGeckoViewTab=" + isGeckoTab + ", mGeckoSession=" + (mGeckoSession != null) + ", mCanGoBack=" + mCanGoBack + ", consecutiveBackPresses=" + mConsecutiveBackPresses);
+        
+        // Only handle back navigation within GeckoView if:
+        // 1. A GeckoView tab is currently selected
+        // 2. GeckoSession exists
+        // 3. GeckoView can actually go back
+        // 4. We haven't pressed back too many times in a row (safety valve)
+        if (mTabHost != null && isGeckoTab && mGeckoSession != null && mCanGoBack && mConsecutiveBackPresses < 2) {
+            Log.d(TAG, "onBackPressed: Navigating back in GeckoView (tab=" + currentTab + ", consecutiveBackPresses=" + mConsecutiveBackPresses + ")");
+            mConsecutiveBackPresses++;
+            mGeckoSession.goBack();
+            return true; // GeckoView handled it
+        }
+        
+        // Otherwise, allow activity to finish (exit session)
+        // Don't reset counter here - let it reset naturally on next back press or when canGoBack becomes false
+        Log.d(TAG, "onBackPressed: Returning false - will exit session (tab=" + currentTab + ", isGeckoViewTab=" + isGeckoTab + ", mGeckoSession=" + (mGeckoSession != null) + ", canGoBack=" + mCanGoBack + ", consecutiveBackPresses=" + mConsecutiveBackPresses + ")");
         return false;
     }
 }

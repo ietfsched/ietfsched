@@ -69,9 +69,10 @@
                 android:layout_height="0dp"
                 android:layout_weight="1">
                 <include android:id="@+id/tab_session_summary"
-                    layout="@layout/tab_session_summary" />
+                    layout="@layout/tab_session_content" />
                 <include android:id="@+id/tab_session_notes" layout="@layout/tab_session_notes" />
                 <include android:id="@+id/tab_session_links" layout="@layout/tab_session_links" />
+                <include android:id="@+id/tab_session_join" layout="@layout/tab_session_join" />
             </FrameLayout>
         </LinearLayout>
     </TabHost>

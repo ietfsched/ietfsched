@@ -72,9 +72,12 @@
     <string name="empty_search">No search results found</string>
     <string name="empty_links">No links available</string>
 
-    <string name="session_summary">Summary</string>
+    <string name="session_content">Content</string>
+    <string name="session_drafts">Internet Drafts</string>
     <string name="session_notes">Notes</string>
     <string name="session_links">Links</string>
+    <string name="session_join">Join</string>
+    <string name="empty_join">No join information available</string>
     <string name="session_requirements">Requirements</string>
     <string name="session_speakers">Speakers</string>
 
