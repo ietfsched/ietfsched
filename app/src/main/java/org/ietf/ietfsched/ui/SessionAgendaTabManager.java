@@ -52,61 +52,36 @@ public class SessionAgendaTabManager extends BaseGeckoViewTabManager {
      * @param sharedGeckoView Optional shared GeckoView instance. If provided, will initialize with it.
      */
     public void updateAgendaTab(String agendaUrl, GeckoView sharedGeckoView) {
-        Log.d(TAG, "updateAgendaTab: agendaUrl=" + agendaUrl + ", mRootView=" + (mRootView != null) + ", sharedGeckoView=" + (sharedGeckoView != null));
         if (agendaUrl == null || agendaUrl.isEmpty()) {
-            Log.w(TAG, "updateAgendaTab: agendaUrl is null or empty, showing loading message");
-            loadLoadingMessage(sharedGeckoView, R.id.tab_session_links, 
-                    "Agenda is being downloaded. Please check back in a moment or use the Refresh button.");
+            // Only show loading message if GeckoView is already initialized and visible
+            if (sharedGeckoView != null && mGeckoViewHelper.getGeckoView() != null) {
+                loadLoadingMessage(sharedGeckoView, R.id.tab_session_links, 
+                        "Agenda is being downloaded. Please check back in a moment or use the Refresh button.");
+            }
             return;
         }
         
-        // Ensure view is created before initializing
-        if (mRootView == null) {
-            Log.w(TAG, "updateAgendaTab: mRootView is null, returning");
-            return;
-        }
-        
-        // Initialize GeckoView if shared instance is provided
+        // Initialize GeckoView if provided
         if (sharedGeckoView != null) {
             initializeGeckoView(sharedGeckoView);
-        } else {
-            // Fallback: Try to find shared GeckoView in container (less efficient)
-            ViewGroup container = (ViewGroup) mRootView.findViewById(R.id.tab_session_links);
-            if (container != null && container.getChildCount() > 0) {
-                View child = container.getChildAt(0);
-                if (child instanceof GeckoView) {
-                    initializeGeckoView((GeckoView) child);
+        }
+        
+        // Check if URL changed
+        String lastUrl = mGeckoViewTabUrls.get(TAB_AGENDA);
+        if (!agendaUrl.equals(lastUrl)) {
+            // Store URL
+            mGeckoViewTabUrls.put(TAB_AGENDA, agendaUrl);
+            if (mGeckoViewInitialUrls.get(TAB_AGENDA) == null) {
+                mGeckoViewInitialUrls.put(TAB_AGENDA, agendaUrl);
+            }
+            
+            // Load URL if GeckoView is ready and session is attached
+            if (mGeckoViewHelper.getGeckoView() != null && mGeckoViewHelper.getGeckoSession() != null) {
+                // Only load if this tab's session is currently attached to avoid blinking
+                if (mGeckoViewHelper.getGeckoView().getSession() == mGeckoViewHelper.getGeckoSession()) {
+                    mGeckoViewHelper.loadUrl(agendaUrl);
                 }
             }
-        }
-        
-        if (mGeckoViewHelper.getGeckoView() == null || mGeckoViewHelper.getGeckoSession() == null) {
-            Log.w(TAG, "updateAgendaTab: GeckoView not initialized, storing URL for later");
-            // Store URL for later loading when GeckoView is initialized
-            mGeckoViewTabUrls.put(TAB_AGENDA, agendaUrl);
-            return;
-        }
-        
-        // Only load if URL has changed AND Agenda tab is currently active
-        boolean agendaTabActive = mTabHost != null && TAB_AGENDA.equals(mTabHost.getCurrentTabTag());
-        String lastUrl = mGeckoViewTabUrls.get(TAB_AGENDA);
-        boolean isFirstLoad = (lastUrl == null);
-        if (!agendaUrl.equals(lastUrl)) {
-            Log.d(TAG, "updateAgendaTab: URL changed, agendaTabActive=" + agendaTabActive + ", isFirstLoad=" + isFirstLoad);
-            // Only load if Agenda tab is active or if this is the first load
-            if (agendaTabActive || isFirstLoad) {
-                Log.d(TAG, "updateAgendaTab: Loading URL: " + agendaUrl);
-                mGeckoViewHelper.loadUrl(agendaUrl);
-                mGeckoViewTabUrls.put(TAB_AGENDA, agendaUrl);
-                // Track this as the initial URL for this tab
-                mGeckoViewInitialUrls.put(TAB_AGENDA, agendaUrl);
-            } else {
-                Log.d(TAG, "updateAgendaTab: Skipping load - Agenda tab not active, will load when tab is opened");
-                // Store URL for later loading when Agenda tab is opened
-                mGeckoViewTabUrls.put(TAB_AGENDA, agendaUrl);
-            }
-        } else {
-            Log.d(TAG, "updateAgendaTab: URL unchanged, skipping reload: " + agendaUrl);
         }
     }
     

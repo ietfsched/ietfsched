@@ -79,6 +79,7 @@
     <string name="session_agenda">Agenda</string>
     <string name="session_join">Join</string>
     <string name="empty_join">No join information available</string>
+    <string name="join_error_message">Unable to load Meetecho Lite. Please check your internet connection and try again.\n\nNote: Meetecho Lite is only available during the IETF meeting.</string>
     <string name="session_requirements">Requirements</string>
     <string name="session_speakers">Speakers</string>
 
