@@ -25,6 +25,7 @@ import org.json.JSONObject;
 import org.ietf.ietfsched.util.ActivityHelper;
 import org.ietf.ietfsched.util.FractionalTouchDelegate;
 import org.ietf.ietfsched.util.GeckoRuntimeHelper;
+import org.ietf.ietfsched.util.GeckoViewHelper;
 import org.ietf.ietfsched.util.NotifyingAsyncQueryHandler;
 import org.ietf.ietfsched.util.UIUtils;
 
@@ -101,16 +102,16 @@ public class SessionDetailFragment extends Fragment implements
     private CompoundButton mStarred;
     
 
-    private GeckoView mNotesWebView;
-    private GeckoSession mGeckoSession;
-    private boolean mCanGoBack = false;
+    // Generic GeckoView wrapper: support multiple GeckoView tabs
+    // Key: tab tag (e.g., TAG_NOTES), Value: GeckoViewHelper instance for that tab
+    private java.util.Map<String, GeckoViewHelper> mGeckoViewHelpers = new java.util.HashMap<String, GeckoViewHelper>();
     private String mCurrentTabTag; // Retained tab selection
     // Track last loaded URL per GeckoView tab to avoid reloading unnecessarily
     // Key: tab tag (e.g., TAG_NOTES), Value: last URL that should be loaded for that tab
     private java.util.Map<String, String> mGeckoViewTabUrls = new java.util.HashMap<String, String>();
-    // Track consecutive back presses on GeckoView tabs to allow exit if stuck
-    private int mConsecutiveBackPresses = 0;
-    private long mLastBackPressTime = 0;
+    // Track the initial URL for each GeckoView tab to determine if we're at the "root" of navigation
+    // Key: tab tag (e.g., TAG_NOTES), Value: initial URL that was loaded for that tab
+    private java.util.Map<String, String> mGeckoViewInitialUrls = new java.util.HashMap<String, String>();
 
     private NotifyingAsyncQueryHandler mHandler;
     private RemoteExecutor mRemoteExecutor;
@@ -231,19 +232,41 @@ public class SessionDetailFragment extends Fragment implements
                 if (TAG_CONTENT.equals(tabId) && !mDraftsFetched && mSessionId != null) {
                     fetchDraftsOnDemand();
                 }
-                // Load GeckoView URL if a GeckoView tab is opened and URL was previously skipped
-                if (isGeckoViewTab(tabId) && mGeckoSession != null) {
-                    String pendingUrl = mGeckoViewTabUrls.get(tabId);
-                    if (pendingUrl != null) {
-                        Log.d(TAG, "onTabChanged: Loading pending URL for GeckoView tab " + tabId + ": " + pendingUrl);
-                        mGeckoSession.loadUri(pendingUrl);
-                        // URL is now loaded, so update the map to reflect current state
-                        mGeckoViewTabUrls.put(tabId, pendingUrl);
+                // Handle GeckoView tab switching: preserve state if URL unchanged, re-initialize if URL changed
+                if (isGeckoViewTab(tabId)) {
+                    String expectedUrl = mGeckoViewTabUrls.get(tabId);
+                    String initialUrl = mGeckoViewInitialUrls.get(tabId);
+                    
+                    // If URL has changed (e.g., different session) or initialUrl is null, re-initialize GeckoView
+                    // Otherwise, preserve navigation state
+                    if (expectedUrl != null && (initialUrl == null || !expectedUrl.equals(initialUrl))) {
+                        Log.d(TAG, "onTabChanged: URL changed for GeckoView tab " + tabId + " (expected=" + expectedUrl + ", initial=" + initialUrl + "), re-initializing");
+                        reinitializeGeckoView(tabId);
+                        // Load the new URL
+                        GeckoViewHelper helper = mGeckoViewHelpers.get(tabId);
+                        if (helper != null) {
+                            Log.d(TAG, "onTabChanged: Loading new URL for GeckoView tab " + tabId + ": " + expectedUrl);
+                            helper.loadUrl(expectedUrl);
+                            mGeckoViewInitialUrls.put(tabId, expectedUrl);
+                        }
+                    } else if (expectedUrl == null) {
+                        // No URL stored yet, trigger update to construct and load URL
+                        Log.d(TAG, "onTabChanged: No URL stored for GeckoView tab " + tabId + ", triggering update");
+                        updateGeckoViewTab(tabId);
+                    } else {
+                        // URL unchanged, preserve navigation state - just ensure GeckoView is initialized
+                        Log.d(TAG, "onTabChanged: URL unchanged for GeckoView tab " + tabId + " (URL=" + expectedUrl + "), preserving navigation state");
+                        ensureWebViewInitialized(tabId);
                     }
-                    // Trigger update method for the specific tab to ensure it's current
-                    updateGeckoViewTab(tabId);
                 }
-                Log.d(TAG, "onTabChanged: tabId=" + tabId + ", mCanGoBack=" + mCanGoBack);
+                // Log tab change with GeckoView state if applicable
+                if (isGeckoViewTab(tabId)) {
+                    GeckoViewHelper helper = mGeckoViewHelpers.get(tabId);
+                    boolean canGoBack = helper != null && helper.canGoBack();
+                    Log.d(TAG, "onTabChanged: tabId=" + tabId + ", canGoBack=" + canGoBack);
+                } else {
+                    Log.d(TAG, "onTabChanged: tabId=" + tabId);
+                }
             }
         });
 
@@ -757,6 +780,46 @@ public class SessionDetailFragment extends Fragment implements
     }
     
     /**
+     * Check if a GeckoView tab is "deep" (navigation stays within GeckoView) or "shallow" (links open externally).
+     * @param tabId The tab tag identifier
+     * @return true if the tab is deep (navigation stays within), false if shallow (links open externally)
+     */
+    private boolean isDeepGeckoViewTab(String tabId) {
+        if (TAG_NOTES.equals(tabId)) {
+            return true; // Notes tab is deep - navigation stays within GeckoView
+        }
+        // Add more GeckoView tabs here as they are added
+        // Return false for shallow tabs (links open externally)
+        return true; // Default to deep for safety
+    }
+    
+    /**
+     * Get the GeckoView resource ID for a given tab.
+     * @param tabId The tab tag identifier
+     * @return The resource ID of the GeckoView for this tab, or 0 if not found
+     */
+    private int getGeckoViewResourceId(String tabId) {
+        if (TAG_NOTES.equals(tabId)) {
+            return R.id.notes_webview;
+        }
+        // Add more GeckoView tabs here as they are added
+        return 0;
+    }
+    
+    /**
+     * Get the tab content resource ID for a given GeckoView tab.
+     * @param tabId The tab tag identifier
+     * @return The resource ID of the tab content container, or 0 if not found
+     */
+    private int getGeckoViewTabContentId(String tabId) {
+        if (TAG_NOTES.equals(tabId)) {
+            return R.id.tab_session_notes;
+        }
+        // Add more GeckoView tabs here as they are added
+        return 0;
+    }
+    
+    /**
      * Update a GeckoView tab with its URL. This is a generic method that can be called
      * for any GeckoView tab. Currently only handles Notes tab, but can be extended.
      * @param tabId The tab tag identifier
@@ -769,85 +832,60 @@ public class SessionDetailFragment extends Fragment implements
     }
     
     /**
-     * Initialize and configure the GeckoView for HedgeDoc.
+     * Initialize and configure the GeckoView for a specific tab.
+     * Generic wrapper that works with any GeckoView tab.
      * Called lazily when we have session data to avoid NullPointerException.
+     * @param tabId The tab tag identifier
      */
-    private void ensureWebViewInitialized() {
-        if (mNotesWebView != null && mGeckoSession != null) {
-            // Ensure session is still attached to view (important after rotation)
-            if (mNotesWebView.getSession() != mGeckoSession) {
-                Log.d(TAG, "ensureWebViewInitialized: Reattaching session to view");
-                mNotesWebView.setSession(mGeckoSession);
-            }
-            return; // Already initialized
+    private void ensureWebViewInitialized(String tabId) {
+        if (!isGeckoViewTab(tabId)) {
+            Log.w(TAG, "ensureWebViewInitialized: Tab " + tabId + " is not a GeckoView tab");
+            return;
+        }
+        
+        GeckoViewHelper helper = mGeckoViewHelpers.get(tabId);
+        if (helper != null && helper.getGeckoView() != null && helper.getGeckoSession() != null) {
+            // Already initialized
+            return;
         }
 
-        Log.d(TAG, "ensureWebViewInitialized: Initializing GeckoView, mRootView=" + (mRootView != null));
+        Log.d(TAG, "ensureWebViewInitialized: Initializing GeckoView for tab " + tabId + ", mRootView=" + (mRootView != null));
+        
+        // Create helper if it doesn't exist
+        if (helper == null) {
+            boolean isDeep = isDeepGeckoViewTab(tabId);
+            helper = new GeckoViewHelper(this, isDeep);
+            mGeckoViewHelpers.put(tabId, helper);
+        }
         
         // Try multiple ways to find the GeckoView
-        mNotesWebView = (GeckoView) mRootView.findViewById(R.id.notes_webview);
-        Log.d(TAG, "ensureWebViewInitialized: Found via findViewById(R.id.notes_webview): " + (mNotesWebView != null));
+        GeckoView geckoView = null;
+        int geckoViewResId = getGeckoViewResourceId(tabId);
+        if (geckoViewResId != 0) {
+            geckoView = (GeckoView) mRootView.findViewById(geckoViewResId);
+            Log.d(TAG, "ensureWebViewInitialized: Found via findViewById: " + (geckoView != null));
+        }
 
-        if (mNotesWebView == null) {
+        if (geckoView == null) {
             // Fallback: the included layout's root might be the GeckoView itself
-            View tabContent = mRootView.findViewById(R.id.tab_session_notes);
-            Log.d(TAG, "ensureWebViewInitialized: tab_session_notes view: " + (tabContent != null) + ", type: " + (tabContent != null ? tabContent.getClass().getName() : "null"));
-            if (tabContent instanceof GeckoView) {
-                mNotesWebView = (GeckoView) tabContent;
-                Log.d(TAG, "ensureWebViewInitialized: Found GeckoView as tab_session_notes root");
-            }
-        }
-
-        if (mNotesWebView == null) {
-            Log.e(TAG, "Failed to find GeckoView in notes tab layout");
-            return;
-        }
-
-        // Get shared GeckoRuntime instance
-        GeckoRuntime runtime = GeckoRuntimeHelper.getRuntime(getActivity());
-        if (runtime == null) {
-            Log.e(TAG, "Failed to get GeckoRuntime");
-            return;
-        }
-
-        // Create GeckoSession
-        mGeckoSession = new GeckoSession();
-
-        // Configure GeckoSession for navigation handling
-        // GeckoView has built-in history management - we just allow navigation and let it work
-        mGeckoSession.setNavigationDelegate(new GeckoSession.NavigationDelegate() {
-            @Override
-            public GeckoResult<AllowOrDeny> onLoadRequest(GeckoSession session, GeckoSession.NavigationDelegate.LoadRequest request) {
-                // Allow all navigation - GeckoView handles history automatically
-                return GeckoResult.allow();
-            }
-            
-            @Override
-            public void onCanGoBack(GeckoSession session, boolean canGoBack) {
-                Log.d(TAG, "onCanGoBack: " + canGoBack + " (currentTab=" + (mTabHost != null ? mTabHost.getCurrentTabTag() : "null") + ")");
-                mCanGoBack = canGoBack;
-                // Reset consecutive back press counter when canGoBack becomes false
-                if (!canGoBack) {
-                    mConsecutiveBackPresses = 0;
+            int tabContentId = getGeckoViewTabContentId(tabId);
+            if (tabContentId != 0) {
+                View tabContent = mRootView.findViewById(tabContentId);
+                Log.d(TAG, "ensureWebViewInitialized: tab content view: " + (tabContent != null) + ", type: " + (tabContent != null ? tabContent.getClass().getName() : "null"));
+                if (tabContent instanceof GeckoView) {
+                    geckoView = (GeckoView) tabContent;
+                    Log.d(TAG, "ensureWebViewInitialized: Found GeckoView as tab content root");
                 }
             }
-            
-            @Override
-            public GeckoResult<GeckoSession> onNewSession(GeckoSession session, String uri) {
-                // Load the URI in the current session
-                session.loadUri(uri);
-                // Return null to deny new session creation
-                return GeckoResult.fromValue((GeckoSession) null);
-            }
-        });
-        
-        // Ensure GeckoView can receive touch events
-        mNotesWebView.setFocusable(true);
-        mNotesWebView.setFocusableInTouchMode(true);
+        }
 
-        // Open session and attach to view
-        mGeckoSession.open(runtime);
-        mNotesWebView.setSession(mGeckoSession);
+        if (geckoView == null) {
+            Log.e(TAG, "Failed to find GeckoView for tab " + tabId);
+            return;
+        }
+
+        // Initialize helper with the GeckoView
+        helper.initialize(geckoView);
     }
     
     /*
@@ -992,10 +1030,11 @@ public class SessionDetailFragment extends Fragment implements
         }
         
         // Initialize WebView lazily (after view is attached)
-        ensureWebViewInitialized();
+        ensureWebViewInitialized(TAG_NOTES);
         
-        if (mNotesWebView == null || mGeckoSession == null) {
-            Log.w(TAG, "updateNotesTab: mNotesWebView=" + (mNotesWebView != null) + ", mGeckoSession=" + (mGeckoSession != null));
+        GeckoViewHelper helper = mGeckoViewHelpers.get(TAG_NOTES);
+        if (helper == null || helper.getGeckoView() == null || helper.getGeckoSession() == null) {
+            Log.w(TAG, "updateNotesTab: helper=" + (helper != null) + ", geckoView=" + (helper != null && helper.getGeckoView() != null) + ", geckoSession=" + (helper != null && helper.getGeckoSession() != null));
             return;
         }
         
@@ -1049,8 +1088,13 @@ public class SessionDetailFragment extends Fragment implements
                 // This prevents reloading when star is toggled and Notes tab isn't visible
                 if (notesTabActive || isFirstLoad) {
                     Log.d(TAG, "updateNotesTab: Loading URL: " + hedgedocUrl);
-                    mGeckoSession.loadUri(hedgedocUrl);
-                    mGeckoViewTabUrls.put(TAG_NOTES, hedgedocUrl);
+                    // helper is already defined earlier in the method
+                    if (helper != null) {
+                        helper.loadUrl(hedgedocUrl);
+                        mGeckoViewTabUrls.put(TAG_NOTES, hedgedocUrl);
+                        // Track this as the initial URL for this tab (will be used to determine if we need to re-initialize)
+                        mGeckoViewInitialUrls.put(TAG_NOTES, hedgedocUrl);
+                    }
                 } else {
                     Log.d(TAG, "updateNotesTab: Skipping load - Notes tab not active, will load when tab is opened");
                     // Store URL for later loading when Notes tab is opened
@@ -1062,6 +1106,7 @@ public class SessionDetailFragment extends Fragment implements
         } else {
             Log.w(TAG, "updateNotesTab: groupAcronym is null or empty, not loading URL");
             mGeckoViewTabUrls.remove(TAG_NOTES);
+            mGeckoViewInitialUrls.remove(TAG_NOTES);
         }
     }
 
@@ -1324,6 +1369,29 @@ public class SessionDetailFragment extends Fragment implements
     }
     
     /**
+     * Re-initialize GeckoView for a specific tab by closing the old session and creating a new one.
+     * This clears the navigation history, ensuring a fresh start when the URL changes.
+     * @param tabId The tab tag identifier
+     */
+    private void reinitializeGeckoView(String tabId) {
+        if (!isGeckoViewTab(tabId)) {
+            Log.w(TAG, "reinitializeGeckoView: Tab " + tabId + " is not a GeckoView tab");
+            return;
+        }
+        
+        GeckoViewHelper helper = mGeckoViewHelpers.get(tabId);
+        if (helper != null) {
+            helper.reinitialize();
+        }
+        
+        // Clear initial URL for this tab since we're starting fresh
+        mGeckoViewInitialUrls.remove(tabId);
+        
+        // Re-initialize GeckoView (will create new session)
+        ensureWebViewInitialized(tabId);
+    }
+    
+    /**
      * Handle back button press - navigate back in GeckoView if a GeckoView tab is active and can go back.
      * Otherwise, allow the activity to finish (exit the session).
      * @return true if GeckoView handled the back press, false to allow activity to finish
@@ -1331,31 +1399,22 @@ public class SessionDetailFragment extends Fragment implements
     public boolean onBackPressed() {
         String currentTab = mTabHost != null ? mTabHost.getCurrentTabTag() : null;
         boolean isGeckoTab = isGeckoViewTab(currentTab);
-        long currentTime = System.currentTimeMillis();
         
-        // Reset counter if more than 2 seconds have passed since last back press
-        if (currentTime - mLastBackPressTime > 2000) {
-            mConsecutiveBackPresses = 0;
-        }
-        mLastBackPressTime = currentTime;
+        GeckoViewHelper helper = currentTab != null ? mGeckoViewHelpers.get(currentTab) : null;
+        boolean canGoBack = helper != null && helper.canGoBack();
         
-        Log.d(TAG, "onBackPressed: currentTab=" + currentTab + ", isGeckoViewTab=" + isGeckoTab + ", mGeckoSession=" + (mGeckoSession != null) + ", mCanGoBack=" + mCanGoBack + ", consecutiveBackPresses=" + mConsecutiveBackPresses);
+        Log.d(TAG, "onBackPressed: currentTab=" + currentTab + ", isGeckoViewTab=" + isGeckoTab + ", helper=" + (helper != null) + ", canGoBack=" + canGoBack);
         
         // Only handle back navigation within GeckoView if:
         // 1. A GeckoView tab is currently selected
-        // 2. GeckoSession exists
+        // 2. GeckoViewHelper exists for that tab
         // 3. GeckoView can actually go back
-        // 4. We haven't pressed back too many times in a row (safety valve)
-        if (mTabHost != null && isGeckoTab && mGeckoSession != null && mCanGoBack && mConsecutiveBackPresses < 2) {
-            Log.d(TAG, "onBackPressed: Navigating back in GeckoView (tab=" + currentTab + ", consecutiveBackPresses=" + mConsecutiveBackPresses + ")");
-            mConsecutiveBackPresses++;
-            mGeckoSession.goBack();
-            return true; // GeckoView handled it
+        if (mTabHost != null && isGeckoTab && helper != null && canGoBack) {
+            return helper.onBackPressed();
         }
         
         // Otherwise, allow activity to finish (exit session)
-        // Don't reset counter here - let it reset naturally on next back press or when canGoBack becomes false
-        Log.d(TAG, "onBackPressed: Returning false - will exit session (tab=" + currentTab + ", isGeckoViewTab=" + isGeckoTab + ", mGeckoSession=" + (mGeckoSession != null) + ", canGoBack=" + mCanGoBack + ", consecutiveBackPresses=" + mConsecutiveBackPresses + ")");
+        Log.d(TAG, "onBackPressed: Returning false - will exit session (tab=" + currentTab + ", isGeckoViewTab=" + isGeckoTab + ", helper=" + (helper != null) + ", canGoBack=" + canGoBack + ")");
         return false;
     }
 }

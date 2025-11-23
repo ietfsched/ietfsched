@@ -23,16 +23,12 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import org.mozilla.geckoview.AllowOrDeny;
-import org.mozilla.geckoview.GeckoResult;
-import org.mozilla.geckoview.GeckoRuntime;
-import org.mozilla.geckoview.GeckoSession;
 import org.mozilla.geckoview.GeckoView;
 
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
 import org.ietf.ietfsched.service.SyncService;
-import org.ietf.ietfsched.util.GeckoRuntimeHelper;
+import org.ietf.ietfsched.util.GeckoViewHelper;
 
 
 /**
@@ -40,84 +36,59 @@ import org.ietf.ietfsched.util.GeckoRuntimeHelper;
  */
 public class WellNoteFragment extends Fragment {
     private static final String TAG = "WellNoteFragment";
-    private GeckoView mGeckoView;
-    private GeckoSession mGeckoSession;
-    private boolean mCanGoBack = false;
-    private MyNavigationDelegate mNavigationDelegate = new MyNavigationDelegate();
-    
-    /**
-     * NavigationDelegate that allows all navigation within GeckoView.
-     * GeckoView has built-in history management - we just allow navigation and let it work.
-     */
-    private class MyNavigationDelegate implements GeckoSession.NavigationDelegate {
-        @Override
-        public GeckoResult<AllowOrDeny> onLoadRequest(GeckoSession session, GeckoSession.NavigationDelegate.LoadRequest request) {
-            // Allow all navigation - GeckoView handles history automatically
-            return GeckoResult.allow();
-        }
-        
-        @Override
-        public void onCanGoBack(GeckoSession session, boolean canGoBack) {
-            WellNoteFragment.this.mCanGoBack = canGoBack;
-        }
-        
-        @Override
-        public GeckoResult<GeckoSession> onNewSession(GeckoSession session, String uri) {
-            Log.d(TAG, "New session requested for: " + uri);
-            // Load the URI in the current session
-            session.loadUri(uri);
-            // Return null to deny new session creation
-            return GeckoResult.fromValue((GeckoSession) null);
-        }
-    }
+    private GeckoViewHelper mGeckoViewHelper;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         // Retain fragment instance across configuration changes to preserve GeckoView state
         setRetainInstance(true);
+        
+        // Initialize GeckoViewHelper with deep mode (all navigation stays within GeckoView)
+        mGeckoViewHelper = new GeckoViewHelper(this, true);
     }
     
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         // Reuse existing GeckoView if available (from retained instance)
-        if (mGeckoView != null) {
-            ViewGroup parent = (ViewGroup) mGeckoView.getParent();
+        GeckoView geckoView = mGeckoViewHelper.getGeckoView();
+        if (geckoView != null) {
+            ViewGroup parent = (ViewGroup) geckoView.getParent();
             if (parent != null) {
-                parent.removeView(mGeckoView);
+                parent.removeView(geckoView);
             }
-            return mGeckoView;
+            return geckoView;
         }
         
-        // Create GeckoView
-        mGeckoView = new GeckoView(getActivity());
-        
-        // Get shared GeckoRuntime instance
-        GeckoRuntime runtime = GeckoRuntimeHelper.getRuntime(getActivity());
-        if (runtime == null) {
-            Log.e(TAG, "Failed to get GeckoRuntime");
-            return mGeckoView; // Return view even if runtime failed
-        }
-        
-        // Create GeckoSession and attach navigation delegate
-        mGeckoSession = new GeckoSession();
-        mGeckoSession.setNavigationDelegate(mNavigationDelegate);
-        
-        // Open session and attach to view
-        mGeckoSession.open(runtime);
-        mGeckoView.setSession(mGeckoSession);
+        // Create GeckoView using helper
+        geckoView = mGeckoViewHelper.createGeckoView();
         
         // Load Note Well content
         loadNoteWellContent();
         
-        return mGeckoView;
+        return geckoView;
+    }
+    
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        // Don't cleanup here - we want to preserve state across configuration changes
+        // Cleanup will happen in onDestroy()
+    }
+    
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (mGeckoViewHelper != null) {
+            mGeckoViewHelper.cleanup();
+        }
     }
     
     /**
      * Load Note Well content into GeckoView.
      */
     private void loadNoteWellContent() {
-        if (mGeckoSession == null || getActivity() == null) {
+        if (mGeckoViewHelper == null || getActivity() == null) {
             return;
         }
         
@@ -166,7 +137,7 @@ public class WellNoteFragment extends Fragment {
             byte[] htmlBytes = styledHtml.getBytes("UTF-8");
             String base64Html = android.util.Base64.encodeToString(htmlBytes, android.util.Base64.NO_WRAP);
             String dataUri = "data:text/html;charset=utf-8;base64," + base64Html;
-            mGeckoSession.loadUri(dataUri);
+            mGeckoViewHelper.loadUrl(dataUri);
         } catch (java.io.UnsupportedEncodingException e) {
             Log.e(TAG, "Failed to encode Note Well HTML", e);
         }
@@ -177,10 +148,6 @@ public class WellNoteFragment extends Fragment {
      * @return true if GeckoView handled the back press, false otherwise
      */
     public boolean onBackPressed() {
-        if (mGeckoSession != null && mCanGoBack) {
-            mGeckoSession.goBack();
-            return true;
-        }
-        return false;
+        return mGeckoViewHelper != null && mGeckoViewHelper.onBackPressed();
     }
 }
