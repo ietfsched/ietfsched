@@ -76,6 +76,7 @@
     <string name="session_drafts">Internet Drafts</string>
     <string name="session_notes">Notes</string>
     <string name="session_links">Links</string>
+    <string name="session_agenda">Agenda</string>
     <string name="session_join">Join</string>
     <string name="empty_join">No join information available</string>
     <string name="session_requirements">Requirements</string>

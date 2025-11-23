@@ -13,10 +13,9 @@
   See the License for the specific language governing permissions and
   limitations under the License.
   -->
-<org.mozilla.geckoview.GeckoView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/notes_webview"
+<!-- GeckoView is created programmatically as a singleton and added to this container -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tab_session_notes"
     android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:focusable="true"
-    android:focusableInTouchMode="true"
-    android:clickable="true" />
+    android:layout_height="fill_parent">
+</FrameLayout>

@@ -41,6 +41,26 @@ public class GeckoViewHelper {
     private boolean mCanGoBack = false;
     private boolean mIsDeep;
     private String mInitialUrl;
+    private String mActualInitialUrl; // The actual URL before wrapping (for comparison)
+    private boolean mInitialLoadComplete = false;
+    private String mCurrentUrl; // Track current URL to prevent error message loops
+    
+    /**
+     * Callback interface for load error events.
+     */
+    public interface LoadErrorCallback {
+        void onLoadError(String uri);
+    }
+    
+    private LoadErrorCallback mLoadErrorCallback;
+    
+    /**
+     * Set callback for load error events.
+     * @param callback The callback to notify on load errors
+     */
+    public void setLoadErrorCallback(LoadErrorCallback callback) {
+        mLoadErrorCallback = callback;
+    }
     
     /**
      * Create a GeckoViewHelper for a fragment.
@@ -57,17 +77,28 @@ public class GeckoViewHelper {
      * @param geckoView The GeckoView instance from the layout
      */
     public void initialize(GeckoView geckoView) {
-        if (mGeckoView != null && mGeckoSession != null) {
-            // Already initialized - ensure session is attached
+        // If this is the same GeckoView we already have, ensure session is attached
+        if (mGeckoView == geckoView && mGeckoSession != null) {
             if (geckoView.getSession() != mGeckoSession) {
-                Log.d(TAG, "initialize: Reattaching session to view");
+                Log.d(TAG, "initialize: Reattaching session to same GeckoView");
                 geckoView.setSession(mGeckoSession);
             }
-            mGeckoView = geckoView;
             return;
         }
         
         mGeckoView = geckoView;
+        
+        // If we already have a session, attach it to the view
+        // GeckoView automatically handles detaching any previous session
+        if (mGeckoSession != null) {
+            Log.d(TAG, "initialize: Attaching existing session to GeckoView");
+            geckoView.setVisibility(View.VISIBLE);
+            geckoView.setSession(mGeckoSession);
+            geckoView.bringToFront();
+            return;
+        }
+        
+        // No session yet - create one
         createSession();
     }
     
@@ -108,22 +139,42 @@ public class GeckoViewHelper {
         mGeckoSession.setNavigationDelegate(new GeckoSession.NavigationDelegate() {
             @Override
             public GeckoResult<AllowOrDeny> onLoadRequest(GeckoSession session, GeckoSession.NavigationDelegate.LoadRequest request) {
+                String uri = request.uri;
+                
+                // Always allow data URIs (local content)
+                if (uri != null && uri.startsWith("data:")) {
+                    Log.d(TAG, "onLoadRequest: Allowing data URI: " + uri.substring(0, Math.min(uri.length(), 50)) + "...");
+                    return GeckoResult.allow();
+                }
+                
                 if (mIsDeep) {
                     // Deep mode: Allow all navigation - GeckoView handles history automatically
                     return GeckoResult.allow();
                 } else {
-                    // Shallow mode: Open all links in external browser
-                    String uri = request.uri;
-                    Log.d(TAG, "onLoadRequest (shallow): Opening link in external browser: " + uri);
-                    try {
-                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
-                        mFragment.getActivity().startActivity(intent);
-                    } catch (Exception e) {
-                        Log.e(TAG, "Failed to open URL in external browser: " + uri, e);
+                    // Shallow mode: Allow initial URL to load, but open subsequent links externally
+                    
+                    // Check if this is the initial URL
+                    boolean isInitialUrl = (mInitialUrl != null && uri.equals(mInitialUrl)) ||
+                                         (mActualInitialUrl != null && uri.equals(mActualInitialUrl));
+                    
+                    if (isInitialUrl && !mInitialLoadComplete) {
+                        // This is the initial URL load - allow it and mark as complete
+                        Log.d(TAG, "onLoadRequest (shallow): Allowing initial URL load: " + uri);
+                        mInitialLoadComplete = true;
+                        return GeckoResult.allow();
+                    } else {
+                        // This is a subsequent navigation (link click) - open externally
+                        Log.d(TAG, "onLoadRequest (shallow): Opening link in external browser: " + uri);
+                        try {
+                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
+                            mFragment.getActivity().startActivity(intent);
+                        } catch (Exception e) {
+                            Log.e(TAG, "Failed to open URL in external browser: " + uri, e);
+                        }
+                        // Deny loading in GeckoView - we opened it externally
+                        return GeckoResult.deny();
                     }
-                    // Deny loading in GeckoView - we opened it externally
-                    return GeckoResult.deny();
                 }
             }
             
@@ -131,6 +182,17 @@ public class GeckoViewHelper {
             public void onCanGoBack(GeckoSession session, boolean canGoBack) {
                 Log.d(TAG, "onCanGoBack: " + canGoBack + " (isDeep=" + mIsDeep + ")");
                 mCanGoBack = canGoBack;
+            }
+            
+            @Override
+            public GeckoResult<String> onLoadError(GeckoSession session, String uri, org.mozilla.geckoview.WebRequestError error) {
+                Log.w(TAG, "onLoadError: uri=" + uri + ", error=" + error);
+                // Notify callback about load error
+                if (mLoadErrorCallback != null && uri != null && !uri.startsWith("data:")) {
+                    mLoadErrorCallback.onLoadError(uri);
+                }
+                // Return null to use default error page, or return a custom error page URL
+                return GeckoResult.fromValue(null);
             }
             
             @Override
@@ -156,6 +218,26 @@ public class GeckoViewHelper {
             }
         });
         
+        // Set ProgressDelegate to detect load errors
+        mGeckoSession.setProgressDelegate(new GeckoSession.ProgressDelegate() {
+            @Override
+            public void onPageStart(GeckoSession session, String url) {
+                Log.d(TAG, "onPageStart: url=" + url);
+                mCurrentUrl = url;
+            }
+            
+            @Override
+            public void onPageStop(GeckoSession session, boolean success) {
+                Log.d(TAG, "onPageStop: success=" + success + ", url=" + mCurrentUrl);
+                if (!success && mCurrentUrl != null && !mCurrentUrl.startsWith("data:")) {
+                    // Page load failed - notify callback (but not for data URIs to avoid loops)
+                    if (mLoadErrorCallback != null) {
+                        mLoadErrorCallback.onLoadError(mCurrentUrl);
+                    }
+                }
+            }
+        });
+        
         // Ensure GeckoView can receive touch events
         mGeckoView.setFocusable(true);
         mGeckoView.setFocusableInTouchMode(true);
@@ -164,6 +246,7 @@ public class GeckoViewHelper {
         mGeckoSession.open(runtime);
         mGeckoView.setSession(mGeckoSession);
     }
+    
     
     /**
      * Load a URL into the GeckoView.
@@ -175,7 +258,12 @@ public class GeckoViewHelper {
             return;
         }
         
-        // Track initial URL for state management
+        // Track actual initial URL for state management
+        if (mActualInitialUrl == null) {
+            mActualInitialUrl = url;
+        }
+        
+        // Track the URL as the initial URL for navigation handling
         if (mInitialUrl == null) {
             mInitialUrl = url;
         }
@@ -202,6 +290,8 @@ public class GeckoViewHelper {
         // Reset navigation state
         mCanGoBack = false;
         mInitialUrl = null;
+        mActualInitialUrl = null;
+        mInitialLoadComplete = false;
         
         // Re-create session
         createSession();
@@ -290,6 +380,8 @@ public class GeckoViewHelper {
         mGeckoView = null;
         mCanGoBack = false;
         mInitialUrl = null;
+        mActualInitialUrl = null;
+        mInitialLoadComplete = false;
     }
 }
 

@@ -27,11 +27,11 @@ import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
 
 /**
- * Manages the Notes tab GeckoView and URL construction for SessionDetailFragment.
+ * Manages the Agenda tab GeckoView for SessionDetailFragment.
  */
-public class SessionNotesTabManager {
-    private static final String TAG = "SessionNotesTabManager";
-    private static final String TAB_NOTES = "notes";
+public class SessionAgendaTabManager {
+    private static final String TAG = "SessionAgendaTabManager";
+    private static final String TAB_AGENDA = "agenda";
     
     private final Fragment mFragment;
     private final ViewGroup mRootView;
@@ -40,7 +40,7 @@ public class SessionNotesTabManager {
     private final java.util.Map<String, String> mGeckoViewInitialUrls;
     private final android.widget.TabHost mTabHost;
     
-    public SessionNotesTabManager(Fragment fragment, ViewGroup rootView, android.widget.TabHost tabHost,
+    public SessionAgendaTabManager(Fragment fragment, ViewGroup rootView, android.widget.TabHost tabHost,
             java.util.Map<String, GeckoViewHelper> geckoViewHelpers,
             java.util.Map<String, String> geckoViewTabUrls,
             java.util.Map<String, String> geckoViewInitialUrls) {
@@ -50,11 +50,11 @@ public class SessionNotesTabManager {
         mGeckoViewTabUrls = geckoViewTabUrls;
         mGeckoViewInitialUrls = geckoViewInitialUrls;
         
-        // Get or create GeckoViewHelper for Notes tab
-        GeckoViewHelper helper = geckoViewHelpers.get(TAB_NOTES);
+        // Get or create GeckoViewHelper for Agenda tab
+        GeckoViewHelper helper = geckoViewHelpers.get(TAB_AGENDA);
         if (helper == null) {
-            helper = new GeckoViewHelper(fragment, true); // Notes tab is deep
-            geckoViewHelpers.put(TAB_NOTES, helper);
+            helper = new GeckoViewHelper(fragment, false); // Agenda tab is shallow - links open externally
+            geckoViewHelpers.put(TAB_AGENDA, helper);
         }
         mGeckoViewHelper = helper;
         
@@ -68,7 +68,7 @@ public class SessionNotesTabManager {
     }
     
     /**
-     * Initialize GeckoView for Notes tab.
+     * Initialize GeckoView for Agenda tab.
      * @param sharedGeckoView Optional shared GeckoView instance (singleton pattern). If null, tries to find from XML.
      */
     public void initializeGeckoView(GeckoView sharedGeckoView) {
@@ -87,137 +87,92 @@ public class SessionNotesTabManager {
         }
         
         // Try to find GeckoView in the container (shouldn't happen with singleton pattern)
-        ViewGroup container = (ViewGroup) mRootView.findViewById(R.id.tab_session_notes);
+        ViewGroup container = (ViewGroup) mRootView.findViewById(R.id.tab_session_links);
         if (container != null && container.getChildCount() > 0) {
             View child = container.getChildAt(0);
             if (child instanceof GeckoView) {
                 GeckoView geckoView = (GeckoView) child;
-                Log.d(TAG, "initializeGeckoView: Found notes GeckoView in container, visibility=" + geckoView.getVisibility() + ", hasSession=" + (geckoView.getSession() != null));
+                Log.d(TAG, "initializeGeckoView: Found agenda GeckoView in container, visibility=" + geckoView.getVisibility() + ", hasSession=" + (geckoView.getSession() != null));
                 mGeckoViewHelper.initialize(geckoView);
                 Log.d(TAG, "initializeGeckoView: After initialize, visibility=" + geckoView.getVisibility() + ", hasSession=" + (geckoView.getSession() != null) + ", session=" + geckoView.getSession());
                 return;
             }
         }
         
-        Log.e(TAG, "initializeGeckoView: Could not find notes GeckoView - shared GeckoView must be provided");
+        Log.e(TAG, "initializeGeckoView: Could not find agenda GeckoView - shared GeckoView must be provided");
     }
     
     /**
-     * Update Notes tab with the session title to construct and load HedgeDoc URL.
-     * @param titleString The session title string
+     * Update Agenda tab with the agenda URL from the session cursor.
      * @param sharedGeckoView Optional shared GeckoView instance. If provided, will initialize with it.
      */
-    public void updateNotesTab(String titleString, GeckoView sharedGeckoView) {
-        Log.d(TAG, "updateNotesTab: titleString=" + titleString + ", mRootView=" + (mRootView != null));
-        if (titleString == null) {
-            Log.w(TAG, "updateNotesTab: titleString is null, returning");
+    public void updateAgendaTab(String agendaUrl, GeckoView sharedGeckoView) {
+        Log.d(TAG, "updateAgendaTab: agendaUrl=" + agendaUrl + ", mRootView=" + (mRootView != null) + ", sharedGeckoView=" + (sharedGeckoView != null));
+        if (agendaUrl == null || agendaUrl.isEmpty()) {
+            Log.w(TAG, "updateAgendaTab: agendaUrl is null or empty, showing loading message");
+            loadLoadingMessage(sharedGeckoView);
             return;
         }
         
         // Ensure view is created before initializing
         if (mRootView == null) {
-            Log.w(TAG, "updateNotesTab: mRootView is null, returning");
+            Log.w(TAG, "updateAgendaTab: mRootView is null, returning");
             return;
         }
         
-        // Initialize GeckoView lazily (after view is attached)
-        // Use provided shared GeckoView if available, otherwise try to find it in container
-        GeckoView sharedView = sharedGeckoView;
-        if (sharedView == null) {
-            ViewGroup container = (ViewGroup) mRootView.findViewById(R.id.tab_session_notes);
+        // Initialize GeckoView if shared instance is provided
+        if (sharedGeckoView != null) {
+            initializeGeckoView(sharedGeckoView);
+        } else {
+            // Fallback: Try to find shared GeckoView in container (less efficient)
+            ViewGroup container = (ViewGroup) mRootView.findViewById(R.id.tab_session_links);
             if (container != null && container.getChildCount() > 0) {
                 View child = container.getChildAt(0);
                 if (child instanceof GeckoView) {
-                    sharedView = (GeckoView) child;
+                    initializeGeckoView((GeckoView) child);
                 }
             }
         }
-        initializeGeckoView(sharedView);
         
         if (mGeckoViewHelper.getGeckoView() == null || mGeckoViewHelper.getGeckoSession() == null) {
-            Log.w(TAG, "updateNotesTab: GeckoView not initialized");
+            Log.w(TAG, "updateAgendaTab: GeckoView not initialized, storing URL for later");
+            // Store URL for later loading when GeckoView is initialized
+            mGeckoViewTabUrls.put(TAB_AGENDA, agendaUrl);
             return;
         }
         
-        // Extract group acronym from session title
-        String groupAcronym = extractGroupAcronym(titleString);
-        
-        Log.d(TAG, "updateNotesTab: Extracted groupAcronym='" + groupAcronym + "' from title='" + titleString + "'");
-        
-        // Construct HedgeDoc URL: https://notes.ietf.org/notes-ietf-{meetingNumber}-{groupAcronym}?view
-        if (groupAcronym != null && !groupAcronym.isEmpty()) {
-            int meetingNumber = org.ietf.ietfsched.util.MeetingPreferences.getCurrentMeetingNumber(mFragment.getActivity());
-            final String hedgedocUrl = "https://notes.ietf.org/notes-ietf-" + meetingNumber + "-" + groupAcronym + "?view";
-            
-            // Only load if URL has changed AND Notes tab is currently active
-            boolean notesTabActive = mTabHost != null && TAB_NOTES.equals(mTabHost.getCurrentTabTag());
-            String lastUrl = mGeckoViewTabUrls.get(TAB_NOTES);
-            boolean isFirstLoad = (lastUrl == null);
-            if (!hedgedocUrl.equals(lastUrl)) {
-                Log.d(TAG, "updateNotesTab: URL changed, notesTabActive=" + notesTabActive + ", isFirstLoad=" + isFirstLoad);
-                // Only load if Notes tab is active or if this is the first load
-                if (notesTabActive || isFirstLoad) {
-                    Log.d(TAG, "updateNotesTab: Loading URL: " + hedgedocUrl);
-                    mGeckoViewHelper.loadUrl(hedgedocUrl);
-                    mGeckoViewTabUrls.put(TAB_NOTES, hedgedocUrl);
-                    // Track this as the initial URL for this tab
-                    mGeckoViewInitialUrls.put(TAB_NOTES, hedgedocUrl);
-                } else {
-                    Log.d(TAG, "updateNotesTab: Skipping load - Notes tab not active, will load when tab is opened");
-                    // Store URL for later loading when Notes tab is opened
-                    mGeckoViewTabUrls.put(TAB_NOTES, hedgedocUrl);
-                }
+        // Only load if URL has changed AND Agenda tab is currently active
+        boolean agendaTabActive = mTabHost != null && TAB_AGENDA.equals(mTabHost.getCurrentTabTag());
+        String lastUrl = mGeckoViewTabUrls.get(TAB_AGENDA);
+        boolean isFirstLoad = (lastUrl == null);
+        if (!agendaUrl.equals(lastUrl)) {
+            Log.d(TAG, "updateAgendaTab: URL changed, agendaTabActive=" + agendaTabActive + ", isFirstLoad=" + isFirstLoad);
+            // Only load if Agenda tab is active or if this is the first load
+            if (agendaTabActive || isFirstLoad) {
+                Log.d(TAG, "updateAgendaTab: Loading URL: " + agendaUrl);
+                mGeckoViewHelper.loadUrl(agendaUrl);
+                mGeckoViewTabUrls.put(TAB_AGENDA, agendaUrl);
+                // Track this as the initial URL for this tab
+                mGeckoViewInitialUrls.put(TAB_AGENDA, agendaUrl);
             } else {
-                Log.d(TAG, "updateNotesTab: URL unchanged, skipping reload: " + hedgedocUrl);
+                Log.d(TAG, "updateAgendaTab: Skipping load - Agenda tab not active, will load when tab is opened");
+                // Store URL for later loading when Agenda tab is opened
+                mGeckoViewTabUrls.put(TAB_AGENDA, agendaUrl);
             }
         } else {
-            Log.w(TAG, "updateNotesTab: groupAcronym is null or empty, showing loading message");
-            loadLoadingMessage(sharedGeckoView);
-            mGeckoViewTabUrls.remove(TAB_NOTES);
-            mGeckoViewInitialUrls.remove(TAB_NOTES);
+            Log.d(TAG, "updateAgendaTab: URL unchanged, skipping reload: " + agendaUrl);
         }
     }
     
     /**
-     * Update Notes tab with the session title (backward compatibility - no shared GeckoView).
+     * Update Agenda tab with the agenda URL (backward compatibility - no shared GeckoView).
      */
-    public void updateNotesTab(String titleString) {
-        updateNotesTab(titleString, null);
-    }
-    
-    private String extractGroupAcronym(String titleString) {
-        // Title format: "{area} - {group} - {title}" or " -{group} - {title}" if area is empty
-        // We need to extract the group (middle part)
-        if (titleString == null || !titleString.contains(" - ")) {
-            return null;
-        }
-        
-        String[] parts = titleString.split(" - ", 3);
-        Log.d(TAG, "updateNotesTab: Split title into " + parts.length + " parts");
-        
-        // Group is typically the middle part (index 1)
-        // But if area is empty, format is " -{group} - {title}", so parts[0] might be empty
-        if (parts.length >= 2) {
-            // Use the middle part (index 1) as the group
-            String groupAcronym = parts[1].toLowerCase(java.util.Locale.ROOT).trim();
-            // Remove any leading dash if area was empty
-            if (groupAcronym.startsWith("-")) {
-                groupAcronym = groupAcronym.substring(1).trim();
-            }
-            return groupAcronym;
-        } else if (parts.length == 1 && titleString.startsWith(" -")) {
-            // Handle case where area is empty: " -{group} - {title}"
-            // Split on " -" (space-dash) instead
-            String[] altParts = titleString.split(" -", 3);
-            if (altParts.length >= 2) {
-                return altParts[1].split(" -", 2)[0].toLowerCase(java.util.Locale.ROOT).trim();
-            }
-        }
-        return null;
+    public void updateAgendaTab(String agendaUrl) {
+        updateAgendaTab(agendaUrl, null);
     }
     
     /**
-     * Load a loading message when notes content is not available.
+     * Load a loading message when agenda content is not available.
      * @param sharedGeckoView Optional shared GeckoView instance. If provided, will initialize with it.
      */
     private void loadLoadingMessage(GeckoView sharedGeckoView) {
@@ -232,7 +187,7 @@ public class SessionNotesTabManager {
                 initializeGeckoView(sharedGeckoView);
             } else {
                 // Fallback: Try to find shared GeckoView in container
-                ViewGroup container = (ViewGroup) mRootView.findViewById(R.id.tab_session_notes);
+                ViewGroup container = (ViewGroup) mRootView.findViewById(R.id.tab_session_links);
                 if (container != null && container.getChildCount() > 0) {
                     View child = container.getChildAt(0);
                     if (child instanceof GeckoView) {
@@ -247,7 +202,7 @@ public class SessionNotesTabManager {
             }
         }
         
-        String markdownText = "Notes are being downloaded. Please check back in a moment or use the Refresh button.";
+        String markdownText = "Agenda is being downloaded. Please check back in a moment or use the Refresh button.";
         
         // Convert markdown to HTML
         Parser parser = Parser.builder().build();
@@ -276,7 +231,7 @@ public class SessionNotesTabManager {
             String dataUri = "data:text/html;charset=utf-8;base64," + base64Html;
             mGeckoViewHelper.loadUrl(dataUri);
         } catch (java.io.UnsupportedEncodingException e) {
-            Log.e(TAG, "Failed to encode Notes loading message HTML", e);
+            Log.e(TAG, "Failed to encode Agenda loading message HTML", e);
         }
     }
     
@@ -295,7 +250,7 @@ public class SessionNotesTabManager {
             return;
         }
         
-        String markdownText = "Unable to load notes. Please check your internet connection and try again.";
+        String markdownText = "Unable to load agenda. Please check your internet connection and try again.";
         
         // Convert markdown to HTML
         Parser parser = Parser.builder().build();
@@ -324,12 +279,12 @@ public class SessionNotesTabManager {
             String dataUri = "data:text/html;charset=utf-8;base64," + base64Html;
             mGeckoViewHelper.loadUrl(dataUri);
         } catch (java.io.UnsupportedEncodingException e) {
-            Log.e(TAG, "Failed to encode Notes error message HTML", e);
+            Log.e(TAG, "Failed to encode Agenda error message HTML", e);
         }
     }
     
     /**
-     * Get the GeckoViewHelper for the Notes tab.
+     * Get the GeckoViewHelper for the Agenda tab.
      */
     public GeckoViewHelper getGeckoViewHelper() {
         return mGeckoViewHelper;
