@@ -247,58 +247,7 @@ public class SessionDetailFragment extends Fragment implements
                     mTabHost.post(new Runnable() {
                         @Override
                         public void run() {
-                            String expectedUrl = mGeckoViewTabUrls.get(tabId);
-                            String initialUrl = mGeckoViewInitialUrls.get(tabId);
-                            
-                            // If URL has changed (e.g., different session) or initialUrl is null, re-initialize GeckoView
-                            // Otherwise, preserve navigation state
-                            if (expectedUrl != null && (initialUrl == null || !expectedUrl.equals(initialUrl))) {
-                                Log.d(TAG, "onTabChanged: URL changed for GeckoView tab " + tabId + " (expected=" + expectedUrl + ", initial=" + initialUrl + "), re-initializing");
-                                reinitializeGeckoView(tabId);
-                                // Load the new URL
-                                GeckoViewHelper helper = mGeckoViewHelpers.get(tabId);
-                                if (helper != null) {
-                                    Log.d(TAG, "onTabChanged: Loading new URL for GeckoView tab " + tabId + ": " + expectedUrl);
-                                    helper.loadUrl(expectedUrl);
-                                    mGeckoViewInitialUrls.put(tabId, expectedUrl);
-                                }
-                            } else if (expectedUrl == null) {
-                                // No URL stored yet, trigger update to construct and load URL
-                                Log.d(TAG, "onTabChanged: No URL stored for GeckoView tab " + tabId + ", triggering update");
-                                // Ensure shared GeckoView exists and is in the correct container
-                                if (mSharedGeckoView == null) {
-                                    createSharedGeckoView();
-                                }
-                                // Move shared GeckoView to active tab's container
-                                ViewGroup targetContainer = null;
-                                if (TAG_NOTES.equals(tabId)) {
-                                    targetContainer = (ViewGroup) mRootView.findViewById(R.id.tab_session_notes);
-                                } else if (TAG_AGENDA.equals(tabId)) {
-                                    targetContainer = (ViewGroup) mRootView.findViewById(R.id.tab_session_links);
-                                }
-                                if (targetContainer != null && mSharedGeckoView != null && mSharedGeckoView.getParent() != targetContainer) {
-                                    ViewGroup currentParent = (ViewGroup) mSharedGeckoView.getParent();
-                                    if (currentParent != null) {
-                                        currentParent.removeView(mSharedGeckoView);
-                                    }
-                                    targetContainer.addView(mSharedGeckoView);
-                                }
-                                if (TAG_NOTES.equals(tabId) && mNotesTabManager != null && mTitleString != null) {
-                                    mNotesTabManager.updateNotesTab(mTitleString, mSharedGeckoView);
-                                    if (mSharedGeckoView != null) {
-                                        mNotesTabManager.initializeGeckoView(mSharedGeckoView);
-                                    }
-                                } else if (TAG_AGENDA.equals(tabId) && mAgendaTabManager != null && mUrl != null) {
-                                    // Pass shared GeckoView directly to avoid redundant initialization
-                                    mAgendaTabManager.updateAgendaTab(mUrl, mSharedGeckoView);
-                                }
-                            } else {
-                                // URL unchanged, preserve navigation state - ensure correct GeckoView is active
-                                Log.d(TAG, "onTabChanged: URL unchanged for GeckoView tab " + tabId + " (URL=" + expectedUrl + "), preserving navigation state");
-                                
-                                // Generic approach: handle session attachment/detachment for all GeckoView tabs
-                                switchGeckoViewTab(tabId);
-                            }
+                            handleGeckoViewTabChange(tabId);
                         }
                     });
                 }
@@ -647,13 +596,7 @@ public class SessionDetailFragment extends Fragment implements
         }
         
         // Step 1: Get target container for active tab
-        ViewGroup targetContainer = null;
-        if (TAG_NOTES.equals(activeTabId)) {
-            targetContainer = (ViewGroup) mRootView.findViewById(R.id.tab_session_notes);
-        } else if (TAG_AGENDA.equals(activeTabId)) {
-            targetContainer = (ViewGroup) mRootView.findViewById(R.id.tab_session_links);
-        }
-        
+        ViewGroup targetContainer = getContainerForTab(activeTabId);
         if (targetContainer == null) {
             Log.w(TAG, "switchGeckoViewTab: Could not find container for tab " + activeTabId);
             return;
@@ -709,11 +652,7 @@ public class SessionDetailFragment extends Fragment implements
         GeckoSession activeSession = activeHelper.getGeckoSession();
         if (activeSession == null) {
             Log.d(TAG, "switchGeckoViewTab: Session not initialized for tab " + activeTabId + ", initializing");
-            if (TAG_NOTES.equals(activeTabId) && mNotesTabManager != null) {
-                mNotesTabManager.initializeGeckoView(mSharedGeckoView);
-            } else if (TAG_AGENDA.equals(activeTabId) && mAgendaTabManager != null) {
-                mAgendaTabManager.initializeGeckoView(mSharedGeckoView);
-            }
+            initializeTabManager(activeTabId);
             activeSession = activeHelper.getGeckoSession();
         }
         
@@ -926,6 +865,98 @@ public class SessionDetailFragment extends Fragment implements
     }
     
     /**
+     * Handle GeckoView tab change: preserve state if URL unchanged, re-initialize if URL changed.
+     * @param tabId The tab ID that is becoming active
+     */
+    private void handleGeckoViewTabChange(String tabId) {
+        String expectedUrl = mGeckoViewTabUrls.get(tabId);
+        String initialUrl = mGeckoViewInitialUrls.get(tabId);
+        
+        // If URL has changed (e.g., different session) or initialUrl is null, re-initialize GeckoView
+        // Otherwise, preserve navigation state
+        if (expectedUrl != null && (initialUrl == null || !expectedUrl.equals(initialUrl))) {
+            Log.d(TAG, "handleGeckoViewTabChange: URL changed for GeckoView tab " + tabId + " (expected=" + expectedUrl + ", initial=" + initialUrl + "), re-initializing");
+            reinitializeGeckoView(tabId);
+            // Load the new URL
+            GeckoViewHelper helper = mGeckoViewHelpers.get(tabId);
+            if (helper != null) {
+                Log.d(TAG, "handleGeckoViewTabChange: Loading new URL for GeckoView tab " + tabId + ": " + expectedUrl);
+                helper.loadUrl(expectedUrl);
+                mGeckoViewInitialUrls.put(tabId, expectedUrl);
+            }
+        } else if (expectedUrl == null) {
+            // No URL stored yet, trigger update to construct and load URL
+            Log.d(TAG, "handleGeckoViewTabChange: No URL stored for GeckoView tab " + tabId + ", triggering update");
+            ensureSharedGeckoViewInContainer(tabId);
+            updateTabManagerForTab(tabId);
+        } else {
+            // URL unchanged, preserve navigation state - ensure correct GeckoView is active
+            Log.d(TAG, "handleGeckoViewTabChange: URL unchanged for GeckoView tab " + tabId + " (URL=" + expectedUrl + "), preserving navigation state");
+            switchGeckoViewTab(tabId);
+        }
+    }
+    
+    /**
+     * Ensure shared GeckoView exists and is in the correct container for the given tab.
+     * @param tabId The tab ID
+     */
+    private void ensureSharedGeckoViewInContainer(String tabId) {
+        if (mSharedGeckoView == null) {
+            createSharedGeckoView();
+        }
+        
+        ViewGroup targetContainer = getContainerForTab(tabId);
+        if (targetContainer != null && mSharedGeckoView != null && mSharedGeckoView.getParent() != targetContainer) {
+            ViewGroup currentParent = (ViewGroup) mSharedGeckoView.getParent();
+            if (currentParent != null) {
+                currentParent.removeView(mSharedGeckoView);
+            }
+            targetContainer.addView(mSharedGeckoView);
+        }
+    }
+    
+    /**
+     * Update the tab manager for the given tab to construct and load URL.
+     * @param tabId The tab ID
+     */
+    private void updateTabManagerForTab(String tabId) {
+        if (TAG_NOTES.equals(tabId) && mNotesTabManager != null && mTitleString != null) {
+            mNotesTabManager.updateNotesTab(mTitleString, mSharedGeckoView);
+            if (mSharedGeckoView != null) {
+                mNotesTabManager.initializeGeckoView(mSharedGeckoView);
+            }
+        } else if (TAG_AGENDA.equals(tabId) && mAgendaTabManager != null && mUrl != null) {
+            mAgendaTabManager.updateAgendaTab(mUrl, mSharedGeckoView);
+        }
+    }
+    
+    /**
+     * Get the container ViewGroup for a given tab ID.
+     * @param tabId The tab ID
+     * @return The container ViewGroup, or null if not found
+     */
+    private ViewGroup getContainerForTab(String tabId) {
+        if (TAG_NOTES.equals(tabId)) {
+            return (ViewGroup) mRootView.findViewById(R.id.tab_session_notes);
+        } else if (TAG_AGENDA.equals(tabId)) {
+            return (ViewGroup) mRootView.findViewById(R.id.tab_session_links);
+        }
+        return null;
+    }
+    
+    /**
+     * Initialize the tab manager for a given tab ID.
+     * @param tabId The tab ID
+     */
+    private void initializeTabManager(String tabId) {
+        if (TAG_NOTES.equals(tabId) && mNotesTabManager != null) {
+            mNotesTabManager.initializeGeckoView(mSharedGeckoView);
+        } else if (TAG_AGENDA.equals(tabId) && mAgendaTabManager != null) {
+            mAgendaTabManager.initializeGeckoView(mSharedGeckoView);
+        }
+    }
+    
+    /**
      * Re-initialize GeckoView for a specific tab by closing the old session and creating a new one.
      * This clears the navigation history, ensuring a fresh start when the URL changes.
      * @param tabId The tab tag identifier
@@ -945,11 +976,7 @@ public class SessionDetailFragment extends Fragment implements
         mGeckoViewInitialUrls.remove(tabId);
         
         // Re-initialize GeckoView (will create new session)
-        if (TAG_NOTES.equals(tabId) && mNotesTabManager != null) {
-            mNotesTabManager.initializeGeckoView(mSharedGeckoView);
-        } else if (TAG_AGENDA.equals(tabId) && mAgendaTabManager != null) {
-            mAgendaTabManager.initializeGeckoView(mSharedGeckoView);
-        }
+        initializeTabManager(tabId);
     }
     
     /**

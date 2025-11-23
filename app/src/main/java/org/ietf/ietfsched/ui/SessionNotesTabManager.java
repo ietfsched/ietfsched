@@ -23,48 +23,20 @@ import androidx.fragment.app.Fragment;
 import org.ietf.ietfsched.R;
 import org.ietf.ietfsched.util.GeckoViewHelper;
 import org.mozilla.geckoview.GeckoView;
-import org.commonmark.parser.Parser;
-import org.commonmark.renderer.html.HtmlRenderer;
 
 /**
  * Manages the Notes tab GeckoView and URL construction for SessionDetailFragment.
  */
-public class SessionNotesTabManager {
+public class SessionNotesTabManager extends BaseGeckoViewTabManager {
     private static final String TAG = "SessionNotesTabManager";
     private static final String TAB_NOTES = "notes";
-    
-    private final Fragment mFragment;
-    private final ViewGroup mRootView;
-    private final GeckoViewHelper mGeckoViewHelper;
-    private final java.util.Map<String, String> mGeckoViewTabUrls;
-    private final java.util.Map<String, String> mGeckoViewInitialUrls;
-    private final android.widget.TabHost mTabHost;
     
     public SessionNotesTabManager(Fragment fragment, ViewGroup rootView, android.widget.TabHost tabHost,
             java.util.Map<String, GeckoViewHelper> geckoViewHelpers,
             java.util.Map<String, String> geckoViewTabUrls,
             java.util.Map<String, String> geckoViewInitialUrls) {
-        mFragment = fragment;
-        mRootView = rootView;
-        mTabHost = tabHost;
-        mGeckoViewTabUrls = geckoViewTabUrls;
-        mGeckoViewInitialUrls = geckoViewInitialUrls;
-        
-        // Get or create GeckoViewHelper for Notes tab
-        GeckoViewHelper helper = geckoViewHelpers.get(TAB_NOTES);
-        if (helper == null) {
-            helper = new GeckoViewHelper(fragment, true); // Notes tab is deep
-            geckoViewHelpers.put(TAB_NOTES, helper);
-        }
-        mGeckoViewHelper = helper;
-        
-        // Set up error callback to show error message on load failure
-        mGeckoViewHelper.setLoadErrorCallback(new GeckoViewHelper.LoadErrorCallback() {
-            @Override
-            public void onLoadError(String uri) {
-                loadErrorMessage(uri);
-            }
-        });
+        super(fragment, rootView, tabHost, geckoViewHelpers, geckoViewTabUrls, geckoViewInitialUrls,
+                TAB_NOTES, true); // Notes tab is deep
     }
     
     /**
@@ -72,34 +44,7 @@ public class SessionNotesTabManager {
      * @param sharedGeckoView Optional shared GeckoView instance (singleton pattern). If null, tries to find from XML.
      */
     public void initializeGeckoView(GeckoView sharedGeckoView) {
-        if (sharedGeckoView != null) {
-            // Use shared singleton GeckoView
-            Log.d(TAG, "initializeGeckoView: Using shared GeckoView instance");
-            mGeckoViewHelper.initialize(sharedGeckoView);
-            return;
-        }
-        
-        // Fallback: try to find from XML (for backward compatibility)
-        // Note: With singleton pattern, this should not be used, but kept for safety
-        if (mRootView == null) {
-            Log.w(TAG, "initializeGeckoView: mRootView is null and no shared GeckoView provided");
-            return;
-        }
-        
-        // Try to find GeckoView in the container (shouldn't happen with singleton pattern)
-        ViewGroup container = (ViewGroup) mRootView.findViewById(R.id.tab_session_notes);
-        if (container != null && container.getChildCount() > 0) {
-            View child = container.getChildAt(0);
-            if (child instanceof GeckoView) {
-                GeckoView geckoView = (GeckoView) child;
-                Log.d(TAG, "initializeGeckoView: Found notes GeckoView in container, visibility=" + geckoView.getVisibility() + ", hasSession=" + (geckoView.getSession() != null));
-                mGeckoViewHelper.initialize(geckoView);
-                Log.d(TAG, "initializeGeckoView: After initialize, visibility=" + geckoView.getVisibility() + ", hasSession=" + (geckoView.getSession() != null) + ", session=" + geckoView.getSession());
-                return;
-            }
-        }
-        
-        Log.e(TAG, "initializeGeckoView: Could not find notes GeckoView - shared GeckoView must be provided");
+        initializeGeckoView(sharedGeckoView, R.id.tab_session_notes);
     }
     
     /**
@@ -172,7 +117,8 @@ public class SessionNotesTabManager {
             }
         } else {
             Log.w(TAG, "updateNotesTab: groupAcronym is null or empty, showing loading message");
-            loadLoadingMessage(sharedGeckoView);
+            loadLoadingMessage(sharedGeckoView, R.id.tab_session_notes,
+                    "Notes are being downloaded. Please check back in a moment or use the Refresh button.");
             mGeckoViewTabUrls.remove(TAB_NOTES);
             mGeckoViewInitialUrls.remove(TAB_NOTES);
         }
@@ -216,123 +162,9 @@ public class SessionNotesTabManager {
         return null;
     }
     
-    /**
-     * Load a loading message when notes content is not available.
-     * @param sharedGeckoView Optional shared GeckoView instance. If provided, will initialize with it.
-     */
-    private void loadLoadingMessage(GeckoView sharedGeckoView) {
-        if (mGeckoViewHelper == null || mFragment.getActivity() == null) {
-            return;
-        }
-        
-        // Ensure GeckoView is initialized
-        if (mGeckoViewHelper.getGeckoView() == null || mGeckoViewHelper.getGeckoSession() == null) {
-            // Initialize with shared GeckoView if provided
-            if (sharedGeckoView != null) {
-                initializeGeckoView(sharedGeckoView);
-            } else {
-                // Fallback: Try to find shared GeckoView in container
-                ViewGroup container = (ViewGroup) mRootView.findViewById(R.id.tab_session_notes);
-                if (container != null && container.getChildCount() > 0) {
-                    View child = container.getChildAt(0);
-                    if (child instanceof GeckoView) {
-                        initializeGeckoView((GeckoView) child);
-                    }
-                }
-            }
-            
-            if (mGeckoViewHelper.getGeckoView() == null || mGeckoViewHelper.getGeckoSession() == null) {
-                Log.w(TAG, "loadLoadingMessage: GeckoView not initialized");
-                return;
-            }
-        }
-        
-        String markdownText = "Notes are being downloaded. Please check back in a moment or use the Refresh button.";
-        
-        // Convert markdown to HTML
-        Parser parser = Parser.builder().build();
-        HtmlRenderer renderer = HtmlRenderer.builder().build();
-        org.commonmark.node.Node document = parser.parse(markdownText);
-        String htmlContent = renderer.render(document);
-        
-        // Wrap HTML with basic styling
-        String styledHtml = "<!DOCTYPE html>" +
-                "<html><head>" +
-                "<meta name='viewport' content='width=device-width, initial-scale=1'>" +
-                "<style>" +
-                "body { font-family: sans-serif; padding: 16px; line-height: 1.6; }" +
-                "a { color: #0066cc; }" +
-                "ul { padding-left: 20px; }" +
-                "li { margin-bottom: 8px; }" +
-                "</style>" +
-                "</head><body>" +
-                htmlContent +
-                "</body></html>";
-        
-        // Load HTML using Base64 encoding (same approach as WellNoteFragment)
-        try {
-            byte[] htmlBytes = styledHtml.getBytes("UTF-8");
-            String base64Html = android.util.Base64.encodeToString(htmlBytes, android.util.Base64.NO_WRAP);
-            String dataUri = "data:text/html;charset=utf-8;base64," + base64Html;
-            mGeckoViewHelper.loadUrl(dataUri);
-        } catch (java.io.UnsupportedEncodingException e) {
-            Log.e(TAG, "Failed to encode Notes loading message HTML", e);
-        }
-    }
-    
-    /**
-     * Load an error message when URL load fails.
-     * @param failedUrl The URL that failed to load
-     */
-    private void loadErrorMessage(String failedUrl) {
-        if (mGeckoViewHelper == null || mFragment.getActivity() == null) {
-            return;
-        }
-        
-        // Ensure GeckoView is initialized
-        if (mGeckoViewHelper.getGeckoView() == null || mGeckoViewHelper.getGeckoSession() == null) {
-            Log.w(TAG, "loadErrorMessage: GeckoView not initialized");
-            return;
-        }
-        
-        String markdownText = "Unable to load notes. Please check your internet connection and try again.";
-        
-        // Convert markdown to HTML
-        Parser parser = Parser.builder().build();
-        HtmlRenderer renderer = HtmlRenderer.builder().build();
-        org.commonmark.node.Node document = parser.parse(markdownText);
-        String htmlContent = renderer.render(document);
-        
-        // Wrap HTML with basic styling
-        String styledHtml = "<!DOCTYPE html>" +
-                "<html><head>" +
-                "<meta name='viewport' content='width=device-width, initial-scale=1'>" +
-                "<style>" +
-                "body { font-family: sans-serif; padding: 16px; line-height: 1.6; }" +
-                "a { color: #0066cc; }" +
-                "ul { padding-left: 20px; }" +
-                "li { margin-bottom: 8px; }" +
-                "</style>" +
-                "</head><body>" +
-                htmlContent +
-                "</body></html>";
-        
-        // Load HTML using Base64 encoding
-        try {
-            byte[] htmlBytes = styledHtml.getBytes("UTF-8");
-            String base64Html = android.util.Base64.encodeToString(htmlBytes, android.util.Base64.NO_WRAP);
-            String dataUri = "data:text/html;charset=utf-8;base64," + base64Html;
-            mGeckoViewHelper.loadUrl(dataUri);
-        } catch (java.io.UnsupportedEncodingException e) {
-            Log.e(TAG, "Failed to encode Notes error message HTML", e);
-        }
-    }
-    
-    /**
-     * Get the GeckoViewHelper for the Notes tab.
-     */
-    public GeckoViewHelper getGeckoViewHelper() {
-        return mGeckoViewHelper;
+    @Override
+    protected String getErrorMessage() {
+        return "Unable to load notes. Please check your internet connection and try again.";
     }
 }
 
