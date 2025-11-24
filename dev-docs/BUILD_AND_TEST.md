@@ -45,6 +45,73 @@ If you don't have a physical Android device:
 
 ---
 
+## Automated Regression Tests
+
+The app includes Espresso UI tests for regression testing of main features.
+
+### Running Tests
+
+**Quick Start:**
+```bash
+cd ietfsched
+./run_tests.sh
+```
+
+The test script will:
+- Automatically find and connect to emulators/devices
+- Start an emulator if none is running
+- Run all regression tests
+- Display progress with test names
+
+**Manual Execution:**
+```bash
+cd ietfsched
+./gradlew connectedAndroidTest
+```
+
+**Run Specific Test Class:**
+```bash
+./gradlew connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=org.ietf.ietfsched.HomeScreenTest
+```
+
+### Test Coverage
+
+The regression tests cover:
+- **Home Screen Navigation** - Verifies main navigation buttons work
+- **Session List & Search** - Tests session listing and search functionality
+- **Session Detail Tabs** - Tests Content, Agenda, Notes, and Join tabs
+- **Session Starring** - Tests star/unstar functionality
+
+### Test Details
+
+See **[REGRESSION_TEST_PLAN.md](REGRESSION_TEST_PLAN.md)** for:
+- Complete test scenarios
+- Implementation details
+- Test data requirements
+- Known limitations
+
+### Test Prerequisites
+
+- App must be installed on device/emulator
+- **IMPORTANT**: Tests require Android API 35 or lower. API 36 (Android 16) is not supported by Espresso 3.6.1
+- After fresh install, tests wait for initial database sync (two toast notifications)
+- Tests use "tls" session as stable test case
+- Network connectivity required for some tests
+
+### Test Output
+
+Test results are available at:
+```
+app/build/reports/androidTests/connected/debug/index.html
+```
+
+Tests log progress to both Logcat and stdout, showing:
+- Test setup messages
+- Individual test names as they run
+- Test completion status
+
+---
+
 ## Feature Testing Guide
 
 ### Test 1: Dynamic Meeting Detection
@@ -345,6 +412,18 @@ Use Android Studio's Device File Explorer:
 
 ## Testing Checklist
 
+### Automated Regression Tests
+
+Before committing changes, run the automated regression tests:
+```bash
+cd ietfsched
+./run_tests.sh
+```
+
+All tests should pass. See [REGRESSION_TEST_PLAN.md](REGRESSION_TEST_PLAN.md) for complete test details.
+
+### Manual Feature Testing
+
 Before considering features complete, verify:
 
 **Core Functionality**
@@ -441,4 +520,5 @@ Once you've verified everything works:
 - **[OVERVIEW.md](OVERVIEW.md)** - Project overview and architecture
 - **[IMPLEMENTATION_NOTES.md](IMPLEMENTATION_NOTES.md)** - Technical implementation details
 - **[CHANGES_LOG.md](CHANGES_LOG.md)** - Detailed changelog
+- **[REGRESSION_TEST_PLAN.md](REGRESSION_TEST_PLAN.md)** - Automated Espresso test plan and implementation
 

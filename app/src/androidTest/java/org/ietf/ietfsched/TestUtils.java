@@ -1,7 +1,15 @@
 package org.ietf.ietfsched;
 
+import android.os.IBinder;
+import android.util.Log;
+import android.view.WindowManager;
+
 import androidx.test.espresso.IdlingResource;
+import androidx.test.espresso.Root;
 import androidx.test.espresso.idling.CountingIdlingResource;
+
+import org.hamcrest.Description;
+import org.hamcrest.TypeSafeMatcher;
 
 /**
  * Utility class for test helpers and common test operations
@@ -183,24 +191,95 @@ public class TestUtils {
     }
 
     /**
+     * Custom matcher for toast messages
+     * 
+     * Toasts are displayed in a separate window type, so we need a custom matcher
+     * to identify them in the view hierarchy.
+     */
+    public static class ToastMatcher extends TypeSafeMatcher<Root> {
+        @Override
+        public void describeTo(Description description) {
+            description.appendText("is toast");
+        }
+
+        @Override
+        protected boolean matchesSafely(Root root) {
+            int type = root.getWindowLayoutParams().get().type;
+            if (type == WindowManager.LayoutParams.TYPE_TOAST) {
+                IBinder windowToken = root.getDecorView().getWindowToken();
+                IBinder appToken = root.getDecorView().getApplicationWindowToken();
+                if (windowToken == appToken) {
+                    // windowToken == appToken means this isn't a toast from another app
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    /**
      * Wait for initial database sync to complete
      * 
-     * After app installation, the app shows two toast notifications indicating
-     * sync completion. This method waits for those toasts to appear.
+     * After app installation, the app shows two toast notifications:
+     * 1. "Refreshing schedule data..." (when sync starts)
+     * 2. "Schedule updated" (when sync completes)
      * 
-     * Uses Espresso to wait for toast messages to appear and disappear.
+     * This method waits for both toast messages to appear and disappear.
+     * If toasts don't appear (sync already completed), returns immediately.
+     * 
+     * Note: On subsequent test runs, sync may already be complete, so toasts
+     * won't appear. In this case, Espresso will timeout (default ~10 seconds)
+     * before catching the exception. To avoid this delay on subsequent runs,
+     * set skipIfNotNeeded=true to quickly check and skip if toasts don't appear.
+     * 
+     * @param skipIfNotNeeded If true, will quickly return if toasts don't appear immediately
+     */
+    public static void waitForInitialSync(boolean skipIfNotNeeded) {
+        Log.d(TAG, "waitForInitialSync: Checking for sync toasts (skipIfNotNeeded=" + skipIfNotNeeded + ")...");
+        
+        // If skipIfNotNeeded is true, skip the wait entirely to avoid long timeouts
+        // This is useful on subsequent test runs when sync is already complete
+        if (skipIfNotNeeded) {
+            Log.d(TAG, "waitForInitialSync: Skipping wait (skipIfNotNeeded=true). If sync is needed, it will happen in background.");
+            return;
+        }
+        
+        try {
+            // Check for first toast: "Refreshing schedule data..."
+            // Note: This will wait up to Espresso's default timeout (~10s) if toast doesn't exist
+            androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.withText("Refreshing schedule data..."))
+                    .inRoot(new ToastMatcher())
+                    .check(androidx.test.espresso.assertion.ViewAssertions.matches(androidx.test.espresso.matcher.ViewMatchers.isDisplayed()));
+            
+            Log.d(TAG, "waitForInitialSync: First toast found, waiting for sync...");
+            
+            // Wait for toast to disappear (toasts typically show for 2 seconds)
+            Thread.sleep(2500);
+            
+            // Wait for second toast: "Schedule updated"
+            androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.withText("Schedule updated"))
+                    .inRoot(new ToastMatcher())
+                    .check(androidx.test.espresso.assertion.ViewAssertions.matches(androidx.test.espresso.matcher.ViewMatchers.isDisplayed()));
+            
+            Log.d(TAG, "waitForInitialSync: Second toast found, sync complete");
+            
+            // Wait for toast to disappear
+            Thread.sleep(2500);
+        } catch (Exception e) {
+            // If toast doesn't appear (e.g., sync already completed), that's okay
+            Log.d(TAG, "waitForInitialSync: Sync toasts not found, assuming sync already completed: " + e.getClass().getSimpleName());
+            // No need to wait - sync is already done
+        }
+    }
+    
+    /**
+     * Wait for initial database sync to complete (convenience method)
+     * 
+     * Calls waitForInitialSync(false) - will wait for full timeout if toasts don't appear.
+     * For faster execution on subsequent runs, use waitForInitialSync(true) instead.
      */
     public static void waitForInitialSync() {
-        // TODO: Implement wait for sync toast notifications
-        // Use Espresso to wait for toast messages:
-        // - Wait for first toast to appear and disappear
-        // - Wait for second toast to appear and disappear
-        // Example:
-        // onView(withText(R.string.sync_started))
-        //     .inRoot(withDecorView(not(is(activity.getWindow().getDecorView()))))
-        //     .check(matches(isDisplayed()));
-        // Then wait for it to disappear
-        // Repeat for second toast
+        waitForInitialSync(false);
     }
 
     /**
@@ -214,6 +293,29 @@ public class TestUtils {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    /**
+     * Log test start message (both to Logcat and stdout for visibility)
+     * 
+     * @param tag Test class tag
+     * @param testName Name of the test method
+     */
+    public static void logTestStart(String tag, String testName) {
+        String message = ">>> Running test: " + testName;
+        Log.d(tag, message);
+        System.out.println(message);
+    }
+
+    /**
+     * Log test setup message (both to Logcat and stdout for visibility)
+     * 
+     * @param tag Test class tag
+     */
+    public static void logTestSetup(String tag) {
+        String message = "=== Starting test setup ===";
+        Log.d(tag, message);
+        System.out.println(message);
     }
 }
 

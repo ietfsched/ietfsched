@@ -308,10 +308,10 @@ app/src/androidTest/java/org/ietf/ietfsched/
 Add to `app/build.gradle`:
 ```gradle
 dependencies {
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.5.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-web:3.5.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-intents:3.5.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.6.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-web:3.6.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-intents:3.6.1'
     androidTestImplementation 'androidx.test:runner:1.5.2'
     androidTestImplementation 'androidx.test:rules:1.5.0'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
@@ -402,6 +402,7 @@ intended(hasData(Uri.parse("https://example.com")));
 - **Meetecho Lite tests**: Only work during active meeting week
 - **Network-dependent tests**: May fail if network is unavailable
 - **Time-sensitive tests**: Some tests depend on meeting schedule
+- **Android API 36**: Tests use Espresso 3.6.1 for API 36 compatibility. If issues persist, use an API 35 or lower emulator for testing.
 
 ### Test Execution Strategy
 
