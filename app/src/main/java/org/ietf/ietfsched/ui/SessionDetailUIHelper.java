@@ -16,8 +16,6 @@
 
 package org.ietf.ietfsched.ui;
 
-import android.content.Intent;
-import android.net.Uri;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -57,18 +55,6 @@ public class SessionDetailUIHelper {
     }
     
     /**
-     * Create a separator view.
-     */
-    public static View createSeparator(Fragment fragment) {
-        View separator = new ImageView(fragment.getActivity());
-        separator.setLayoutParams(new ViewGroup.LayoutParams(
-            ViewGroup.LayoutParams.FILL_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT));
-        separator.setBackgroundResource(android.R.drawable.divider_horizontal_bright);
-        return separator;
-    }
-    
-    /**
      * Create a thin separator line.
      */
     public static View createThinSeparator(Fragment fragment) {
@@ -79,57 +65,5 @@ public class SessionDetailUIHelper {
         return separator;
     }
     
-    /**
-     * Create Meetecho button with green gradient background.
-     */
-    public static TextView createMeetechoButton(Fragment fragment, final String meetechoUrl, 
-            Runnable linkEventCallback) {
-        TextView button = new TextView(fragment.getActivity());
-        button.setText(R.string.session_link_meetecho);
-        button.setTextSize(14);
-        button.setTextColor(0xFFFFFFFF);  // White text
-        button.setTypeface(null, android.graphics.Typeface.BOLD);
-        button.setGravity(android.view.Gravity.CENTER);
-        button.setPadding(16, 12, 16, 12);
-        
-        // Green gradient background with rounded corners
-        button.setBackground(createGradient(0xFF388E3C, 0xFF66BB6A, 4));
-        
-        button.setClickable(true);
-        button.setFocusable(true);
-        button.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                if (linkEventCallback != null) {
-                    linkEventCallback.run();
-                }
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(meetechoUrl));
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
-                fragment.startActivity(intent);
-            }
-        });
-        
-        android.widget.LinearLayout.LayoutParams buttonParams = new android.widget.LinearLayout.LayoutParams(
-            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
-        buttonParams.leftMargin = 8;   // Small gap between agenda and button
-        buttonParams.rightMargin = 16; // Right padding to match left padding of agenda
-        button.setLayoutParams(buttonParams);
-        
-        return button;
-    }
-    
-    /**
-     * Escape HTML special characters to prevent XSS.
-     */
-    public static String escapeHtml(String text) {
-        if (text == null) {
-            return "";
-        }
-        return text.replace("&", "&amp;")
-                   .replace("<", "&lt;")
-                   .replace(">", "&gt;")
-                   .replace("\"", "&quot;")
-                   .replace("'", "&#39;");
-    }
 }
 

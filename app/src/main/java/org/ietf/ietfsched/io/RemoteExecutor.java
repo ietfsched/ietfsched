@@ -80,6 +80,8 @@ public class RemoteExecutor {
 			urlConnection = (HttpsURLConnection) url.openConnection();
 
 			int status = urlConnection.getResponseCode();
+			Log.d(TAG, "executeGet: status=" + status + " for " + urlString);
+			
 			if (status == HttpsURLConnection.HTTP_OK) {
 				StringBuilder result = new StringBuilder();
 				BufferedReader reader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
@@ -97,6 +99,13 @@ public class RemoteExecutor {
 					urlConnection.disconnect();
 				}
 				return result.toString();
+			} else {
+				// Log non-200 status codes
+				Log.w(TAG, "executeGet: Non-200 status " + status + " for " + urlString);
+				// For 503 or other errors, return null to indicate failure
+				if (status == 503 || status >= 500) {
+					throw new Exception("Server error: HTTP " + status);
+				}
 			}
 		} finally {
 			if (urlConnection != null) {

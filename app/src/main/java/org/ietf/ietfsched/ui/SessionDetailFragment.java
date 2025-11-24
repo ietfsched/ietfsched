@@ -195,6 +195,10 @@ public class SessionDetailFragment extends Fragment implements
 
         mHandler = new NotifyingAsyncQueryHandler(getActivity().getContentResolver(), this);
         mRemoteExecutor = new RemoteExecutor();
+        
+        // Initialize draft fetcher now that RemoteExecutor is ready
+        initializeDraftFetcher();
+        
         mHandler.startQuery(SessionsQuery._TOKEN, mSessionUri, SessionsQuery.PROJECTION);
 //        mHandler.startQuery(TracksQuery._TOKEN, mTrackUri, TracksQuery.PROJECTION);
  //       mHandler.startQuery(SpeakersQuery._TOKEN, speakersUri, SpeakersQuery.PROJECTION);
@@ -249,6 +253,19 @@ public class SessionDetailFragment extends Fragment implements
                         @Override
                         public void run() {
                             handleGeckoViewTabChange(tabId);
+                            // After switching, trigger update to ensure URL loads if it was stored but not loaded
+                            if (TAG_JOIN.equals(tabId) && mJoinTabManager != null && mTitleString != null) {
+                                mJoinTabManager.updateJoinTab(mTitleString, mSharedGeckoView);
+                            }
+                        }
+                    });
+                }
+                // Handle Agenda tab (WebView) - trigger update if needed
+                if (TAG_AGENDA.equals(tabId) && mAgendaTabManager != null && mUrl != null) {
+                    mTabHost.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            mAgendaTabManager.updateAgendaTab(mUrl);
                         }
                     });
                 }
@@ -326,22 +343,30 @@ public class SessionDetailFragment extends Fragment implements
     private void initializeHelpers() {
         mContentTabBuilder = new SessionContentTabBuilder(this, mRootView, 
             new Runnable() { public void run() { fireLinkEvent(R.string.session_link_pdf); } });
-        mAgendaTabManager = new SessionAgendaTabManager(this, mRootView, mTabHost,
-            mGeckoViewHelpers, mGeckoViewTabUrls, mGeckoViewInitialUrls);
+        mAgendaTabManager = new SessionAgendaTabManager(this, mRootView, mTabHost);
         mNotesTabManager = new SessionNotesTabManager(this, mRootView, mTabHost,
             mGeckoViewHelpers, mGeckoViewTabUrls, mGeckoViewInitialUrls);
         mJoinTabManager = new SessionJoinTabManager(this, mRootView, mTabHost,
             mGeckoViewHelpers, mGeckoViewTabUrls, mGeckoViewInitialUrls);
         
-        mDraftFetcher = new SessionDraftFetcher(this, mSessionUri, mRemoteExecutor,
-            new Runnable() {
-                public void run() {
-                    // Re-query to refresh the Content tab
-                    if (mHandler != null && mSessionUri != null) {
-                        mHandler.startQuery(SessionsQuery._TOKEN, mSessionUri, SessionsQuery.PROJECTION);
+        // mDraftFetcher will be initialized in onActivityCreated() after mRemoteExecutor is ready
+    }
+    
+    /**
+     * Initialize draft fetcher after RemoteExecutor is ready.
+     */
+    private void initializeDraftFetcher() {
+        if (mDraftFetcher == null && mRemoteExecutor != null && mSessionUri != null) {
+            mDraftFetcher = new SessionDraftFetcher(this, mSessionUri, mRemoteExecutor,
+                new Runnable() {
+                    public void run() {
+                        // Re-query to refresh the Content tab
+                        if (mHandler != null && mSessionUri != null) {
+                            mHandler.startQuery(SessionsQuery._TOKEN, mSessionUri, SessionsQuery.PROJECTION);
+                        }
                     }
-                }
-            });
+                });
+        }
     }
 
     /**
@@ -566,7 +591,7 @@ public class SessionDetailFragment extends Fragment implements
      * @return true if the tab uses GeckoView, false otherwise
      */
     private boolean isGeckoViewTab(String tabId) {
-        return TAG_NOTES.equals(tabId) || TAG_AGENDA.equals(tabId) || TAG_JOIN.equals(tabId);
+        return TAG_NOTES.equals(tabId) || TAG_JOIN.equals(tabId);
     }
     
     /**
@@ -616,6 +641,15 @@ public class SessionDetailFragment extends Fragment implements
         }
         
         // Step 2: Add GeckoView to target container first (must be attached before setting session)
+        // But first, check if target container has a WebView (from Agenda tab) - remove it
+        if (targetContainer != null && targetContainer.getChildCount() > 0) {
+            View firstChild = targetContainer.getChildAt(0);
+            if (firstChild instanceof android.webkit.WebView) {
+                Log.d(TAG, "switchGeckoViewTab: Removing WebView from target container before adding GeckoView");
+                targetContainer.removeView(firstChild);
+            }
+        }
+        
         if (mSharedGeckoView.getParent() != targetContainer) {
             // Remove from current parent if exists
             ViewGroup oldParent = (ViewGroup) mSharedGeckoView.getParent();
@@ -666,10 +700,13 @@ public class SessionDetailFragment extends Fragment implements
             }
             
             // Detach current session only if it's different (after helper is initialized)
-            if (currentSession != null) {
+            if (currentSession != null && mSharedGeckoView != null) {
                 try {
                     Log.d(TAG, "switchGeckoViewTab: Detaching current session from shared GeckoView");
-                    mSharedGeckoView.setSession(null);
+                    // Check if GeckoView still has a valid session before detaching
+                    if (mSharedGeckoView.getSession() == currentSession) {
+                        mSharedGeckoView.setSession(null);
+                    }
                 } catch (Exception e) {
                     Log.w(TAG, "switchGeckoViewTab: Error detaching session, continuing anyway", e);
                 }
@@ -752,13 +789,9 @@ public class SessionDetailFragment extends Fragment implements
             Log.w(TAG, "updateAgendaTab: AgendaTabManager not initialized");
             return;
         }
-        // Ensure shared GeckoView exists first
-        if (mSharedGeckoView == null) {
-            createSharedGeckoView();
-        }
         String agendaUrl = cursor.getString(SessionsQuery.SESSION_URL);
         // Always call updateAgendaTab - it will show loading message if URL is null/empty
-        mAgendaTabManager.updateAgendaTab(agendaUrl != null ? agendaUrl : "", mSharedGeckoView);
+        mAgendaTabManager.updateAgendaTab(agendaUrl != null ? agendaUrl : "");
     }
 
     private String getHashtagsString() {
@@ -939,7 +972,7 @@ public class SessionDetailFragment extends Fragment implements
                 mNotesTabManager.initializeGeckoView(mSharedGeckoView);
             }
         } else if (TAG_AGENDA.equals(tabId) && mAgendaTabManager != null && mUrl != null) {
-            mAgendaTabManager.updateAgendaTab(mUrl, mSharedGeckoView);
+            mAgendaTabManager.updateAgendaTab(mUrl);
         } else if (TAG_JOIN.equals(tabId) && mJoinTabManager != null && mTitleString != null) {
             mJoinTabManager.updateJoinTab(mTitleString, mSharedGeckoView);
             if (mSharedGeckoView != null) {
@@ -971,11 +1004,10 @@ public class SessionDetailFragment extends Fragment implements
     private void initializeTabManager(String tabId) {
         if (TAG_NOTES.equals(tabId) && mNotesTabManager != null) {
             mNotesTabManager.initializeGeckoView(mSharedGeckoView);
-        } else if (TAG_AGENDA.equals(tabId) && mAgendaTabManager != null) {
-            mAgendaTabManager.initializeGeckoView(mSharedGeckoView);
         } else if (TAG_JOIN.equals(tabId) && mJoinTabManager != null) {
             mJoinTabManager.initializeGeckoView(mSharedGeckoView);
         }
+        // Agenda tab uses WebView, not GeckoView - no initialization needed here
     }
     
     /**
@@ -1008,8 +1040,16 @@ public class SessionDetailFragment extends Fragment implements
      */
     public boolean onBackPressed() {
         String currentTab = mTabHost != null ? mTabHost.getCurrentTabTag() : null;
-        boolean isGeckoTab = isGeckoViewTab(currentTab);
         
+        // Handle Agenda tab (WebView) back button
+        if (TAG_AGENDA.equals(currentTab) && mAgendaTabManager != null) {
+            if (mAgendaTabManager.onBackPressed()) {
+                return true; // WebView handled it
+            }
+        }
+        
+        // Handle GeckoView tabs
+        boolean isGeckoTab = isGeckoViewTab(currentTab);
         GeckoViewHelper helper = currentTab != null ? mGeckoViewHelpers.get(currentTab) : null;
         boolean canGoBack = helper != null && helper.canGoBack();
         

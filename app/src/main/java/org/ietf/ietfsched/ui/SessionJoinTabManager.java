@@ -100,23 +100,28 @@ public class SessionJoinTabManager extends BaseGeckoViewTabManager {
             // Only load if URL has changed AND Join tab is currently active
             boolean joinTabActive = mTabHost != null && TAB_JOIN.equals(mTabHost.getCurrentTabTag());
             String lastUrl = mGeckoViewTabUrls.get(TAB_JOIN);
-            boolean isFirstLoad = (lastUrl == null);
             if (!meetechoUrl.equals(lastUrl)) {
-                Log.d(TAG, "updateJoinTab: URL changed, joinTabActive=" + joinTabActive + ", isFirstLoad=" + isFirstLoad);
-                // Only load if Join tab is active or if this is the first load
-                if (joinTabActive || isFirstLoad) {
+                Log.d(TAG, "updateJoinTab: URL changed, joinTabActive=" + joinTabActive);
+                // Store URL for later loading when Join tab is opened
+                mGeckoViewTabUrls.put(TAB_JOIN, meetechoUrl);
+                if (mGeckoViewInitialUrls.get(TAB_JOIN) == null) {
+                    mGeckoViewInitialUrls.put(TAB_JOIN, meetechoUrl);
+                }
+                // Only load if Join tab is currently active - don't load on first load if tab is not active
+                if (joinTabActive) {
                     Log.d(TAG, "updateJoinTab: Loading URL: " + meetechoUrl);
                     mGeckoViewHelper.loadUrl(meetechoUrl);
-                    mGeckoViewTabUrls.put(TAB_JOIN, meetechoUrl);
-                    // Track this as the initial URL for this tab
-                    mGeckoViewInitialUrls.put(TAB_JOIN, meetechoUrl);
                 } else {
                     Log.d(TAG, "updateJoinTab: Skipping load - Join tab not active, will load when tab is opened");
-                    // Store URL for later loading when Join tab is opened
-                    mGeckoViewTabUrls.put(TAB_JOIN, meetechoUrl);
                 }
             } else {
-                Log.d(TAG, "updateJoinTab: URL unchanged, skipping reload: " + meetechoUrl);
+                Log.d(TAG, "updateJoinTab: URL unchanged: " + meetechoUrl);
+                // If URL is unchanged but tab is active, ensure it's loaded (e.g., after a tab switch)
+                if (joinTabActive && mGeckoViewHelper.getGeckoView() != null && 
+                    mGeckoViewHelper.getGeckoView().getSession() == mGeckoViewHelper.getGeckoSession()) {
+                    Log.d(TAG, "updateJoinTab: URL unchanged but tab active, ensuring load: " + meetechoUrl);
+                    mGeckoViewHelper.loadUrl(meetechoUrl);
+                }
             }
         } else {
             Log.w(TAG, "updateJoinTab: groupAcronym is null or empty, showing loading message");
