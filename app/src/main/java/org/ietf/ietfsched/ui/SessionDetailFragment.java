@@ -73,12 +73,6 @@ public class SessionDetailFragment extends Fragment implements
         CompoundButton.OnCheckedChangeListener {
     private static final String TAG = "SessionDetailFragment";
 
-    /**
-     * Since sessions can belong tracks, the parent activity can send this extra specifying a
-     * track URI that should be used for coloring the title-bar.
-     */
-    public static final String EXTRA_TRACK = "org.ietf.ietfsched.extra.TRACK";
-
     private static final String TAG_CONTENT = "content";
     private static final String TAG_NOTES = "notes";
     private static final String TAG_AGENDA = "agenda";
@@ -88,7 +82,6 @@ public class SessionDetailFragment extends Fragment implements
 
     private String mSessionId;
     private Uri mSessionUri;
-    private Uri mTrackUri;
 
     private String mTitleString;
     private String mHashtag;
@@ -128,6 +121,7 @@ public class SessionDetailFragment extends Fragment implements
     private boolean mSessionCursor = false;
     private boolean mSpeakersCursor = false;
     private boolean mHasSummaryContent = false;
+    private boolean mPendingStarredUpdate = false; // Track if a starred update is in progress
 
 
     @Override
@@ -196,12 +190,25 @@ public class SessionDetailFragment extends Fragment implements
         mHandler = new NotifyingAsyncQueryHandler(getActivity().getContentResolver(), this);
         mRemoteExecutor = new RemoteExecutor();
         
+        // Set up update listener to track database updates for testing
+        // This allows IdlingResources in tests to wait for updates to complete
+        mHandler.setUpdateListener(new NotifyingAsyncQueryHandler.AsyncUpdateListener() {
+            @Override
+            public void onUpdateComplete(int token, Object cookie, int result) {
+                // Clear pending flag when update completes
+                // Note: We don't re-query here because the UI is already correct (user clicked it)
+                // and re-querying immediately could cause race conditions if the database transaction
+                // hasn't fully committed yet. The UI will be refreshed naturally when the next
+                // query runs (e.g., from a sync or fragment refresh).
+                mPendingStarredUpdate = false;
+                Log.d(TAG, "onUpdateComplete: token=" + token + ", result=" + result + ", sessionId=" + mSessionId);
+            }
+        });
+        
         // Initialize draft fetcher now that RemoteExecutor is ready
         initializeDraftFetcher();
         
         mHandler.startQuery(SessionsQuery._TOKEN, mSessionUri, SessionsQuery.PROJECTION);
-//        mHandler.startQuery(TracksQuery._TOKEN, mTrackUri, TracksQuery.PROJECTION);
- //       mHandler.startQuery(SpeakersQuery._TOKEN, speakersUri, SpeakersQuery.PROJECTION);
     }
 
     @Override
@@ -420,22 +427,6 @@ public class SessionDetailFragment extends Fragment implements
     }
 
     /**
-     * Derive {@link org.ietf.ietfsched.provider.ScheduleContract.Tracks#CONTENT_ITEM_TYPE}
-     * {@link Uri} based on incoming {@link Intent}, using
-     * {@link #EXTRA_TRACK} when set.
-     * @param intent
-     * @return Uri
-     */
-    private Uri resolveTrackUri(Intent intent) {
-        final Uri trackUri = intent.getParcelableExtra(EXTRA_TRACK);
-        if (trackUri != null) {
-            return trackUri;
-        } else {
-            return ScheduleContract.Sessions.buildTracksDirUri(mSessionId);
-        }
-    }
-
-    /**
      * {@inheritDoc}
      */
     public void onQueryComplete(int token, Object cookie, Cursor cursor) {
@@ -482,9 +473,15 @@ public class SessionDetailFragment extends Fragment implements
 
             // Unregister around setting checked state to avoid triggering
             // listener since change isn't user generated.
-            mStarred.setOnCheckedChangeListener(null);
-            mStarred.setChecked(cursor.getInt(SessionsQuery.STARRED) != 0);
-            mStarred.setOnCheckedChangeListener(this);
+            // However, don't overwrite the checkbox if there's a pending update
+            // to prevent race conditions where a user click gets overwritten.
+            if (!mPendingStarredUpdate) {
+                mStarred.setOnCheckedChangeListener(null);
+                mStarred.setChecked(cursor.getInt(SessionsQuery.STARRED) != 0);
+                mStarred.setOnCheckedChangeListener(this);
+            } else {
+                Log.d(TAG, "onSessionQueryComplete: Skipping checkbox update due to pending starred update");
+            }
 
             updateAgendaTab(cursor);
             updateContentTab(cursor);
@@ -511,25 +508,6 @@ public class SessionDetailFragment extends Fragment implements
             cursor.close();
         }
     }
-
-    /**
-     * Handle {@link TracksQuery} {@link Cursor}.
-     */
-    private void onTrackQueryComplete(Cursor cursor) {
-        try {
-            if (!cursor.moveToFirst()) {
-                return;
-            }
-
-            // Use found track to build title-bar
-            ActivityHelper activityHelper = ((BaseActivity) getActivity()).getActivityHelper();
-            activityHelper.setActionBarTitle(cursor.getString(TracksQuery.TRACK_NAME));
-            activityHelper.setActionBarColor(cursor.getInt(TracksQuery.TRACK_COLOR));
-        } finally {
-            cursor.close();
-        }
-    }
-
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
@@ -568,9 +546,13 @@ public class SessionDetailFragment extends Fragment implements
      * Handle toggling of starred checkbox.
      */
     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+        Log.d(TAG, "onCheckedChanged: isChecked=" + isChecked + ", sessionId=" + mSessionId);
+        // Mark that we have a pending update to prevent race conditions
+        mPendingStarredUpdate = true;
         final ContentValues values = new ContentValues();
         values.put(ScheduleContract.Sessions.SESSION_STARRED, isChecked ? 1 : 0);
         mHandler.startUpdate(mSessionUri, values);
+        Log.d(TAG, "onCheckedChanged: Started database update");
     }
 
     /**
