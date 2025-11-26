@@ -429,6 +429,17 @@ public class LocalExecutor {
 		} else {
 			builder.withValue(Sessions.SESSION_PDF_URL, "::");
 		}
+		if (m.drafts != null && m.drafts.length > 0) {
+			// Store multiple draft entries separated by "::"
+			builder.withValue(Sessions.SESSION_DRAFTS_URL, TextUtils.join("::", m.drafts));
+		} else {
+			builder.withValue(Sessions.SESSION_DRAFTS_URL, null);
+		}
+		if (m.sessionResUri != null && !m.sessionResUri.isEmpty()) {
+			builder.withValue(Sessions.SESSION_RES_URI, m.sessionResUri);
+		} else {
+			builder.withValue(Sessions.SESSION_RES_URI, null);
+		}
 			
 			final Uri sessionUri = Sessions.buildSessionUri(sessionId);
 			final int starred = querySessionStarred(sessionUri, mResolver);

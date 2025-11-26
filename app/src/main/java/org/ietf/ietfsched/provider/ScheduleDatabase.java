@@ -48,8 +48,10 @@ public class ScheduleDatabase extends SQLiteOpenHelper {
     private static final int VER_LAUNCH = 21;
     private static final int VER_SESSION_FEEDBACK_URL = 22;
     private static final int VER_SESSION_NOTES_URL_SLUG = 28;
+    private static final int VER_SESSION_DRAFTS_URL = 29;
+    private static final int VER_SESSION_RES_URI = 30;
 
-    private static final int DATABASE_VERSION = VER_SESSION_NOTES_URL_SLUG;
+    private static final int DATABASE_VERSION = VER_SESSION_RES_URI;
 
     interface Tables {
         String BLOCKS = "blocks";
@@ -173,6 +175,8 @@ public class ScheduleDatabase extends SQLiteOpenHelper {
                 + SessionsColumns.SESSION_MODERATOR_URL + " TEXT,"
                 + SessionsColumns.SESSION_YOUTUBE_URL + " TEXT,"
                 + SessionsColumns.SESSION_PDF_URL + " TEXT,"
+                + SessionsColumns.SESSION_DRAFTS_URL + " TEXT,"
+                + SessionsColumns.SESSION_RES_URI + " TEXT,"
                 + SessionsColumns.SESSION_FEEDBACK_URL + " TEXT,"
                 + SessionsColumns.SESSION_NOTES_URL + " TEXT,"
                 + SessionsColumns.SESSION_STARRED + " INTEGER NOT NULL DEFAULT 0,"
@@ -247,7 +251,18 @@ public class ScheduleDatabase extends SQLiteOpenHelper {
         switch (oldVersion) {
             case VER_LAUNCH:
             case VER_SESSION_FEEDBACK_URL:
-		}
+            case VER_SESSION_NOTES_URL_SLUG:
+                // Add SESSION_DRAFTS_URL column
+                db.execSQL("ALTER TABLE " + Tables.SESSIONS + " ADD COLUMN "
+                        + SessionsColumns.SESSION_DRAFTS_URL + " TEXT DEFAULT ''");
+                // Fall through
+            case VER_SESSION_DRAFTS_URL:
+                // Add SESSION_RES_URI column
+                db.execSQL("ALTER TABLE " + Tables.SESSIONS + " ADD COLUMN "
+                        + SessionsColumns.SESSION_RES_URI + " TEXT DEFAULT ''");
+                // Fall through
+            // case VER_SESSION_RES_URI: // No further changes yet
+        }
 
         Log.d(TAG, "after upgrade logic, at version " + oldVersion);
         if (oldVersion != DATABASE_VERSION) {

@@ -19,9 +19,13 @@ package org.ietf.ietfsched.ui;
 import org.ietf.ietfsched.R;
 import org.ietf.ietfsched.io.RemoteExecutor;
 import org.ietf.ietfsched.provider.ScheduleContract;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.ietf.ietfsched.util.ActivityHelper;
 import org.ietf.ietfsched.util.FractionalTouchDelegate;
 import org.ietf.ietfsched.util.GeckoRuntimeHelper;
+import org.ietf.ietfsched.util.GeckoViewHelper;
 import org.ietf.ietfsched.util.NotifyingAsyncQueryHandler;
 import org.ietf.ietfsched.util.UIUtils;
 
@@ -31,6 +35,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
+import android.os.Handler;
+import android.os.Looper;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.net.Uri;
@@ -73,9 +79,10 @@ public class SessionDetailFragment extends Fragment implements
      */
     public static final String EXTRA_TRACK = "org.ietf.ietfsched.extra.TRACK";
 
-    private static final String TAG_SUMMARY = "summary";
+    private static final String TAG_CONTENT = "content";
     private static final String TAG_NOTES = "notes";
-    private static final String TAG_LINKS = "links";
+    private static final String TAG_AGENDA = "agenda";
+    private static final String TAG_JOIN = "join";
 
     private static StyleSpan sBoldSpan = new StyleSpan(Typeface.BOLD);
 
@@ -86,7 +93,6 @@ public class SessionDetailFragment extends Fragment implements
     private String mTitleString;
     private String mHashtag;
     private String mUrl;
-    private TextView mTagDisplay;
     private String mRoomId;
 
     private ViewGroup mRootView;
@@ -95,15 +101,29 @@ public class SessionDetailFragment extends Fragment implements
     private TextView mSubtitle;
     private CompoundButton mStarred;
     
-    private TextView mAbstract;
-    private TextView mRequirements;
 
-    private GeckoView mNotesWebView;
-    private GeckoSession mGeckoSession;
-    private boolean mCanGoBack = false;
+    // Single shared GeckoView instance (singleton pattern)
+    // Key: tab tag (e.g., TAG_NOTES), Value: GeckoViewHelper instance for that tab
+    // Each helper manages its own GeckoSession, but they all share the same GeckoView instance
+    private java.util.Map<String, GeckoViewHelper> mGeckoViewHelpers = new java.util.HashMap<String, GeckoViewHelper>();
+    private GeckoView mSharedGeckoView; // Single GeckoView instance shared across tabs
     private String mCurrentTabTag; // Retained tab selection
+    // Track last loaded URL per GeckoView tab to avoid reloading unnecessarily
+    // Key: tab tag (e.g., TAG_NOTES), Value: last URL that should be loaded for that tab
+    private java.util.Map<String, String> mGeckoViewTabUrls = new java.util.HashMap<String, String>();
+    // Track the initial URL for each GeckoView tab to determine if we're at the "root" of navigation
+    // Key: tab tag (e.g., TAG_NOTES), Value: initial URL that was loaded for that tab
+    private java.util.Map<String, String> mGeckoViewInitialUrls = new java.util.HashMap<String, String>();
 
     private NotifyingAsyncQueryHandler mHandler;
+    private RemoteExecutor mRemoteExecutor;
+    
+    // Helper classes for tab management
+    private SessionContentTabBuilder mContentTabBuilder;
+    private SessionAgendaTabManager mAgendaTabManager;
+    private SessionNotesTabManager mNotesTabManager;
+    private SessionJoinTabManager mJoinTabManager;
+    private SessionDraftFetcher mDraftFetcher;
 
     private boolean mSessionCursor = false;
     private boolean mSpeakersCursor = false;
@@ -132,7 +152,9 @@ public class SessionDetailFragment extends Fragment implements
     @Override
     public void onResume() {	
         super.onResume();
-        updateNotesTab();
+        if (mNotesTabManager != null && mTitleString != null) {
+            mNotesTabManager.updateNotesTab(mTitleString, mSharedGeckoView);
+        }
 
         // Start listening for time updates to adjust "now" bar. TIME_TICK is
         // triggered once per minute, which is how we move the bar over time.
@@ -172,7 +194,11 @@ public class SessionDetailFragment extends Fragment implements
 //        final Uri speakersUri = ScheduleContract.Sessions.buildSpeakersDirUri(mSessionId);
 
         mHandler = new NotifyingAsyncQueryHandler(getActivity().getContentResolver(), this);
-        Log.d(TAG, "mSessionUri: " + mSessionUri);
+        mRemoteExecutor = new RemoteExecutor();
+        
+        // Initialize draft fetcher now that RemoteExecutor is ready
+        initializeDraftFetcher();
+        
         mHandler.startQuery(SessionsQuery._TOKEN, mSessionUri, SessionsQuery.PROJECTION);
 //        mHandler.startQuery(TracksQuery._TOKEN, mTrackUri, TracksQuery.PROJECTION);
  //       mHandler.startQuery(SpeakersQuery._TOKEN, speakersUri, SpeakersQuery.PROJECTION);
@@ -211,11 +237,46 @@ public class SessionDetailFragment extends Fragment implements
             });
         }
         
-        // Set up tab change listener to track current tab
+        // Set up tab change listener to track current tab and fetch drafts when Content tab opens
         mTabHost.setOnTabChangedListener(new TabHost.OnTabChangeListener() {
             @Override
             public void onTabChanged(String tabId) {
                 mCurrentTabTag = tabId;
+                // Fetch drafts on-demand when Content tab is opened
+                if (TAG_CONTENT.equals(tabId) && mDraftFetcher != null && mSessionId != null) {
+                    mDraftFetcher.fetchDraftsOnDemand();
+                }
+                // Handle GeckoView tab switching: preserve state if URL unchanged, re-initialize if URL changed
+                if (isGeckoViewTab(tabId)) {
+                    // Use post to ensure TabHost has finished its visibility management
+                    mTabHost.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            handleGeckoViewTabChange(tabId);
+                            // After switching, trigger update to ensure URL loads if it was stored but not loaded
+                            if (TAG_JOIN.equals(tabId) && mJoinTabManager != null && mTitleString != null) {
+                                mJoinTabManager.updateJoinTab(mTitleString, mSharedGeckoView);
+                            }
+                        }
+                    });
+                }
+                // Handle Agenda tab (WebView) - trigger update if needed
+                if (TAG_AGENDA.equals(tabId) && mAgendaTabManager != null && mUrl != null) {
+                    mTabHost.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            mAgendaTabManager.updateAgendaTab(mUrl);
+                        }
+                    });
+                }
+                // Log tab change with GeckoView state if applicable
+                if (isGeckoViewTab(tabId)) {
+                    GeckoViewHelper helper = mGeckoViewHelpers.get(tabId);
+                    boolean canGoBack = helper != null && helper.canGoBack();
+                    Log.d(TAG, "onTabChanged: tabId=" + tabId + ", canGoBack=" + canGoBack);
+                } else {
+                    Log.d(TAG, "onTabChanged: tabId=" + tabId);
+                }
             }
         });
 
@@ -230,25 +291,105 @@ public class SessionDetailFragment extends Fragment implements
         final View starParent = mRootView.findViewById(R.id.header_session);
         FractionalTouchDelegate.setupDelegate(starParent, mStarred, new RectF(0.6f, 0f, 1f, 0.8f));
 
-        mAbstract = (TextView) mRootView.findViewById(R.id.session_abstract);
-//        mRequirements = (TextView) mRootView.findViewById(R.id.session_requirements);
-
-        setupLinksTab();
-        setupNotesTab();			
-        setupSummaryTab();
+        setupAgendaTab();
+        setupJoinTab();
+        setupContentTab();
+        setupNotesTab();
+        
+        // Create single shared GeckoView instance (singleton pattern)
+        createSharedGeckoView();
+        
+        // Initialize helper classes after views are created
+        initializeHelpers();
 
         return mRootView;
     }
+    
+    /**
+     * Create a single shared GeckoView instance that will be moved between tab containers.
+     * This implements the singleton pattern for GeckoView.
+     */
+    private void createSharedGeckoView() {
+        if (mSharedGeckoView != null) {
+            Log.d(TAG, "createSharedGeckoView: Shared GeckoView already exists");
+            return;
+        }
+        
+        android.app.Activity activity = getActivity();
+        if (activity == null) {
+            Log.w(TAG, "createSharedGeckoView: Activity is null, cannot create GeckoView");
+            return;
+        }
+        
+        try {
+            mSharedGeckoView = new GeckoView(activity);
+            mSharedGeckoView.setId(android.view.View.generateViewId());
+            mSharedGeckoView.setLayoutParams(new android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT));
+            mSharedGeckoView.setFocusable(true);
+            mSharedGeckoView.setFocusableInTouchMode(true);
+            mSharedGeckoView.setClickable(true);
+            Log.d(TAG, "createSharedGeckoView: Created singleton GeckoView instance");
+        } catch (Exception e) {
+            Log.e(TAG, "createSharedGeckoView: Failed to create GeckoView", e);
+            mSharedGeckoView = null;
+        }
+    }
+    
+    /**
+     * Initialize helper classes for tab management.
+     */
+    private void initializeHelpers() {
+        mContentTabBuilder = new SessionContentTabBuilder(this, mRootView, 
+            new Runnable() { public void run() { fireLinkEvent(R.string.session_link_pdf); } });
+        mAgendaTabManager = new SessionAgendaTabManager(this, mRootView, mTabHost);
+        mNotesTabManager = new SessionNotesTabManager(this, mRootView, mTabHost,
+            mGeckoViewHelpers, mGeckoViewTabUrls, mGeckoViewInitialUrls);
+        mJoinTabManager = new SessionJoinTabManager(this, mRootView, mTabHost,
+            mGeckoViewHelpers, mGeckoViewTabUrls, mGeckoViewInitialUrls);
+        
+        // mDraftFetcher will be initialized in onActivityCreated() after mRemoteExecutor is ready
+    }
+    
+    /**
+     * Initialize draft fetcher after RemoteExecutor is ready.
+     */
+    private void initializeDraftFetcher() {
+        if (mDraftFetcher == null && mRemoteExecutor != null && mSessionUri != null) {
+            mDraftFetcher = new SessionDraftFetcher(this, mSessionUri, mRemoteExecutor,
+                new Runnable() {
+                    public void run() {
+                        // Re-query to refresh the Content tab
+                        if (mHandler != null && mSessionUri != null) {
+                            mHandler.startQuery(SessionsQuery._TOKEN, mSessionUri, SessionsQuery.PROJECTION);
+                        }
+                    }
+                });
+        }
+    }
 
     /**
-     * Build and add "summary" tab.
+     * Build and add "content" tab.
      */
-    private void setupSummaryTab() {
-        // Summary content comes from existing layout
-        mTabHost.addTab(mTabHost.newTabSpec(TAG_SUMMARY)
-                .setIndicator(buildIndicator(R.string.session_summary))
+    private void setupContentTab() {
+        // Content tab includes slides and drafts
+        mTabHost.addTab(mTabHost.newTabSpec(TAG_CONTENT)
+                .setIndicator(buildIndicator(R.string.session_content))
                 .setContent(R.id.tab_session_summary));
     }
+
+    /**
+     * Updates the Content tab with Internet drafts and presentation slides.
+     */
+    private void updateContentTab(Cursor cursor) {
+        if (mContentTabBuilder == null) {
+            Log.w(TAG, "updateContentTab: ContentTabBuilder not initialized");
+            return;
+        }
+        mContentTabBuilder.updateContentTab(cursor, SessionsQuery.PDF_URL, SessionsQuery.DRAFTS_URL);
+    }
+
 
     /**
      * Build a {@link View} to be used as a tab indicator, setting the requested string resource as
@@ -258,10 +399,23 @@ public class SessionDetailFragment extends Fragment implements
      * @return View
      */
     private View buildIndicator(int textRes) {
+        return buildIndicator(textRes, R.drawable.tab_indicator);
+    }
+
+    /**
+     * Build a {@link View} to be used as a tab indicator, setting the requested string resource as
+     * its label and a custom background drawable.
+     *
+     * @param textRes
+     * @param backgroundRes
+     * @return View
+     */
+    private View buildIndicator(int textRes, int backgroundRes) {
         final TextView indicator = (TextView) getActivity().getLayoutInflater()
                 .inflate(R.layout.tab_indicator,
                         (ViewGroup) mRootView.findViewById(android.R.id.tabs), false);
         indicator.setText(textRes);
+        indicator.setBackgroundResource(backgroundRes);
         return indicator;
     }
 
@@ -323,28 +477,6 @@ public class SessionDetailFragment extends Fragment implements
             }
 
             mHashtag = cursor.getString(SessionsQuery.HASHTAG);
-            mTagDisplay = (TextView) mRootView.findViewById(R.id.session_tags_button);
-            if (!TextUtils.isEmpty(mHashtag)) {
-                // Create the button text
-                SpannableStringBuilder sb = new SpannableStringBuilder();
-                sb.append(getString(R.string.tag_stream) + " ");
-                int boldStart = sb.length();
-                sb.append(getHashtagsString());
-                sb.setSpan(sBoldSpan, boldStart, sb.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-
-                mTagDisplay.setText(sb);
-
-                mTagDisplay.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View v) {
-/*                        Intent intent = new Intent(getActivity(), TagStreamActivity.class);
-                        intent.putExtra(TagStreamFragment.EXTRA_QUERY, getHashtagsString());
-                        startActivity(intent);
-*/					Log.d(TAG, "on click mTagDisplay");
-                    }
-                });
-            } else {
-                mTagDisplay.setVisibility(View.GONE);
-            }
 
             mRoomId = cursor.getString(SessionsQuery.ROOM_ID);
 
@@ -354,25 +486,26 @@ public class SessionDetailFragment extends Fragment implements
             mStarred.setChecked(cursor.getInt(SessionsQuery.STARRED) != 0);
             mStarred.setOnCheckedChangeListener(this);
 
-            final String sessionAbstract = cursor.getString(SessionsQuery.ABSTRACT);
-            if (!TextUtils.isEmpty(sessionAbstract)) {
-                UIUtils.setTextMaybeHtml(mAbstract, sessionAbstract);
-                mAbstract.setVisibility(View.VISIBLE);
-                mHasSummaryContent = true;
-            } else {
-                mAbstract.setVisibility(View.GONE);
+            updateAgendaTab(cursor);
+            updateContentTab(cursor);
+            // Ensure shared GeckoView exists before updating Notes and Join tabs
+            if (mSharedGeckoView == null) {
+                createSharedGeckoView();
             }
-
-            // Show empty message when all data is loaded, and nothing to show
-			if (!mHasSummaryContent) {
-					mRootView.findViewById(android.R.id.empty).setVisibility(View.VISIBLE);
+            if (mNotesTabManager != null && mTitleString != null) {
+                mNotesTabManager.updateNotesTab(mTitleString, mSharedGeckoView);
+                // Initialize with shared GeckoView if not already initialized
+                if (mSharedGeckoView != null) {
+                    mNotesTabManager.initializeGeckoView(mSharedGeckoView);
+                }
             }
-			else {
-				mTabHost.setCurrentTabByTag(TAG_SUMMARY);
-			}
-
-            updateLinksTab(cursor);
-            updateNotesTab();
+            if (mJoinTabManager != null && mTitleString != null) {
+                mJoinTabManager.updateJoinTab(mTitleString, mSharedGeckoView);
+                // Initialize with shared GeckoView if not already initialized
+                if (mSharedGeckoView != null) {
+                    mJoinTabManager.initializeGeckoView(mSharedGeckoView);
+                }
+            }
 
         } finally {
             cursor.close();
@@ -453,79 +586,148 @@ public class SessionDetailFragment extends Fragment implements
     }
     
     /**
-     * Initialize and configure the GeckoView for HedgeDoc.
-     * Called lazily when we have session data to avoid NullPointerException.
+     * Check if a tab uses GeckoView.
+     * @param tabId The tab tag identifier
+     * @return true if the tab uses GeckoView, false otherwise
      */
-    private void ensureWebViewInitialized() {
-        if (mNotesWebView != null && mGeckoSession != null) {
-            // Ensure session is still attached to view (important after rotation)
-            if (mNotesWebView.getSession() != mGeckoSession) {
-                mNotesWebView.setSession(mGeckoSession);
-            }
-            return; // Already initialized
-        }
-
-        // Try multiple ways to find the GeckoView
-        mNotesWebView = (GeckoView) mRootView.findViewById(R.id.notes_webview);
-
-        if (mNotesWebView == null) {
-            // Fallback: the included layout's root might be the GeckoView itself
-            View tabContent = mRootView.findViewById(R.id.tab_session_notes);
-            if (tabContent instanceof GeckoView) {
-                mNotesWebView = (GeckoView) tabContent;
-            }
-        }
-
-        if (mNotesWebView == null) {
-            Log.e(TAG, "Failed to find GeckoView in notes tab layout");
-            return;
-        }
-
-        // Get shared GeckoRuntime instance
-        GeckoRuntime runtime = GeckoRuntimeHelper.getRuntime(getActivity());
-        if (runtime == null) {
-            Log.e(TAG, "Failed to get GeckoRuntime");
-            return;
-        }
-
-        // Create GeckoSession
-        mGeckoSession = new GeckoSession();
-
-        // Configure GeckoSession for navigation handling
-        // GeckoView has built-in history management - we just allow navigation and let it work
-        mGeckoSession.setNavigationDelegate(new GeckoSession.NavigationDelegate() {
-            @Override
-            public GeckoResult<AllowOrDeny> onLoadRequest(GeckoSession session, GeckoSession.NavigationDelegate.LoadRequest request) {
-                Log.d(TAG, "Navigation request: " + request.uri);
-                // Allow all navigation - GeckoView handles history automatically
-                return GeckoResult.allow();
-            }
-            
-            @Override
-            public void onCanGoBack(GeckoSession session, boolean canGoBack) {
-                mCanGoBack = canGoBack;
-            }
-            
-            @Override
-            public GeckoResult<GeckoSession> onNewSession(GeckoSession session, String uri) {
-                Log.d(TAG, "New session requested for: " + uri);
-                // Load the URI in the current session
-                session.loadUri(uri);
-                // Return null to deny new session creation
-                return GeckoResult.fromValue((GeckoSession) null);
-            }
-        });
-        
-        // Ensure GeckoView can receive touch events
-        mNotesWebView.setFocusable(true);
-        mNotesWebView.setFocusableInTouchMode(true);
-
-        // Open session and attach to view
-        mGeckoSession.open(runtime);
-        mNotesWebView.setSession(mGeckoSession);
+    private boolean isGeckoViewTab(String tabId) {
+        return TAG_NOTES.equals(tabId) || TAG_JOIN.equals(tabId);
     }
     
-
+    /**
+     * Check if a GeckoView tab is "deep" (navigation stays within GeckoView) or "shallow" (links open externally).
+     * @param tabId The tab tag identifier
+     * @return true if the tab is deep (navigation stays within), false if shallow (links open externally)
+     */
+    private boolean isDeepGeckoViewTab(String tabId) {
+        if (TAG_NOTES.equals(tabId)) {
+            return true; // Notes tab is deep - navigation stays within GeckoView
+        }
+        if (TAG_AGENDA.equals(tabId)) {
+            return false; // Agenda tab is shallow - links open externally
+        }
+        if (TAG_JOIN.equals(tabId)) {
+            return true; // Join tab is deep - navigation stays within GeckoView
+        }
+        return true; // Default to deep for safety
+    }
+    
+    /**
+     * Generic method to handle GeckoView tab switching using singleton GeckoView.
+     * 
+     * Strategy: Use a single GeckoView instance and move it between tab containers.
+     * This ensures only one GeckoView exists and only one session is attached at a time.
+     * 
+     * @param activeTabId The tab ID that is becoming active
+     */
+    private void switchGeckoViewTab(String activeTabId) {
+        Log.d(TAG, "switchGeckoViewTab: Switching to tab " + activeTabId + " using singleton GeckoView");
+        
+        // Ensure shared GeckoView exists
+        if (mSharedGeckoView == null) {
+            createSharedGeckoView();
+        }
+        
+        if (mSharedGeckoView == null) {
+            Log.e(TAG, "switchGeckoViewTab: Failed to create shared GeckoView");
+            return;
+        }
+        
+        // Step 1: Get target container for active tab
+        ViewGroup targetContainer = getContainerForTab(activeTabId);
+        if (targetContainer == null) {
+            Log.w(TAG, "switchGeckoViewTab: Could not find container for tab " + activeTabId);
+            return;
+        }
+        
+        // Step 2: Add GeckoView to target container first (must be attached before setting session)
+        // But first, check if target container has a WebView (from Agenda tab) - remove it
+        if (targetContainer != null && targetContainer.getChildCount() > 0) {
+            View firstChild = targetContainer.getChildAt(0);
+            if (firstChild instanceof android.webkit.WebView) {
+                Log.d(TAG, "switchGeckoViewTab: Removing WebView from target container before adding GeckoView");
+                targetContainer.removeView(firstChild);
+            }
+        }
+        
+        if (mSharedGeckoView.getParent() != targetContainer) {
+            // Remove from current parent if exists
+            ViewGroup oldParent = (ViewGroup) mSharedGeckoView.getParent();
+            if (oldParent != null) {
+                Log.d(TAG, "switchGeckoViewTab: Removing GeckoView from current parent");
+                oldParent.removeView(mSharedGeckoView);
+            }
+            Log.d(TAG, "switchGeckoViewTab: Adding GeckoView to " + activeTabId + " container");
+            targetContainer.addView(mSharedGeckoView);
+        }
+        
+        // Step 3: Get the active tab's helper and session
+        GeckoViewHelper activeHelper = mGeckoViewHelpers.get(activeTabId);
+        if (activeHelper == null) {
+            Log.w(TAG, "switchGeckoViewTab: No helper found for active tab " + activeTabId);
+            return;
+        }
+        
+        // Step 4: Check if we need to switch sessions (only if different)
+        GeckoSession currentSession = mSharedGeckoView.getSession();
+        GeckoSession activeSession = activeHelper.getGeckoSession();
+        
+        // Get or create the active session if needed
+        if (activeSession == null) {
+            Log.d(TAG, "switchGeckoViewTab: Session not initialized for tab " + activeTabId + ", initializing");
+            initializeTabManager(activeTabId);
+            activeSession = activeHelper.getGeckoSession();
+        }
+        
+        // Only proceed if we have a valid active session
+        if (activeSession == null) {
+            Log.w(TAG, "switchGeckoViewTab: Could not get or create session for tab " + activeTabId);
+            return;
+        }
+        
+        // Only detach/reattach if sessions are different
+        if (currentSession != activeSession) {
+            // Update helper to use shared GeckoView first
+            if (activeHelper.getGeckoView() != mSharedGeckoView) {
+                Log.d(TAG, "switchGeckoViewTab: Updating helper to use shared GeckoView");
+                activeHelper.initialize(mSharedGeckoView);
+                // Re-check session after initialization
+                activeSession = activeHelper.getGeckoSession();
+                if (activeSession == null) {
+                    Log.w(TAG, "switchGeckoViewTab: Session still null after initialization");
+                    return;
+                }
+            }
+            
+            // Detach current session only if it's different (after helper is initialized)
+            if (currentSession != null && mSharedGeckoView != null) {
+                try {
+                    Log.d(TAG, "switchGeckoViewTab: Detaching current session from shared GeckoView");
+                    // Check if GeckoView still has a valid session before detaching
+                    if (mSharedGeckoView.getSession() == currentSession) {
+                        mSharedGeckoView.setSession(null);
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "switchGeckoViewTab: Error detaching session, continuing anyway", e);
+                }
+            }
+            
+            // Attach active session to shared GeckoView
+            try {
+                Log.d(TAG, "switchGeckoViewTab: Attaching " + activeTabId + " session to shared GeckoView");
+                mSharedGeckoView.setSession(activeSession);
+            } catch (Exception e) {
+                Log.e(TAG, "switchGeckoViewTab: Error attaching session", e);
+            }
+        } else {
+            // Sessions are the same - just ensure helper is updated
+            if (activeHelper.getGeckoView() != mSharedGeckoView) {
+                Log.d(TAG, "switchGeckoViewTab: Updating helper to use shared GeckoView (session already attached)");
+                activeHelper.initialize(mSharedGeckoView);
+            }
+        }
+    }
+    
     /*
      * Event structure:
      * Category -> "Session Details"
@@ -556,326 +758,40 @@ public class SessionDetailFragment extends Fragment implements
         startActivity(intent);
     }
     
-    /**
-     * Helper method to create a gradient drawable
-     */
-    private android.graphics.drawable.GradientDrawable createGradient(int startColor, int endColor, float cornerRadius) {
-        android.graphics.drawable.GradientDrawable gradient = new android.graphics.drawable.GradientDrawable(
-            android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
-            new int[] {startColor, endColor});
-        gradient.setCornerRadius(cornerRadius);
-        return gradient;
-    }
     
-    /**
-     * Helper method to create a section header with gradient background
-     */
-    private TextView createSectionHeader(int textResId) {
-        TextView header = new TextView(getActivity());
-        header.setText(textResId);
-        header.setTextSize(14);
-        header.setTextColor(0xFFFFFFFF);  // White text
-        header.setBackground(createGradient(0xFF888888, 0xFFC0C0C0, 0));  // Gray gradient
-        header.setPadding(20, 14, 16, 14);
-        header.setTypeface(null, android.graphics.Typeface.ITALIC);
-        return header;
-    }
-    
-    /**
-     * Helper method to create a separator view
-     */
-    private View createSeparator() {
-        View separator = new ImageView(getActivity());
-        separator.setLayoutParams(new ViewGroup.LayoutParams(
-            ViewGroup.LayoutParams.FILL_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT));
-        separator.setBackgroundResource(android.R.drawable.divider_horizontal_bright);
-        return separator;
-    }
-    
-    /**
-     * Helper method to create a thin separator line
-     */
-    private View createThinSeparator() {
-        View separator = new ImageView(getActivity());
-        separator.setLayoutParams(new ViewGroup.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, 1));
-        separator.setBackgroundColor(0xFFCCCCCC);
-        return separator;
-    }
-    
-    /**
-     * Helper method to create Meetecho button
-     */
-    private TextView createMeetechoButton(final String meetechoUrl) {
-        TextView button = new TextView(getActivity());
-        button.setText(R.string.session_link_meetecho);
-        button.setTextSize(14);
-        button.setTextColor(0xFFFFFFFF);  // White text
-        button.setTypeface(null, android.graphics.Typeface.BOLD);
-        button.setGravity(android.view.Gravity.CENTER);
-        button.setPadding(16, 12, 16, 12);
-        
-        // Green gradient background with rounded corners
-        button.setBackground(createGradient(0xFF388E3C, 0xFF66BB6A, 4));
-        
-        button.setClickable(true);
-        button.setFocusable(true);
-        button.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                fireLinkEvent(R.string.session_link_meetecho);
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(meetechoUrl));
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
-                startActivity(intent);
-            }
-        });
-        
-        android.widget.LinearLayout.LayoutParams buttonParams = new android.widget.LinearLayout.LayoutParams(
-            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
-        buttonParams.leftMargin = 8;   // Small gap between agenda and button
-        buttonParams.rightMargin = 16; // Right padding to match left padding of agenda
-        button.setLayoutParams(buttonParams);
-        
-        return button;
-    }
 
     /**
-     * Escape HTML special characters to prevent XSS.
+     * Build and add "agenda" tab.
      */
-    private String escapeHtml(String text) {
-        if (text == null) {
-            return "";
-        }
-        return text.replace("&", "&amp;")
-                   .replace("<", "&lt;")
-                   .replace(">", "&gt;")
-                   .replace("\"", "&quot;")
-                   .replace("'", "&#39;");
-    }
-    
-    private void updateNotesTab() {
-        if (mTitleString == null) {
-            return;
-        }
-        
-        // Ensure view is created before initializing
-        if (mRootView == null) {
-            return;
-        }
-        
-        // Initialize WebView lazily (after view is attached)
-        ensureWebViewInitialized();
-        
-        if (mNotesWebView == null || mGeckoSession == null) {
-            return;
-        }
-        
-        // Extract group acronym from session title (format: "area - group - title")
-        String groupAcronym = null;
-        if (mTitleString.contains(" - ")) {
-            String[] parts = mTitleString.split(" - ", 3);
-            if (parts.length >= 2) {
-                groupAcronym = parts[1].toLowerCase(java.util.Locale.ROOT).trim();
-            }
-        }
-        
-        // Construct HedgeDoc URL: https://notes.ietf.org/notes-ietf-{meetingNumber}-{groupAcronym}?view
-        if (groupAcronym != null && !groupAcronym.isEmpty()) {
-            int meetingNumber = org.ietf.ietfsched.util.MeetingPreferences.getCurrentMeetingNumber(getActivity());
-            final String hedgedocUrl = "https://notes.ietf.org/notes-ietf-" + meetingNumber + "-" + groupAcronym + "?view";
-            
-            // Simply load the URL - GeckoView will handle everything naturally
-            mGeckoSession.loadUri(hedgedocUrl);
-        }
-    }
-
-    /**
-     * Build and add "summary" tab.
-     */
-    private void setupLinksTab() {
-        // Summary content comes from existing layout
-        mTabHost.addTab(mTabHost.newTabSpec(TAG_LINKS)
-                .setIndicator(buildIndicator(R.string.session_links))
+    private void setupAgendaTab() {
+        // Agenda content comes from GeckoView layout
+        mTabHost.addTab(mTabHost.newTabSpec(TAG_AGENDA)
+                .setIndicator(buildIndicator(R.string.session_agenda))
                 .setContent(R.id.tab_session_links));
     }
 
     /**
-     * Updates the Links tab with session links, agendas, and presentation slides.
-     * 
-     * Special handling for different link types:
-     * - PDF_URL: Can contain multiple slides (separated by "::"), shown with section header
-     * - SESSION_URL (Agenda): Paired with Meetecho button on the same row
-     * - Other links: Displayed as standard clickable items with separators
+     * Build and add "join" tab.
      */
-    private void updateLinksTab(Cursor cursor) {
-        ViewGroup container = (ViewGroup) mRootView.findViewById(R.id.links_container);
+    private void setupJoinTab() {
+        // Join content comes from existing layout
+        // Use green tab indicator to match "Join Meeting" button color
+        mTabHost.addTab(mTabHost.newTabSpec(TAG_JOIN)
+                .setIndicator(buildIndicator(R.string.session_join, R.drawable.tab_indicator_green))
+                .setContent(R.id.tab_session_join));
+    }
 
-        // Remove all views but the 'empty' view
-        int childCount = container.getChildCount();
-        if (childCount > 1) {
-            container.removeViews(1, childCount - 1);
+    /**
+     * Updates the Agenda tab with the agenda URL.
+     */
+    private void updateAgendaTab(Cursor cursor) {
+        if (mAgendaTabManager == null) {
+            Log.w(TAG, "updateAgendaTab: AgendaTabManager not initialized");
+            return;
         }
-
-        LayoutInflater inflater = getLayoutInflater(null);
-
-        boolean hasLinks = false;
-        boolean hasPresentationSlides = false;
-        
-        // Process each link type defined in SessionsQuery
-        for (int i = 0; i < SessionsQuery.LINKS_INDICES.length; i++) {
-            final String url = cursor.getString(SessionsQuery.LINKS_INDICES[i]);
-            if (!TextUtils.isEmpty(url)) {
-                hasLinks = true;
-                
-                // Special handling for PDF_URL (presentation slides) - can contain multiple entries separated by "::"
-                // Each entry is formatted as "title|||url"
-                // Note: compare against the COLUMN INDEX (LINKS_INDICES[i]), not the loop index i
-                if (SessionsQuery.LINKS_INDICES[i] == SessionsQuery.PDF_URL) {
-                    // Split by "::" separator to get individual slide entries
-                    String[] slideEntries = url.split("::");
-                    
-                    // First pass: check if there are any valid slides
-                    boolean hasValidSlides = false;
-                    for (String entry : slideEntries) {
-                        if (!entry.trim().isEmpty()) {
-                            hasValidSlides = true;
-                            break;
-                        }
-                    }
-                    
-                    // Only show section header if there are actual slides
-                    if (hasValidSlides && !hasPresentationSlides) {
-                        container.addView(createSectionHeader(R.string.session_link_pdf));
-                        hasPresentationSlides = true;
-                    }
-                    
-                    // Second pass: add the actual slide links
-                    for (int j = 0; j < slideEntries.length; j++) {
-                        final String slideEntry = slideEntries[j].trim();
-                        if (slideEntry.isEmpty()) continue;
-                        
-                        // Parse "title|||url" format
-                        final String slideTitle;
-                        final String slideUrl;
-                        if (slideEntry.contains("|||")) {
-                            String[] parts = slideEntry.split("\\|\\|\\|", 2);
-                            slideTitle = parts[0].trim();
-                            slideUrl = parts[1].trim();
-                        } else {
-                            // Fallback for old format (just URL without title)
-                            slideTitle = slideEntries.length == 1 
-                                ? getString(R.string.session_link_pdf)
-                                : getString(R.string.session_link_pdf) + " " + (j + 1);
-                            slideUrl = slideEntry;
-                        }
-                        
-                        ViewGroup linkContainer = (ViewGroup)
-                                inflater.inflate(R.layout.list_item_session_link, container, false);
-                        
-                        ((TextView) linkContainer.findViewById(R.id.link_text)).setText(slideTitle);
-                        
-                        linkContainer.setOnClickListener(new View.OnClickListener() {
-                            public void onClick(View view) {
-                                fireLinkEvent(R.string.session_link_pdf);
-                                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(slideUrl));
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
-                                startActivity(intent);
-                            }
-                        });
-                        
-                        container.addView(linkContainer);
-                        container.addView(createThinSeparator());
-                    }
-                } else {
-                    // Special handling for Agenda link (SESSION_URL) - place Meetecho button on same row
-                    if (SessionsQuery.LINKS_INDICES[i] == SessionsQuery.SESSION_URL) {
-                        // Extract group acronym from session title (format: "area - group - title")
-                        String groupAcronym = null;
-                        if (mTitleString != null && mTitleString.contains(" - ")) {
-                            String[] parts = mTitleString.split(" - ", 3);
-                            if (parts.length >= 2) {
-                                groupAcronym = parts[1].toLowerCase(java.util.Locale.ROOT).trim();
-                            }
-                        }
-                        
-                        if (groupAcronym != null && !groupAcronym.isEmpty()) {
-                            // Create horizontal container for Agenda link + Meetecho button
-                            android.widget.LinearLayout horizontalContainer = new android.widget.LinearLayout(getActivity());
-                            horizontalContainer.setOrientation(android.widget.LinearLayout.HORIZONTAL);
-                            horizontalContainer.setGravity(android.view.Gravity.CENTER_VERTICAL);  // Vertically center all children
-                            horizontalContainer.setLayoutParams(new android.widget.LinearLayout.LayoutParams(
-                                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT));
-                            
-                            // Add Agenda link on the left
-                            ViewGroup linkContainer = (ViewGroup)
-                                    inflater.inflate(R.layout.list_item_session_link, container, false);
-                            ((TextView) linkContainer.findViewById(R.id.link_text)).setText(
-                                    SessionsQuery.LINKS_TITLES[i]);
-                            final int linkTitleIndex = i;
-                            linkContainer.setOnClickListener(new View.OnClickListener() {
-                                public void onClick(View view) {
-                                    fireLinkEvent(SessionsQuery.LINKS_TITLES[linkTitleIndex]);
-                                    openAgendaInWebView(url);
-                                }
-                            });
-                            
-                            android.widget.LinearLayout.LayoutParams agendaParams = new android.widget.LinearLayout.LayoutParams(
-                                0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
-                            linkContainer.setLayoutParams(agendaParams);
-                            horizontalContainer.addView(linkContainer);
-                            
-                            // Add Meetecho button on the right
-                            int meetingNumber = org.ietf.ietfsched.util.MeetingPreferences.getCurrentMeetingNumber(getActivity());
-                            final String meetechoUrl = "https://meetings.conf.meetecho.com/onsite" + meetingNumber + "/?group=" + groupAcronym;
-                            horizontalContainer.addView(createMeetechoButton(meetechoUrl));
-                            
-                            container.addView(horizontalContainer);
-                            container.addView(createSeparator());
-                        } else {
-                            // No group acronym, just add agenda link normally
-                            ViewGroup linkContainer = (ViewGroup)
-                                    inflater.inflate(R.layout.list_item_session_link, container, false);
-                            ((TextView) linkContainer.findViewById(R.id.link_text)).setText(
-                                    SessionsQuery.LINKS_TITLES[i]);
-                            final int linkTitleIndex = i;
-                            linkContainer.setOnClickListener(new View.OnClickListener() {
-                                public void onClick(View view) {
-                                    fireLinkEvent(SessionsQuery.LINKS_TITLES[linkTitleIndex]);
-                                    openAgendaInWebView(url);
-                                }
-                            });
-
-                            container.addView(linkContainer);
-                            container.addView(createSeparator());
-                        }
-                    } else {
-                        // Normal handling for other link types (single URL)
-                        ViewGroup linkContainer = (ViewGroup)
-                                inflater.inflate(R.layout.list_item_session_link, container, false);
-                        ((TextView) linkContainer.findViewById(R.id.link_text)).setText(
-                                SessionsQuery.LINKS_TITLES[i]);
-                        final int linkTitleIndex = i;
-                        linkContainer.setOnClickListener(new View.OnClickListener() {
-                            public void onClick(View view) {
-                                fireLinkEvent(SessionsQuery.LINKS_TITLES[linkTitleIndex]);
-                                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
-                                startActivity(intent);
-                            }
-                        });
-
-                        container.addView(linkContainer);
-                        container.addView(createSeparator());
-                    }
-                }
-            } else {
-                Log.d(TAG, "NOT URL - Links Indices loop, Url[" + i + "]: " + SessionsQuery.LINKS_INDICES[i] + " Title: " + SessionsQuery.LINKS_TITLES[i]);
-            }
-        }
-
-        container.findViewById(R.id.empty_links).setVisibility(hasLinks ? View.GONE : View.VISIBLE);
+        String agendaUrl = cursor.getString(SessionsQuery.SESSION_URL);
+        // Always call updateAgendaTab - it will show loading message if URL is null/empty
+        mAgendaTabManager.updateAgendaTab(agendaUrl != null ? agendaUrl : "");
     }
 
     private String getHashtagsString() {
@@ -884,8 +800,6 @@ public class SessionDetailFragment extends Fragment implements
         } else {
             return TagStreamFragment.CONFERENCE_HASHTAG;
        }
-
-		Log.d(TAG, "Get hashtag/string method");
 */	
 		return ""; 
    }
@@ -893,7 +807,9 @@ public class SessionDetailFragment extends Fragment implements
     private BroadcastReceiver mPackageChangesReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            updateNotesTab();
+            if (mNotesTabManager != null && mTitleString != null) {
+                mNotesTabManager.updateNotesTab(mTitleString);
+            }
         }
     };
     /**
@@ -916,6 +832,8 @@ public class SessionDetailFragment extends Fragment implements
                 ScheduleContract.Sessions.SESSION_MODERATOR_URL,
                 ScheduleContract.Sessions.SESSION_YOUTUBE_URL,
                 ScheduleContract.Sessions.SESSION_PDF_URL,
+                ScheduleContract.Sessions.SESSION_DRAFTS_URL,
+                ScheduleContract.Sessions.SESSION_RES_URI,
                 ScheduleContract.Sessions.SESSION_FEEDBACK_URL,
                 ScheduleContract.Sessions.SESSION_NOTES_URL,
                 ScheduleContract.Sessions.ROOM_ID,
@@ -935,10 +853,12 @@ public class SessionDetailFragment extends Fragment implements
         int MODERATOR_URL = 10;
         int YOUTUBE_URL = 11;
         int PDF_URL = 12;
-        int FEEDBACK_URL = 13;
-        int NOTES_URL = 14;
-        int ROOM_ID = 15;
-        int ROOM_NAME = 16;
+        int DRAFTS_URL = 13;
+        int RES_URI = 14;
+        int FEEDBACK_URL = 15;
+        int NOTES_URL = 16;
+        int ROOM_ID = 17;
+        int ROOM_NAME = 18;
 
         int[] LINKS_INDICES = {
                 SESSION_URL,
@@ -991,17 +911,160 @@ public class SessionDetailFragment extends Fragment implements
     }
     
     /**
-     * Handle back button press - navigate back in GeckoView if Notes tab is active and can go back.
-     * @return true if GeckoView handled the back press, false otherwise
+     * Handle GeckoView tab change: preserve state if URL unchanged, re-initialize if URL changed.
+     * @param tabId The tab ID that is becoming active
      */
-    public boolean onBackPressed() {
-        // Only handle back if Notes tab is currently selected and GeckoSession can go back
-        if (mTabHost != null && TAG_NOTES.equals(mTabHost.getCurrentTabTag())) {
-            if (mGeckoSession != null && mCanGoBack) {
-                mGeckoSession.goBack();
-                return true;
+    private void handleGeckoViewTabChange(String tabId) {
+        String expectedUrl = mGeckoViewTabUrls.get(tabId);
+        String initialUrl = mGeckoViewInitialUrls.get(tabId);
+        
+        // If URL has changed (e.g., different session) or initialUrl is null, re-initialize GeckoView
+        // Otherwise, preserve navigation state
+        if (expectedUrl != null && (initialUrl == null || !expectedUrl.equals(initialUrl))) {
+            Log.d(TAG, "handleGeckoViewTabChange: URL changed for GeckoView tab " + tabId + " (expected=" + expectedUrl + ", initial=" + initialUrl + "), re-initializing");
+            reinitializeGeckoView(tabId);
+            // Load the new URL
+            GeckoViewHelper helper = mGeckoViewHelpers.get(tabId);
+            if (helper != null) {
+                Log.d(TAG, "handleGeckoViewTabChange: Loading new URL for GeckoView tab " + tabId + ": " + expectedUrl);
+                helper.loadUrl(expectedUrl);
+                mGeckoViewInitialUrls.put(tabId, expectedUrl);
+            }
+        } else if (expectedUrl == null) {
+            // No URL stored yet, trigger update to construct and load URL
+            Log.d(TAG, "handleGeckoViewTabChange: No URL stored for GeckoView tab " + tabId + ", triggering update");
+            ensureSharedGeckoViewInContainer(tabId);
+            updateTabManagerForTab(tabId);
+        } else {
+            // URL unchanged, preserve navigation state - ensure correct GeckoView is active
+            Log.d(TAG, "handleGeckoViewTabChange: URL unchanged for GeckoView tab " + tabId + " (URL=" + expectedUrl + "), preserving navigation state");
+            switchGeckoViewTab(tabId);
+        }
+    }
+    
+    /**
+     * Ensure shared GeckoView exists and is in the correct container for the given tab.
+     * @param tabId The tab ID
+     */
+    private void ensureSharedGeckoViewInContainer(String tabId) {
+        if (mSharedGeckoView == null) {
+            createSharedGeckoView();
+        }
+        
+        ViewGroup targetContainer = getContainerForTab(tabId);
+        if (targetContainer != null && mSharedGeckoView != null && mSharedGeckoView.getParent() != targetContainer) {
+            ViewGroup currentParent = (ViewGroup) mSharedGeckoView.getParent();
+            if (currentParent != null) {
+                currentParent.removeView(mSharedGeckoView);
+            }
+            targetContainer.addView(mSharedGeckoView);
+        }
+    }
+    
+    /**
+     * Update the tab manager for the given tab to construct and load URL.
+     * @param tabId The tab ID
+     */
+    private void updateTabManagerForTab(String tabId) {
+        if (TAG_NOTES.equals(tabId) && mNotesTabManager != null && mTitleString != null) {
+            mNotesTabManager.updateNotesTab(mTitleString, mSharedGeckoView);
+            if (mSharedGeckoView != null) {
+                mNotesTabManager.initializeGeckoView(mSharedGeckoView);
+            }
+        } else if (TAG_AGENDA.equals(tabId) && mAgendaTabManager != null && mUrl != null) {
+            mAgendaTabManager.updateAgendaTab(mUrl);
+        } else if (TAG_JOIN.equals(tabId) && mJoinTabManager != null && mTitleString != null) {
+            mJoinTabManager.updateJoinTab(mTitleString, mSharedGeckoView);
+            if (mSharedGeckoView != null) {
+                mJoinTabManager.initializeGeckoView(mSharedGeckoView);
             }
         }
+    }
+    
+    /**
+     * Get the container ViewGroup for a given tab ID.
+     * @param tabId The tab ID
+     * @return The container ViewGroup, or null if not found
+     */
+    private ViewGroup getContainerForTab(String tabId) {
+        if (TAG_NOTES.equals(tabId)) {
+            return (ViewGroup) mRootView.findViewById(R.id.tab_session_notes);
+        } else if (TAG_AGENDA.equals(tabId)) {
+            return (ViewGroup) mRootView.findViewById(R.id.tab_session_links);
+        } else if (TAG_JOIN.equals(tabId)) {
+            return (ViewGroup) mRootView.findViewById(R.id.tab_session_join);
+        }
+        return null;
+    }
+    
+    /**
+     * Initialize the tab manager for a given tab ID.
+     * @param tabId The tab ID
+     */
+    private void initializeTabManager(String tabId) {
+        if (TAG_NOTES.equals(tabId) && mNotesTabManager != null) {
+            mNotesTabManager.initializeGeckoView(mSharedGeckoView);
+        } else if (TAG_JOIN.equals(tabId) && mJoinTabManager != null) {
+            mJoinTabManager.initializeGeckoView(mSharedGeckoView);
+        }
+        // Agenda tab uses WebView, not GeckoView - no initialization needed here
+    }
+    
+    /**
+     * Re-initialize GeckoView for a specific tab by closing the old session and creating a new one.
+     * This clears the navigation history, ensuring a fresh start when the URL changes.
+     * @param tabId The tab tag identifier
+     */
+    private void reinitializeGeckoView(String tabId) {
+        if (!isGeckoViewTab(tabId)) {
+            Log.w(TAG, "reinitializeGeckoView: Tab " + tabId + " is not a GeckoView tab");
+            return;
+        }
+        
+        GeckoViewHelper helper = mGeckoViewHelpers.get(tabId);
+        if (helper != null) {
+            helper.reinitialize();
+        }
+        
+        // Clear initial URL for this tab since we're starting fresh
+        mGeckoViewInitialUrls.remove(tabId);
+        
+        // Re-initialize GeckoView (will create new session)
+        initializeTabManager(tabId);
+    }
+    
+    /**
+     * Handle back button press - navigate back in GeckoView if a GeckoView tab is active and can go back.
+     * Otherwise, allow the activity to finish (exit the session).
+     * @return true if GeckoView handled the back press, false to allow activity to finish
+     */
+    public boolean onBackPressed() {
+        String currentTab = mTabHost != null ? mTabHost.getCurrentTabTag() : null;
+        
+        // Handle Agenda tab (WebView) back button
+        if (TAG_AGENDA.equals(currentTab) && mAgendaTabManager != null) {
+            if (mAgendaTabManager.onBackPressed()) {
+                return true; // WebView handled it
+            }
+        }
+        
+        // Handle GeckoView tabs
+        boolean isGeckoTab = isGeckoViewTab(currentTab);
+        GeckoViewHelper helper = currentTab != null ? mGeckoViewHelpers.get(currentTab) : null;
+        boolean canGoBack = helper != null && helper.canGoBack();
+        
+        Log.d(TAG, "onBackPressed: currentTab=" + currentTab + ", isGeckoViewTab=" + isGeckoTab + ", helper=" + (helper != null) + ", canGoBack=" + canGoBack);
+        
+        // Only handle back navigation within GeckoView if:
+        // 1. A GeckoView tab is currently selected
+        // 2. GeckoViewHelper exists for that tab
+        // 3. GeckoView can actually go back
+        if (mTabHost != null && isGeckoTab && helper != null && canGoBack) {
+            return helper.onBackPressed();
+        }
+        
+        // Otherwise, allow activity to finish (exit session)
+        Log.d(TAG, "onBackPressed: Returning false - will exit session (tab=" + currentTab + ", isGeckoViewTab=" + isGeckoTab + ", helper=" + (helper != null) + ", canGoBack=" + canGoBack + ")");
         return false;
     }
 }

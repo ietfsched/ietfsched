@@ -39,23 +39,31 @@ public class SessionDetailActivity extends BaseSinglePaneActivity {
         getActivityHelper().setupSubActivity();
         
         // Set up back button handling for Android 13+ (API 33+)
+        // Always enabled - we'll check fragment state inside handleOnBackPressed
         mBackCallback = new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
+                android.util.Log.d("SessionDetailActivity", "handleOnBackPressed called, callback enabled=" + isEnabled() + ", activity=" + SessionDetailActivity.this);
                 Fragment fragment = getSupportFragmentManager().findFragmentById(org.ietf.ietfsched.R.id.root_container);
+                android.util.Log.d("SessionDetailActivity", "Fragment: " + fragment);
                 if (fragment instanceof SessionDetailFragment) {
                     SessionDetailFragment sessionDetailFragment = (SessionDetailFragment) fragment;
-                    if (sessionDetailFragment.onBackPressed()) {
-                        return; // Fragment handled it
+                    boolean handled = sessionDetailFragment.onBackPressed();
+                    android.util.Log.d("SessionDetailActivity", "Fragment onBackPressed returned: " + handled);
+                    if (handled) {
+                        android.util.Log.d("SessionDetailActivity", "Fragment handled back press (navigated in GeckoView)");
+                        return; // Fragment handled it (navigated back in GeckoView)
                     }
+                } else {
+                    android.util.Log.w("SessionDetailActivity", "Fragment is not SessionDetailFragment: " + (fragment != null ? fragment.getClass().getName() : "null"));
                 }
-                // Fragment didn't handle it, disable callback and use default behavior
-                setEnabled(false);
-                getOnBackPressedDispatcher().onBackPressed();
-                setEnabled(true);
+                // Fragment didn't handle it, finish the activity
+                android.util.Log.d("SessionDetailActivity", "Fragment did not handle back press, calling finish()");
+                finish();
             }
         };
         getOnBackPressedDispatcher().addCallback(this, mBackCallback);
+        android.util.Log.d("SessionDetailActivity", "Back callback registered, enabled=" + mBackCallback.isEnabled());
     }
     
     @Override
@@ -70,15 +78,7 @@ public class SessionDetailActivity extends BaseSinglePaneActivity {
     
     @Override
     public void finish() {
-        // Fallback: intercept finish() to check if GeckoView can navigate back instead.
-        // This handles cases where finish() might be called directly (e.g., older Android versions).
-        Fragment fragment = getSupportFragmentManager().findFragmentById(org.ietf.ietfsched.R.id.root_container);
-        if (fragment instanceof SessionDetailFragment) {
-            SessionDetailFragment sessionDetailFragment = (SessionDetailFragment) fragment;
-            if (sessionDetailFragment.onBackPressed()) {
-                return; // Fragment handled it, don't finish
-            }
-        }
+        // Just finish - back button handling is done in handleOnBackPressed/onBackPressed
         super.finish();
     }
     

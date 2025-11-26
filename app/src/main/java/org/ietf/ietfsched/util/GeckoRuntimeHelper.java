@@ -59,4 +59,3 @@ public class GeckoRuntimeHelper {
         return sGeckoRuntime != null;
     }
 }
-
