@@ -47,13 +47,34 @@ public class TestUtils {
      * @param searchTerm Title or group acronym to search for
      */
     public static void navigateToSessionBySearch(String searchTerm) {
-        // TODO: Implement UI-based navigation
-        // Use Espresso to:
-        // - Click Sessions button
-        // - Open search UI
-        // - Type searchTerm
-        // - Click on first matching result
-        // No direct ContentProvider queries
+        Log.d(TAG, "navigateToSessionBySearch: Searching for '" + searchTerm + "'");
+        
+        // Navigate to Sessions list
+        androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.withId(org.ietf.ietfsched.R.id.home_btn_sessions))
+                .perform(androidx.test.espresso.action.ViewActions.click());
+        
+        // Wait for list to load
+        androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.withId(android.R.id.list))
+                .check(androidx.test.espresso.assertion.ViewAssertions.matches(androidx.test.espresso.matcher.ViewMatchers.isDisplayed()));
+        
+        // Enter search term in search box
+        androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.withId(org.ietf.ietfsched.R.id.search_box))
+                .perform(androidx.test.espresso.action.ViewActions.typeText(searchTerm));
+        
+        // Wait for search to filter
+        waitFor(500);
+        
+        // Click on first item in the list (should match search term)
+        androidx.test.espresso.Espresso.onData(org.hamcrest.Matchers.anything())
+                .inAdapterView(androidx.test.espresso.matcher.ViewMatchers.withId(android.R.id.list))
+                .atPosition(0)
+                .perform(androidx.test.espresso.action.ViewActions.click());
+        
+        // Wait for session detail to load
+        androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.withId(org.ietf.ietfsched.R.id.session_title))
+                .check(androidx.test.espresso.assertion.ViewAssertions.matches(androidx.test.espresso.matcher.ViewMatchers.isDisplayed()));
+        
+        Log.d(TAG, "navigateToSessionBySearch: Successfully navigated to session");
     }
 
     /**
@@ -188,12 +209,79 @@ public class TestUtils {
      * @param shouldBeStarred Whether the session should be starred
      */
     public static void setSessionStarredViaUI(String searchTerm, boolean shouldBeStarred) {
-        // TODO: Implement UI-based starred state reset
-        // Use Espresso to:
-        // - Navigate to session detail via searchTerm
-        // - Check current star button state
-        // - Click star button if needed to reach shouldBeStarred state
-        // No direct ContentProvider updates
+        Log.d(TAG, "setSessionStarredViaUI: Setting starred state for '" + searchTerm + "' to " + shouldBeStarred);
+        
+        // Navigate to session detail
+        navigateToSessionBySearch(searchTerm);
+        
+        // Ensure Content tab is selected so the view is fully initialized
+        // This ensures the star button is ready for interaction
+        try {
+            androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.withText("Content"))
+                    .perform(androidx.test.espresso.action.ViewActions.click());
+        } catch (Exception e) {
+            // Tab might already be selected, or might not exist - continue anyway
+            Log.d(TAG, "setSessionStarredViaUI: Could not click Content tab (might already be selected): " + e.getMessage());
+        }
+        
+        // Check current star button state using ViewAction
+        final boolean[] currentStateRef = new boolean[1];
+        try {
+            androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.withId(org.ietf.ietfsched.R.id.star_button))
+                    .perform(new androidx.test.espresso.ViewAction() {
+                        @Override
+                        public org.hamcrest.Matcher<android.view.View> getConstraints() {
+                            return androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom(android.widget.CompoundButton.class);
+                        }
+                        
+                        @Override
+                        public String getDescription() {
+                            return "Check checkbox state";
+                        }
+                        
+                        @Override
+                        public void perform(androidx.test.espresso.UiController uiController, android.view.View view) {
+                            if (view instanceof android.widget.CompoundButton) {
+                                android.widget.CompoundButton checkbox = (android.widget.CompoundButton) view;
+                                currentStateRef[0] = checkbox.isChecked();
+                            }
+                        }
+                    });
+        } catch (Exception e) {
+            Log.w(TAG, "setSessionStarredViaUI: Could not check star button state: " + e.getMessage());
+            currentStateRef[0] = false;
+        }
+        boolean currentState = currentStateRef[0];
+        
+        Log.d(TAG, "setSessionStarredViaUI: Current starred state: " + currentState + ", desired: " + shouldBeStarred);
+        
+        // Click star button if needed to reach desired state
+        if (currentState != shouldBeStarred) {
+            Log.d(TAG, "setSessionStarredViaUI: Toggling star button");
+            androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.withId(org.ietf.ietfsched.R.id.star_button))
+                    .perform(androidx.test.espresso.action.ViewActions.click());
+            
+            // Wait for database update to complete
+            waitFor(1000);
+            
+            // Verify final state matches desired state
+            if (shouldBeStarred) {
+                androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.withId(org.ietf.ietfsched.R.id.star_button))
+                        .check(androidx.test.espresso.assertion.ViewAssertions.matches(
+                                androidx.test.espresso.matcher.ViewMatchers.isChecked()));
+            } else {
+                androidx.test.espresso.Espresso.onView(androidx.test.espresso.matcher.ViewMatchers.withId(org.ietf.ietfsched.R.id.star_button))
+                        .check(androidx.test.espresso.assertion.ViewAssertions.matches(
+                                androidx.test.espresso.matcher.ViewMatchers.isNotChecked()));
+            }
+        } else {
+            Log.d(TAG, "setSessionStarredViaUI: Starred state already matches desired state");
+        }
+        
+        // Navigate back
+        androidx.test.espresso.Espresso.pressBack();
+        
+        Log.d(TAG, "setSessionStarredViaUI: Successfully set starred state");
     }
 
     /**
