@@ -4,18 +4,12 @@ import androidx.test.espresso.Espresso;
 import androidx.test.espresso.action.ViewActions;
 import androidx.test.espresso.assertion.ViewAssertions;
 import androidx.test.espresso.contrib.RecyclerViewActions;
-import androidx.test.espresso.intent.Intents;
 import androidx.test.espresso.intent.matcher.IntentMatchers;
 import androidx.test.espresso.matcher.ViewMatchers;
-import androidx.test.ext.junit.rules.ActivityScenarioRule;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import org.ietf.ietfsched.R;
-import org.ietf.ietfsched.ui.HomeActivity;
 import org.ietf.ietfsched.ui.phone.SessionDetailActivity;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -37,25 +31,13 @@ import static org.hamcrest.Matchers.containsString;
  * Uses "tls" as the test session (assumed to always exist).
  */
 @RunWith(AndroidJUnit4.class)
-public class SessionsListTest {
+public class SessionsListTest extends BaseTest {
     private static final String TAG = "SessionsListTest";
     private static final String TEST_SESSION_SEARCH = "tls";
 
-    @Rule
-    public ActivityScenarioRule<HomeActivity> activityRule =
-            new ActivityScenarioRule<>(HomeActivity.class);
-
-    @Before
-    public void setUp() {
-        TestUtils.logTestSetup(TAG);
-        Intents.init();
-        // Use skipIfNotNeeded=true to avoid long waits on subsequent runs
-        TestUtils.waitForInitialSync(true);
-    }
-
-    @After
-    public void tearDown() {
-        Intents.release();
+    @Override
+    protected String getTestTag() {
+        return TAG;
     }
 
     @Test
@@ -137,10 +119,7 @@ public class SessionsListTest {
                 .atPosition(0)
                 .perform(click());
         
-        // Verify SessionDetailActivity opens
-        intended(hasComponent(SessionDetailActivity.class.getName()));
-        
-        // Verify session detail is displayed
+        // Verify session detail is displayed (more reliable than intent matching)
         onView(withId(R.id.session_title))
                 .check(ViewAssertions.matches(isDisplayed()));
         

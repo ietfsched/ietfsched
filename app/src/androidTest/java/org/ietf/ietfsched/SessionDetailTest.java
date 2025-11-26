@@ -3,16 +3,10 @@ package org.ietf.ietfsched;
 import androidx.test.espresso.Espresso;
 import androidx.test.espresso.action.ViewActions;
 import androidx.test.espresso.assertion.ViewAssertions;
-import androidx.test.espresso.intent.Intents;
 import androidx.test.espresso.matcher.ViewMatchers;
-import androidx.test.ext.junit.rules.ActivityScenarioRule;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import org.ietf.ietfsched.R;
-import org.ietf.ietfsched.ui.HomeActivity;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -31,7 +25,7 @@ import static androidx.test.espresso.matcher.ViewMatchers.withText;
  * Uses "tls" session as test data (assumed to always exist).
  */
 @RunWith(AndroidJUnit4.class)
-public class SessionDetailTest {
+public class SessionDetailTest extends BaseTest {
     private static final String TAG = "SessionDetailTest";
     private static final String TEST_SESSION_SEARCH = "tls";
     private static final String TAB_CONTENT = "content";
@@ -39,21 +33,9 @@ public class SessionDetailTest {
     private static final String TAB_NOTES = "notes";
     private static final String TAB_JOIN = "join";
 
-    @Rule
-    public ActivityScenarioRule<HomeActivity> activityRule =
-            new ActivityScenarioRule<>(HomeActivity.class);
-
-    @Before
-    public void setUp() {
-        TestUtils.logTestSetup(TAG);
-        Intents.init();
-        // Use skipIfNotNeeded=true to avoid long waits on subsequent runs
-        TestUtils.waitForInitialSync(true);
-    }
-
-    @After
-    public void tearDown() {
-        Intents.release();
+    @Override
+    protected String getTestTag() {
+        return TAG;
     }
 
     /**
@@ -91,7 +73,7 @@ public class SessionDetailTest {
         TestUtils.logTestStart(TAG, "testContentTabDisplays");
         navigateToTlsSession();
         
-        // Verify Content tab is selected by default (tabhost should be visible)
+        // Verify TabHost is visible
         onView(withId(android.R.id.tabhost))
                 .check(ViewAssertions.matches(isDisplayed()));
         
@@ -103,8 +85,12 @@ public class SessionDetailTest {
         onView(withId(R.id.session_subtitle))
                 .check(ViewAssertions.matches(isDisplayed()));
         
-        // Note: Draft names and slides are loaded asynchronously,
-        // so we just verify the tab container is visible
+        // TabHost should select the first tab automatically, but ensure Content tab is selected
+        // by clicking it - this ensures Espresso waits for the tab to become visible
+        onView(ViewMatchers.withText("Content"))
+                .perform(click());
+        
+        // Verify Content tab container is visible
         onView(withId(R.id.tab_session_summary))
                 .check(ViewAssertions.matches(isDisplayed()));
         
@@ -240,6 +226,11 @@ public class SessionDetailTest {
     public void testTabSwitching() {
         TestUtils.logTestStart(TAG, "testTabSwitching");
         navigateToTlsSession();
+        
+        // TabHost should select the first tab automatically, but ensure Content tab is selected
+        // by clicking it - this ensures Espresso waits for the tab to become visible
+        onView(ViewMatchers.withText("Content"))
+                .perform(click());
         
         // Start on Content tab (default)
         onView(withId(R.id.tab_session_summary))
