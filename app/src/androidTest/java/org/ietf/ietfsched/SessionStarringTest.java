@@ -412,9 +412,24 @@ public class SessionStarringTest extends BaseTest {
         onView(withId(R.id.star_button))
                 .check(ViewAssertions.matches(isChecked()));
         
-        // Navigate back to home
-        pressBack();
-        pressBack();
+        // Navigate back to home - may need multiple presses
+        // Press back until we're on home screen (max 5 presses to avoid infinite loop)
+        for (int i = 0; i < 5; i++) {
+            try {
+                // Try to find home screen button - if found, we're on home screen
+                onView(withId(R.id.home_btn_sessions))
+                        .check(ViewAssertions.matches(isDisplayed()));
+                break; // Found home screen, exit loop
+            } catch (Exception e) {
+                // Not on home screen yet, press back
+                pressBack();
+                TestUtils.waitFor(300); // Wait for activity transition
+            }
+        }
+        
+        // Verify we're on the home screen before navigating to Starred list
+        onView(withId(R.id.home_btn_sessions))
+                .check(ViewAssertions.matches(isDisplayed()));
         
         // Navigate to Starred list
         onView(withId(R.id.home_btn_starred))
@@ -581,9 +596,26 @@ public class SessionStarringTest extends BaseTest {
         onView(withId(R.id.star_button))
                 .check(ViewAssertions.matches(isNotChecked()));
         
+        // Navigate back to home - may need multiple presses
+        // Press back until we're on home screen (max 5 presses to avoid infinite loop)
+        for (int i = 0; i < 5; i++) {
+            try {
+                // Try to find home screen button - if found, we're on home screen
+                onView(withId(R.id.home_btn_sessions))
+                        .check(ViewAssertions.matches(isDisplayed()));
+                break; // Found home screen, exit loop
+            } catch (Exception e) {
+                // Not on home screen yet, press back
+                pressBack();
+                TestUtils.waitFor(300); // Wait for activity transition
+            }
+        }
+        
+        // Verify we're on the home screen before navigating to Starred list
+        onView(withId(R.id.home_btn_sessions))
+                .check(ViewAssertions.matches(isDisplayed()));
+        
         // Navigate to Starred list
-        pressBack();
-        pressBack();
         onView(withId(R.id.home_btn_starred))
                 .perform(click());
         
