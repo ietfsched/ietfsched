@@ -70,6 +70,8 @@ public class HomeActivity extends BaseActivity {
         // Also don't trigger if a sync is already in progress
         if (savedInstanceState == null && !isRefreshing()) {
             if (isCacheStale()) {
+                // Show toast for automatic sync too, so users know sync is happening
+                Toast.makeText(this, "Refreshing schedule data...", Toast.LENGTH_SHORT).show();
                 triggerRefresh();
             }
         }
