@@ -441,29 +441,6 @@ public class GeckoViewHelper {
     }
     
     /**
-     * Inject CSS via WebExtension content script.
-     * This is a workaround for GeckoView's lack of direct JavaScript evaluation API.
-     */
-    private void injectCSSViaWebExtension(GeckoRuntime runtime, 
-                                         org.mozilla.geckoview.WebExtensionController webExtController,
-                                         String escapedCSS) {
-        // WebExtension approach requires creating extension files
-        // For now, fall back to direct injection attempt
-        Log.d(TAG, "injectCSSViaWebExtension: WebExtension approach not implemented - using direct injection");
-        injectCSSDirectly(mPendingCSS);
-    }
-    
-    /**
-     * Reset initial load state. Used when loading a URL that should be treated as initial.
-     */
-    public void resetInitialLoadState() {
-        mInitialLoadComplete = false;
-        mInitialUrl = null;
-        mActualInitialUrl = null;
-        mCanGoBack = false; // Reset navigation state
-    }
-    
-    /**
      * Re-initialize GeckoView by closing the old session and creating a new one.
      * This clears the navigation history.
      */
@@ -487,15 +464,6 @@ public class GeckoViewHelper {
         
         // Re-create session
         createSession();
-    }
-    
-    /**
-     * Check if the current URL matches the initial URL.
-     * @param currentUrl The current URL to check
-     * @return true if the URL has changed from the initial URL
-     */
-    public boolean hasUrlChanged(String currentUrl) {
-        return mInitialUrl != null && !currentUrl.equals(mInitialUrl);
     }
     
     /**

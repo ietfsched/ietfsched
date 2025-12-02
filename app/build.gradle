@@ -6,8 +6,13 @@ android {
         applicationId "org.ietf.ietfsched"
         minSdkVersion 26
         targetSdkVersion 36
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
+        debug {
+            // Enable code coverage for debug builds
+            testCoverageEnabled true
+        }
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
@@ -37,4 +42,14 @@ dependencies {
     implementation "org.commonmark:commonmark:0.21.0"
     // GeckoView for better WebView compatibility
     implementation "org.mozilla.geckoview:geckoview:145.0.20251118022223"
+    
+    // Espresso testing dependencies
+    // Updated to 3.6.1 for better API 36 compatibility
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.6.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-intents:3.6.1'
+    androidTestImplementation 'androidx.test:runner:1.5.2'
+    androidTestImplementation 'androidx.test:rules:1.5.0'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.3.0'
 }

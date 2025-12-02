@@ -948,73 +948,6 @@ public class Workspace extends ViewGroup {
         }
     }
 
-    /**
-     * If set, invocations of requestChildRectangleOnScreen() will be ignored.
-     */
-    public void setIgnoreChildFocusRequests(boolean mIgnoreChildFocusRequests) {
-        this.mIgnoreChildFocusRequests = mIgnoreChildFocusRequests;
-    }
-
-    public void markViewSelected(View v) {
-        mCurrentScreen = indexOfChild(v);
-    }
-
-    /**
-     * Locks the current screen, preventing users from changing screens by swiping.
-     */
-    public void lockCurrentScreen() {
-        mLocked = true;
-    }
-
-    /**
-     * Unlocks the current screen, if it was previously locked. See also {@link
-     * Workspace#lockCurrentScreen()}.
-     */
-    public void unlockCurrentScreen() {
-        mLocked = false;
-    }
-
-    /**
-     * Sets the resource ID of the separator drawable to use between adjacent screens.
-     */
-    public void setSeparator(int resId) {
-        if (mSeparatorDrawable != null && resId == 0) {
-            // remove existing separators
-            mSeparatorDrawable = null;
-            int num = getChildCount();
-            for (int i = num - 2; i > 0; i -= 2) {
-                removeViewAt(i);
-            }
-            requestLayout();
-        } else if (resId != 0) {
-            // add or update separators
-            if (mSeparatorDrawable == null) {
-                // add
-                int numsep = getChildCount();
-                int insertIndex = 1;
-                mSeparatorDrawable = getResources().getDrawable(resId);
-                for (int i = 1; i < numsep; i++) {
-                    View v = new View(getContext());
-                    v.setBackgroundDrawable(mSeparatorDrawable);
-                    LayoutParams lp = new LayoutParams(LayoutParams.WRAP_CONTENT,
-                            LayoutParams.FILL_PARENT);
-                    v.setLayoutParams(lp);
-                    addView(v, insertIndex);
-                    insertIndex += 2;
-                }
-                requestLayout();
-            } else {
-                // update
-                mSeparatorDrawable = getResources().getDrawable(resId);
-                int num = getChildCount();
-                for (int i = num - 2; i > 0; i -= 2) {
-                    getChildAt(i).setBackgroundDrawable(mSeparatorDrawable);
-                }
-                requestLayout();
-            }
-        }
-    }
-
     private static class SavedState extends BaseSavedState {
         int currentScreen = -1;
 
@@ -1043,23 +976,5 @@ public class Workspace extends ViewGroup {
                         return new SavedState[size];
                     }
                 };
-    }
-
-    public void addViewToFront(View v) {
-        mCurrentScreen++;
-        addView(v, 0);
-    }
-
-    public void removeViewFromFront() {
-        mCurrentScreen--;
-        removeViewAt(0);
-    }
-
-    public void addViewToBack(View v) {
-        addView(v);
-    }
-
-    public void removeViewFromBack() {
-        removeViewAt(getChildCount() - 1);
     }
 }

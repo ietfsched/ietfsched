@@ -52,7 +52,6 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
     private static final String TAG = "SessionsFragment";
     private static final boolean debug = true;
 
-    private Uri mTrackUri;
     private Cursor mCursor;
     private CursorAdapter mAdapter;
     private int mCheckedPosition = -1;
@@ -86,7 +85,6 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
 
         mHandler.cancelOperation(SearchQuery._TOKEN);
         mHandler.cancelOperation(SessionsQuery._TOKEN);
-        mHandler.cancelOperation(TracksQuery._TOKEN);
 
         // Load new arguments
         final Intent intent = BaseActivity.fragmentArgumentsToIntent(arguments);
@@ -114,13 +112,6 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
         // Start background query to load sessions
         mHandler.startQuery(sessionQueryToken, null, sessionsUri, projection, null, null,
                 ScheduleContract.Sessions.DEFAULT_SORT);
-
-        // If caller launched us with specific track hint, pass it along when
-        // launching session details. Also start a query to load the track info.
-        mTrackUri = intent.getParcelableExtra(SessionDetailFragment.EXTRA_TRACK);
-        if (mTrackUri != null) {
-            mHandler.startQuery(TracksQuery._TOKEN, mTrackUri, TracksQuery.PROJECTION);
-        }
     }
 
     @Override
@@ -158,8 +149,6 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
 
         if (token == SessionsQuery._TOKEN || token == SearchQuery._TOKEN) {
             onSessionOrSearchQueryComplete(cursor);
-        } else if (token == TracksQuery._TOKEN) {
-            onTrackQueryComplete(cursor);
         } else {
         	if (debug) Log.d("SessionsFragment/onQueryComplete", "Query complete, Not Actionable: " + token);
             cursor.close();
@@ -185,27 +174,6 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
         }
     }
 
-    /**
-     * Handle {@link TracksQuery} {@link Cursor}.
-     */
-    private void onTrackQueryComplete(Cursor cursor) {
-    	if (debug) Log.d(TAG, "onTrackQueryComplete");
-        try {
-            if (!cursor.moveToFirst()) {
-                return;
-            }
-
-            // Use found track to build title-bar
-            ActivityHelper activityHelper = ((BaseActivity) getActivity()).getActivityHelper();
-            String trackName = cursor.getString(TracksQuery.TRACK_NAME);
-            activityHelper.setActionBarTitle(trackName);
-            activityHelper.setActionBarColor(cursor.getInt(TracksQuery.TRACK_COLOR));
-
-//            AnalyticsUtils.getInstance(getActivity()).trackPageView("/Tracks/" + trackName);
-        } finally {
-            cursor.close();
-        }
-    }
 
     @Override
     public void onResume() {	
@@ -264,7 +232,6 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
 
         final Uri sessionUri = ScheduleContract.Sessions.buildSessionUri(sessionId);
         final Intent intent = new Intent(Intent.ACTION_VIEW, sessionUri);
-        intent.putExtra(SessionDetailFragment.EXTRA_TRACK, mTrackUri);
         ((BaseActivity) getActivity()).openActivityOrFragment(intent);
 
         getListView().setItemChecked(position, true);
@@ -568,21 +535,6 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
         int BLOCK_START = 4;
         int BLOCK_END = 5;
         int ROOM_NAME = 6;
-    }
-
-    /**
-     * {@link org.ietf.ietfsched.provider.ScheduleContract.Tracks} query parameters.
-     */
-    private interface TracksQuery {
-        int _TOKEN = 0x2;
-
-        String[] PROJECTION = {
-                ScheduleContract.Tracks.TRACK_NAME,
-                ScheduleContract.Tracks.TRACK_COLOR,
-        };
-
-        int TRACK_NAME = 0;
-        int TRACK_COLOR = 1;
     }
 
     /** {@link org.ietf.ietfsched.provider.ScheduleContract.Sessions} search query

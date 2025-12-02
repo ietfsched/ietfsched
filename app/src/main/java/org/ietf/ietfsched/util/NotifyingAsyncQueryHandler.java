@@ -37,13 +37,21 @@ import java.lang.ref.WeakReference;
  */
 public class NotifyingAsyncQueryHandler extends AsyncQueryHandler {
     private WeakReference<AsyncQueryListener> mListener;
-	private final static String TAG = "NotifyingAsyncQueryHandler";
+    private WeakReference<AsyncUpdateListener> mUpdateListener;
+    private final static String TAG = "NotifyingAsyncQueryHandler";
 
     /**
      * Interface to listen for completed query operations.
      */
     public interface AsyncQueryListener {
         void onQueryComplete(int token, Object cookie, Cursor cursor);
+    }
+
+    /**
+     * Interface to listen for completed update operations.
+     */
+    public interface AsyncUpdateListener {
+        void onUpdateComplete(int token, Object cookie, int result);
     }
 
     public NotifyingAsyncQueryHandler(ContentResolver resolver, AsyncQueryListener listener) {
@@ -56,7 +64,7 @@ public class NotifyingAsyncQueryHandler extends AsyncQueryHandler {
      * asynchronous calls. Will replace any existing listener.
      */
     public void setQueryListener(AsyncQueryListener listener) {
-        mListener = new WeakReference<AsyncQueryListener>(listener);
+        mListener = listener == null ? null : new WeakReference<AsyncQueryListener>(listener);
     }
 
     /**
@@ -65,6 +73,13 @@ public class NotifyingAsyncQueryHandler extends AsyncQueryHandler {
      */
     public void clearQueryListener() {
         mListener = null;
+    }
+
+    /**
+     * Set listener for update completion events.
+     */
+    public void setUpdateListener(AsyncUpdateListener listener) {
+        mUpdateListener = listener == null ? null : new WeakReference<AsyncUpdateListener>(listener);
     }
 
     /**
@@ -131,5 +146,15 @@ public class NotifyingAsyncQueryHandler extends AsyncQueryHandler {
         } else if (cursor != null) {
             cursor.close();
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    protected void onUpdateComplete(int token, Object cookie, int result) {
+        final AsyncUpdateListener listener = mUpdateListener == null ? null : mUpdateListener.get();
+        if (listener != null) {
+            listener.onUpdateComplete(token, cookie, result);
+        }
+        super.onUpdateComplete(token, cookie, result);
     }
 }

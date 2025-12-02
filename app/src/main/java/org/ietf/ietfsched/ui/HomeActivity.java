@@ -50,6 +50,7 @@ public class HomeActivity extends BaseActivity {
     private static final long CACHE_JITTER_MS = 20 * 60 * 1000;   // ±20 minutes
 
     private SyncStatusUpdaterFragment mSyncStatusUpdaterFragment;
+    private boolean mIsManualRefresh = false; // Track if sync was manually triggered
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,6 +71,7 @@ public class HomeActivity extends BaseActivity {
         // Also don't trigger if a sync is already in progress
         if (savedInstanceState == null && !isRefreshing()) {
             if (isCacheStale()) {
+                mIsManualRefresh = false; // Mark as automatic refresh
                 // Show toast for automatic sync too, so users know sync is happening
                 Toast.makeText(this, "Refreshing schedule data...", Toast.LENGTH_SHORT).show();
                 triggerRefresh();
@@ -95,6 +97,7 @@ public class HomeActivity extends BaseActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.menu_refresh) {
             // Manual refresh always forces a sync, bypassing cache
+            mIsManualRefresh = true; // Mark as manual refresh
             Toast.makeText(this, "Refreshing schedule data...", Toast.LENGTH_SHORT).show();
             triggerRefresh();
             return true;
@@ -199,14 +202,23 @@ public class HomeActivity extends BaseActivity {
                     mSyncing = false;
                     activity.recordSyncTime(); // Cache the sync timestamp
                     Toast.makeText(activity, "Schedule updated", Toast.LENGTH_SHORT).show();
+                    // Reset manual refresh flag
+                    activity.mIsManualRefresh = false;
                     break;
                 }
                 case SyncService.STATUS_ERROR: {
-                    // Error happened down in SyncService, show as toast.
+                    // Error happened down in SyncService
                     mSyncing = false;
+                    // Record sync time even on error to prevent immediate retries
+                    // This prevents the "sync error all over the place" issue
+                    activity.recordSyncTime();
+                    // Show error toast for both manual and automatic refreshes
+                    // Users should know if sync failed, even during automatic refresh
                     final String errorText = getString(R.string.toast_sync_error, resultData
                             .getString(Intent.EXTRA_TEXT));
                     Toast.makeText(activity, errorText, Toast.LENGTH_LONG).show();
+                    // Reset manual refresh flag
+                    activity.mIsManualRefresh = false;
                     break;
                 }
             }
