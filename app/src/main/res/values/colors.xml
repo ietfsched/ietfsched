@@ -14,7 +14,7 @@
   limitations under the License.
   -->
 <resources>
-    <color name="actionbar_text">#ff29549f</color>
+    <color name="actionbar_text">#ff6B9EE8</color>
 
     <color name="body_text_1">#ff000000</color>
     <color name="body_text_2">#99000000</color>
@@ -23,7 +23,7 @@
     <color name="body_text_1_inverse">#ffffffff</color>
     <color name="body_text_2_inverse">#99ffffff</color>
 
-    <color name="accent_1">#ff29549f</color>
+    <color name="accent_1">#ff6B9EE8</color>
     <color name="hyperlink">#ffff549f</color>
     <color name="background_1">#ffffffff</color>
 
