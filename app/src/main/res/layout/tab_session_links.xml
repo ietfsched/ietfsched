@@ -13,25 +13,9 @@
   See the License for the specific language governing permissions and
   limitations under the License.
   -->
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- GeckoView is created programmatically as a singleton and added to this container -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tab_session_links"
     android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:fillViewport="true">
-
-    <LinearLayout android:orientation="vertical"
-        android:id="@+id/links_container"
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent">
-
-        <TextView android:id="@+id/empty_links"
-            style="@android:style/TextAppearance.Medium"
-            android:layout_width="fill_parent"
-            android:layout_height="fill_parent"
-            android:layout_weight="1"
-            android:text="@string/empty_links"
-            android:gravity="center"
-            android:visibility="gone" />
-
-    </LinearLayout>
-
-</ScrollView>
+    android:layout_height="fill_parent">
+</FrameLayout>

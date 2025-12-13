@@ -15,7 +15,8 @@
   -->
 <!-- GeckoView is created programmatically as a singleton and added to this container -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/tab_session_notes"
+    android:id="@+id/tab_session_join"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent">
 </FrameLayout>
+

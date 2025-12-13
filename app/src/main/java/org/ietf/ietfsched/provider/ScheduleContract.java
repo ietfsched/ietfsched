@@ -112,6 +112,10 @@ public class ScheduleContract {
         String SESSION_YOUTUBE_URL = "session_youtube_url";
         /** Full URL to PDF. */
         String SESSION_PDF_URL = "session_pdf_url";
+        /** Internet drafts associated with this session (stored as "draft-name|||url" separated by "::", where draft-name is the raw draft identifier like "draft-ietf-6man-enhanced-vpn-vtn-id"). */
+        String SESSION_DRAFTS_URL = "session_drafts_url";
+        /** Session resource URI for fetching detailed session data (e.g., "/api/v1/meeting/session/{id}/"). */
+        String SESSION_RES_URI = "session_res_uri";
         /** Full URL to speakermeter/external feedback URL. */
         String SESSION_FEEDBACK_URL = "session_feedback_url";
         /** Full URL to official session notes. */

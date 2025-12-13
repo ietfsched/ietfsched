@@ -50,6 +50,7 @@ public class HomeActivity extends BaseActivity {
     private static final long CACHE_JITTER_MS = 20 * 60 * 1000;   // ±20 minutes
 
     private SyncStatusUpdaterFragment mSyncStatusUpdaterFragment;
+    private boolean mIsManualRefresh = false; // Track if sync was manually triggered
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,9 +67,15 @@ public class HomeActivity extends BaseActivity {
             fm.beginTransaction().add(mSyncStatusUpdaterFragment,  SyncStatusUpdaterFragment.TAG).commit();
         }
         
-        // Only refresh if cache is stale (>1 hour with jitter)
-        if (isCacheStale()) {
-            triggerRefresh();
+        // Only check cache and refresh on initial creation (not on configuration changes)
+        // Also don't trigger if a sync is already in progress
+        if (savedInstanceState == null && !isRefreshing()) {
+            if (isCacheStale()) {
+                mIsManualRefresh = false; // Mark as automatic refresh
+                // Show toast for automatic sync too, so users know sync is happening
+                Toast.makeText(this, "Refreshing schedule data...", Toast.LENGTH_SHORT).show();
+                triggerRefresh();
+            }
         }
     }
 
@@ -90,6 +97,7 @@ public class HomeActivity extends BaseActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.menu_refresh) {
             // Manual refresh always forces a sync, bypassing cache
+            mIsManualRefresh = true; // Mark as manual refresh
             Toast.makeText(this, "Refreshing schedule data...", Toast.LENGTH_SHORT).show();
             triggerRefresh();
             return true;
@@ -99,25 +107,31 @@ public class HomeActivity extends BaseActivity {
 
     /**
      * Check if cached data is stale and needs refresh.
-     * Uses 1 hour + random jitter (±20 minutes) to avoid thundering herd.
+     * Uses 1 hour + random jitter (0 to +20 minutes) to avoid thundering herd.
+     * Jitter only adds time, never subtracts, ensuring minimum 1 hour cache.
      */
     private boolean isCacheStale() {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         long lastSync = prefs.getLong(PREF_LAST_SYNC, 0);
         
         if (lastSync == 0) {
+            Log.d(TAG, "isCacheStale: Never synced before, cache is stale");
             return true; // Never synced before
         }
         
         long now = System.currentTimeMillis();
         long age = now - lastSync;
         
-        // Add random jitter (±20 minutes) to cache duration
+        // Add random jitter (0 to +20 minutes) to cache duration
+        // This ensures minimum 1 hour cache, with up to 80 minutes to avoid thundering herd
         Random random = new Random();
-        long jitter = (long) (random.nextDouble() * 2 * CACHE_JITTER_MS - CACHE_JITTER_MS);
+        long jitter = (long) (random.nextDouble() * CACHE_JITTER_MS); // 0 to +20 minutes
         long threshold = CACHE_DURATION_MS + jitter;
         
-        return age > threshold;
+        boolean stale = age > threshold;
+        Log.d(TAG, "isCacheStale: lastSync=" + lastSync + " (" + (lastSync / 1000) + " seconds), now=" + now + 
+              ", age=" + (age / 60000) + " min, threshold=" + (threshold / 60000) + " min, stale=" + stale);
+        return stale;
     }
 
     private void triggerRefresh() {
@@ -137,7 +151,9 @@ public class HomeActivity extends BaseActivity {
     
     private void recordSyncTime() {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        prefs.edit().putLong(PREF_LAST_SYNC, System.currentTimeMillis()).apply();
+        long syncTime = System.currentTimeMillis();
+        prefs.edit().putLong(PREF_LAST_SYNC, syncTime).commit(); // Use commit() instead of apply() to ensure persistence
+        Log.d(TAG, "recordSyncTime: Recorded sync time: " + syncTime + " (" + (syncTime / 1000) + " seconds since epoch)");
     }
 
     private void updateRefreshStatus(boolean refreshing) {
@@ -186,14 +202,23 @@ public class HomeActivity extends BaseActivity {
                     mSyncing = false;
                     activity.recordSyncTime(); // Cache the sync timestamp
                     Toast.makeText(activity, "Schedule updated", Toast.LENGTH_SHORT).show();
+                    // Reset manual refresh flag
+                    activity.mIsManualRefresh = false;
                     break;
                 }
                 case SyncService.STATUS_ERROR: {
-                    // Error happened down in SyncService, show as toast.
+                    // Error happened down in SyncService
                     mSyncing = false;
+                    // Record sync time even on error to prevent immediate retries
+                    // This prevents the "sync error all over the place" issue
+                    activity.recordSyncTime();
+                    // Show error toast for both manual and automatic refreshes
+                    // Users should know if sync failed, even during automatic refresh
                     final String errorText = getString(R.string.toast_sync_error, resultData
                             .getString(Intent.EXTRA_TEXT));
                     Toast.makeText(activity, errorText, Toast.LENGTH_LONG).show();
+                    // Reset manual refresh flag
+                    activity.mIsManualRefresh = false;
                     break;
                 }
             }

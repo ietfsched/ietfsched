@@ -20,7 +20,6 @@ package org.ietf.ietfsched.ui;
 import org.ietf.ietfsched.R;
 import org.ietf.ietfsched.provider.ScheduleContract;
 import org.ietf.ietfsched.ui.phone.ScheduleActivity;
-import org.ietf.ietfsched.ui.tablet.ScheduleMultiPaneActivity;
 import org.ietf.ietfsched.util.UIUtils;
 
 import android.content.Intent;

@@ -519,12 +519,6 @@ public class ScheduleProvider extends ContentProvider {
         }
     }
 
-    @Override
-    public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException {
-        final int match = sUriMatcher.match(uri);
-        throw new UnsupportedOperationException("Unknown uri: " + uri);
-    }
-
     private interface Subquery {
         String BLOCK_SESSIONS_COUNT = "(SELECT COUNT(" + Qualified.SESSIONS_SESSION_ID + ") FROM "
                 + Tables.SESSIONS + " WHERE " + Qualified.SESSIONS_BLOCK_ID + "="

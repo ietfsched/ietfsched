@@ -61,6 +61,8 @@ class Meeting {
 	String typeSession; // Morning Session I
 	String key; // unique identifier
 	String[] slides; // The list of slides urls.
+	String[] drafts; // The list of Internet drafts (stored as "draft-name|||url", where draft-name is the raw identifier like "draft-ietf-6man-enhanced-vpn-vtn-id")
+	String sessionResUri; // Session detail API URI for fetching materials
 
 	/**
 	 * Sets the current meeting number. Must be called before creating Meeting objects.
@@ -108,7 +110,6 @@ class Meeting {
 			Date jDay = jsonDate.parse(mJSON.getString("start"));
 
 			startHour = afterFormat.format(jDay);
-			Log.d(TAG, "jSON Date: " + jDay + " startHour: " + startHour);
 			// Build an endDate by using localTime, and Duration (from localtime start 00:00 to duration)
 			String[] durSplit = mJSON.getString("duration").split(":");
 			Integer[] durSplitInt = new Integer[durSplit.length];
@@ -137,7 +138,17 @@ class Meeting {
 			try {
 				hrefDetail = mJSON.getString("agenda");
 			} catch (JSONException e) {
-				Log.d(TAG, "Failed to get an agenda / hrefDetail for " + title);
+			}
+			
+			// Try to get session_res_uri for fetching details (which contain materials array)
+			try {
+				this.sessionResUri = mJSON.getString("session_res_uri");
+				if (debug && this.sessionResUri != null) {
+					Log.d(TAG, String.format(Locale.ROOT, "Found session_res_uri for %s: %s", title, this.sessionResUri));
+				}
+			} catch (JSONException e) {
+				// session_res_uri is optional
+				this.sessionResUri = null;
 			}
 		} catch (JSONException e) {
 			throw new UnScheduledMeetingException(
@@ -172,11 +183,6 @@ class Meeting {
 			if (pArray == null) throw new UnScheduledMeetingException("No presentations");
 			slides = new String[pArray.length()];
 			
-			// DEBUG: Log the entire presentation object to understand structure
-			if (pArray.length() > 0) {
-				Log.d(TAG, "First presentation object: " + pArray.getJSONObject(0).toString());
-			}
-			
 			// The presentations array contains objects with "url", "name", and "title" fields
 			// Store as: "title|||url" so we can display the actual presentation title
 			for (int i = 0; i < pArray.length(); i++ ){
@@ -200,17 +206,74 @@ class Meeting {
 				
 				// Store as "title|||url" (using ||| as separator since :: separates multiple presentations)
 				slides[i] = presentationTitle + "|||" + url;
-				if (debug) Log.d(TAG, "Presentation: " + presentationTitle + " -> " + url);
 			}
 		} catch (JSONException e) {
-			if (debug) Log.d(TAG, String.format(Locale.ROOT, "NoPresentations for %s: %s", title, e.toString()));
+			// Ignore - presentations array parsing is optional
 		}
-		if (debug) Log.d(TAG, "Agenda URL: " + hrefDetail);
-		if (debug && slides != null) {
-			Log.d(TAG, "Slides URLs count: " + slides.length);
-			for (int i = 0; i < slides.length; i++) {
-				Log.d(TAG, "Slides URL[" + i + "]: " + slides[i]);
+		
+		// Extract Internet drafts from materials array, if available
+		java.util.List<String> draftList = new java.util.ArrayList<>();
+		try {
+			JSONArray materialsArray = mJSON.optJSONArray("materials");
+			if (materialsArray != null) {
+				for (int i = 0; i < materialsArray.length(); i++) {
+					String materialUri = materialsArray.getString(i);
+					// Materials are API endpoints like "/api/v1/doc/document/draft-richardson-emu-eap-onboarding/"
+					// Extract draft name from the endpoint
+					if (materialUri != null && materialUri.contains("/api/") && materialUri.contains("draft-")) {
+						// Extract draft name from URI: /api/v1/doc/document/draft-name/ -> draft-name
+						String[] parts = materialUri.split("/");
+						for (String part : parts) {
+							if (part.startsWith("draft-")) {
+								// Construct URL to the draft document
+								String draftUrl = "https://datatracker.ietf.org/doc/" + part + "/";
+								// Store raw draft name (e.g., "draft-ietf-6man-enhanced-vpn-vtn-id")
+								draftList.add(part + "|||" + draftUrl);
+								break;
+							}
+						}
+					}
+				}
 			}
+			if (draftList.size() > 0) {
+				drafts = draftList.toArray(new String[0]);
+			}
+		} catch (JSONException e) {
+			// Ignore - materials array parsing is optional
+		}
+	}
+	
+	/**
+	 * Parse drafts from a materials JSONArray (called after fetching session details).
+	 * Returns drafts in "draft-name|||url" format, where draft-name is the raw draft identifier.
+	 */
+	void parseDraftsFromMaterials(JSONArray materialsArray) {
+		if (materialsArray == null) return;
+		
+		java.util.List<String> draftList = new java.util.ArrayList<>();
+		try {
+			for (int i = 0; i < materialsArray.length(); i++) {
+				String materialUri = materialsArray.getString(i);
+				// Materials are API endpoints like "/api/v1/doc/document/draft-richardson-emu-eap-onboarding/"
+				if (materialUri != null && materialUri.contains("/api/") && materialUri.contains("draft-")) {
+					// Extract draft name from URI: /api/v1/doc/document/draft-name/ -> draft-name
+					String[] parts = materialUri.split("/");
+					for (String part : parts) {
+						if (part.startsWith("draft-")) {
+							// Construct URL to the draft document
+							String draftUrl = "https://datatracker.ietf.org/doc/" + part + "/";
+							// Store raw draft name (e.g., "draft-ietf-6man-enhanced-vpn-vtn-id")
+							draftList.add(part + "|||" + draftUrl);
+							break;
+						}
+					}
+				}
+			}
+			if (draftList.size() > 0) {
+				drafts = draftList.toArray(new String[0]);
+			}
+		} catch (JSONException e) {
+			// Ignore - materials array parsing errors
 		}
 	}
 }

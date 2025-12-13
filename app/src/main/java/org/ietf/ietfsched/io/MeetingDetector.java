@@ -18,7 +18,8 @@ public class MeetingDetector {
     private static final boolean DEBUG = true;
     
     // Request more meetings to ensure we get past meetings (API defaults to very few)
-    private static final String MEETINGS_API_URL = "https://datatracker.ietf.org/api/v1/meeting/meeting/?limit=50";
+    // Filter by type=ietf to exclude interim meetings and ensure we get IETF meetings like 124
+    private static final String MEETINGS_API_URL = "https://datatracker.ietf.org/api/v1/meeting/meeting/?type=ietf&limit=50";
     
     // Cache settings
     private static final long CACHE_DURATION_DURING_MEETING = 60 * 60 * 1000; // 1 hour
@@ -83,45 +84,59 @@ public class MeetingDetector {
      */
     private List<MeetingMetadata> fetchMeetingList() {
         try {
+            Log.d(TAG, "Fetching meetings from: " + MEETINGS_API_URL);
             String jsonStr = remoteExecutor.executeGet(MEETINGS_API_URL);
-            if (jsonStr == null) {
-                Log.e(TAG, "Failed to fetch meetings list");
+            if (jsonStr == null || jsonStr.trim().isEmpty()) {
+                Log.e(TAG, "Failed to fetch meetings list: executeGet returned null or empty");
                 return null;
             }
             
+            Log.d(TAG, "Received API response, length: " + jsonStr.length());
             JSONObject root = new JSONObject(jsonStr);
             JSONArray objects = root.optJSONArray("objects");
             
             if (objects == null) {
-                Log.e(TAG, "No 'objects' array in API response");
+                Log.e(TAG, "No 'objects' array in API response. Response keys: " + root.keys());
                 return null;
             }
+            
+            Log.d(TAG, "Found " + objects.length() + " meetings in API response");
             
             List<MeetingMetadata> meetings = new ArrayList<>();
             
             for (int i = 0; i < objects.length(); i++) {
                 try {
                     JSONObject meetingJson = objects.getJSONObject(i);
+                    String meetingNumber = meetingJson.optString("number", "");
                     
                     // Filter for IETF meetings only
                     String type = meetingJson.optString("type", "");
                     if (!type.contains("ietf")) {
-                        if (DEBUG) Log.d(TAG, "Skipping non-IETF meeting: " + 
-                            meetingJson.optString("number"));
+                        if (DEBUG) Log.d(TAG, "Skipping non-IETF meeting: " + meetingNumber);
                         continue;
+                    }
+                    
+                    // Log all IETF meetings found, especially IETF-124
+                    if (meetingNumber.contains("124") || DEBUG) {
+                        Log.d(TAG, "Processing IETF meeting: " + meetingNumber + ", type=" + type);
                     }
                     
                     MeetingMetadata meeting = MeetingMetadata.fromJSON(meetingJson);
                     
-                    // Check if agenda is available
-                    boolean agendaAvailable = checkAgendaAvailable(meeting.agendaUrl);
-                    meeting = meeting.withAgendaAvailability(agendaAvailable);
+                    // Only check agenda availability for the first few meetings to avoid throttling
+                    // We'll check agendas for meetings as needed during selection
+                    // For now, assume agenda is available (will be checked during selection if needed)
+                    boolean agendaAvailable = true; // Optimistic - will be verified during selection if needed
+                    
+                    // Log IETF-124 specifically
+                    if (meeting.number == 124 || DEBUG) {
+                        Log.d(TAG, "IETF " + meeting.number + " found: url=" + meeting.agendaUrl);
+                    }
                     
                     meetings.add(meeting);
                     
                     if (DEBUG) Log.d(TAG, "Found meeting: IETF " + meeting.number + 
-                        " (" + meeting.city + "), start=" + meeting.startMillis + 
-                        ", agenda=" + agendaAvailable);
+                        " (" + meeting.city + "), start=" + meeting.startMillis);
                         
                 } catch (JSONException e) {
                     Log.w(TAG, "Failed to parse meeting JSON", e);
@@ -132,7 +147,8 @@ public class MeetingDetector {
             return meetings;
             
         } catch (Exception e) {
-            Log.e(TAG, "Error fetching meetings list", e);
+            Log.e(TAG, "Error fetching meetings list: " + e.getMessage(), e);
+            e.printStackTrace();
             return null;
         }
     }
@@ -187,45 +203,78 @@ public class MeetingDetector {
      * 1. Currently ongoing meeting with agenda
      * 2. Upcoming meeting with agenda
      * 3. Previous meeting with agenda (fallback)
+     * 
+     * Note: Agenda availability is checked on-demand for candidates to avoid throttling.
      */
     private MeetingMetadata selectMeeting(List<MeetingMetadata> meetings, long now) {
         MeetingMetadata currentMeeting = null;
         MeetingMetadata upcomingMeeting = null;
         MeetingMetadata previousMeeting = null;
         
+        // First pass: identify candidates without checking agendas (to avoid throttling)
         for (MeetingMetadata meeting : meetings) {
             boolean isOngoing = now >= meeting.startMillis && now <= meeting.endMillis;
             boolean isUpcoming = now < meeting.startMillis;
             boolean isPrevious = now > meeting.endMillis;
             
-            if (isOngoing && meeting.agendaAvailable) {
+            if (isOngoing) {
                 currentMeeting = meeting;
                 break; // Prefer current meeting
-            } else if (isUpcoming && meeting.agendaAvailable) {
+            } else if (isUpcoming) {
                 if (upcomingMeeting == null || meeting.startMillis < upcomingMeeting.startMillis) {
                     upcomingMeeting = meeting; // Get the nearest upcoming
                 }
             } else if (isPrevious) {
-                // For past meetings, don't check agendaAvailable - they should always have it
                 if (previousMeeting == null || meeting.startMillis > previousMeeting.startMillis) {
                     previousMeeting = meeting; // Get the most recent previous
                 }
             }
         }
         
-        // Return in priority order
+        // Second pass: check agenda availability only for the selected candidate
+        // This avoids checking agendas for all 50 meetings
         if (currentMeeting != null) {
-            if (DEBUG) Log.d(TAG, "Selected current meeting: IETF " + currentMeeting.number);
-            return currentMeeting;
-        } else if (upcomingMeeting != null) {
-            if (DEBUG) Log.d(TAG, "Selected upcoming meeting: IETF " + upcomingMeeting.number);
-            return upcomingMeeting;
-        } else if (previousMeeting != null) {
+            boolean agendaAvailable = checkAgendaAvailable(currentMeeting.agendaUrl);
+            if (agendaAvailable) {
+                currentMeeting = currentMeeting.withAgendaAvailability(true);
+                if (DEBUG) Log.d(TAG, "Selected current meeting: IETF " + currentMeeting.number);
+                return currentMeeting;
+            } else {
+                // Current meeting doesn't have agenda, fall through to upcoming/previous
+                currentMeeting = null;
+            }
+        }
+        
+        if (upcomingMeeting != null) {
+            boolean agendaAvailable = checkAgendaAvailable(upcomingMeeting.agendaUrl);
+            if (agendaAvailable) {
+                upcomingMeeting = upcomingMeeting.withAgendaAvailability(true);
+                if (DEBUG) Log.d(TAG, "Selected upcoming meeting: IETF " + upcomingMeeting.number);
+                return upcomingMeeting;
+            } else {
+                // Upcoming meeting doesn't have agenda, fall through to previous
+                upcomingMeeting = null;
+            }
+        }
+        
+        if (previousMeeting != null) {
+            // For past meetings, assume agenda is available (they should always have it)
+            // But verify if we have time
+            boolean agendaAvailable = checkAgendaAvailable(previousMeeting.agendaUrl);
+            previousMeeting = previousMeeting.withAgendaAvailability(agendaAvailable);
             if (DEBUG) Log.d(TAG, "Using previous meeting as fallback: IETF " + previousMeeting.number);
             return previousMeeting;
         }
         
-        Log.e(TAG, "No suitable meeting found");
+        Log.e(TAG, "No suitable meeting found. Checked " + meetings.size() + " meetings. Current time: " + now);
+        // Log details about meetings for debugging
+        for (MeetingMetadata m : meetings) {
+            Log.d(TAG, "Meeting IETF " + m.number + ": start=" + m.startMillis + 
+                ", end=" + m.endMillis + 
+                ", ongoing=" + (now >= m.startMillis && now <= m.endMillis) +
+                ", upcoming=" + (now < m.startMillis) +
+                ", previous=" + (now > m.endMillis));
+        }
         return null;
     }
     
