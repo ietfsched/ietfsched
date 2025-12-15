@@ -23,11 +23,15 @@ import org.ietf.ietfsched.ui.phone.ScheduleActivity;
 import org.ietf.ietfsched.util.UIUtils;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import androidx.fragment.app.Fragment;
+import android.text.Html;
+import android.text.Spanned;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
 public class DashboardFragment extends Fragment {
@@ -89,6 +93,34 @@ public class DashboardFragment extends Fragment {
                         startActivity(new Intent(getActivity(), WellNoteActivity.class));
                     }
                 });
+
+        // Set up Feedback and Support link
+        TextView feedbackLink = root.findViewById(R.id.feedback_support_link);
+        if (feedbackLink != null) {
+            // Make text underlined using HTML
+            String text = getString(R.string.feedback_and_support);
+            Spanned spannedText = Html.fromHtml("<u>" + text + "</u>", Html.FROM_HTML_MODE_LEGACY);
+            feedbackLink.setText(spannedText);
+            
+            feedbackLink.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    fireTrackerEvent("Feedback and Support");
+                    String email = getString(R.string.feedback_email);
+                    String subject = getString(R.string.feedback_email_subject);
+                    Intent intent = new Intent(Intent.ACTION_SENDTO);
+                    // Build mailto URI with query parameters - construct manually to ensure email is preserved
+                    String mailtoString = "mailto:" + email + "?subject=" + Uri.encode(subject);
+                    intent.setData(Uri.parse(mailtoString));
+                    try {
+                        startActivity(intent);
+                    } catch (android.content.ActivityNotFoundException e) {
+                        Toast.makeText(getActivity(), "No email app found", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+        }
+
         return root;
     }
 }

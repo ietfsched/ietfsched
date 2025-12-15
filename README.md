@@ -9,7 +9,7 @@ This project is the Android app for the IETF meeting. The app supports devices r
 
 <h2>Source</h2>
 
-The source code in this repository reflects the app as of IETF 92.
+The source code in this repository reflects the app and Datatracker API as of IETF 124.
 
 <h2>Features</h2>
 
@@ -21,14 +21,14 @@ With the app, you can:
 <h2>How to build IETFSched</h2>
 
 1. Install the following software:
-       - Android Studio (latest version recommended):
+   - Android Studio (latest version recommended):
          https://developer.android.com/studio
-       - Android SDK with the following components:
-         - Android SDK Platform-tools (latest)
-         - Android SDK Build-tools (latest)
-         - Android SDK Platform API 36 (Android 16)
-         - Android SDK Platform API 26 (Android 8.0) - minimum SDK
-         - AndroidX libraries (included with Android Studio)
+   - Android SDK with the following components:
+     - Android SDK Platform-tools (latest)
+     - Android SDK Build-tools (latest)
+     - Android SDK Platform API 36 (Android 16)
+     - Android SDK Platform API 26 (Android 8.0) - minimum SDK
+     - AndroidX libraries (included with Android Studio)
 
 2. Ensure you have Java 17 or later installed.
 

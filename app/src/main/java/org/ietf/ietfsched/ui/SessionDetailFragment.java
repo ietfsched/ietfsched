@@ -37,8 +37,12 @@ import android.content.IntentFilter;
 import android.database.Cursor;
 import android.os.Handler;
 import android.os.Looper;
+import android.graphics.ColorFilter;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.graphics.RectF;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import androidx.fragment.app.Fragment;
@@ -418,11 +422,30 @@ public class SessionDetailFragment extends Fragment implements
      * @return View
      */
     private View buildIndicator(int textRes, int backgroundRes) {
+        return buildIndicator(textRes, backgroundRes, 0);
+    }
+
+    /**
+     * Build a {@link View} to be used as a tab indicator, setting the requested string resource as
+     * its label, a custom background drawable, and optionally a color tint.
+     *
+     * @param textRes
+     * @param backgroundRes
+     * @param colorTint Color to tint the drawable (0 for no tint)
+     * @return View
+     */
+    private View buildIndicator(int textRes, int backgroundRes, int colorTint) {
         final TextView indicator = (TextView) getActivity().getLayoutInflater()
                 .inflate(R.layout.tab_indicator,
                         (ViewGroup) mRootView.findViewById(android.R.id.tabs), false);
         indicator.setText(textRes);
         indicator.setBackgroundResource(backgroundRes);
+        if (colorTint != 0) {
+            Drawable background = indicator.getBackground();
+            if (background != null) {
+                background.setColorFilter(new PorterDuffColorFilter(colorTint, PorterDuff.Mode.SRC_ATOP));
+            }
+        }
         return indicator;
     }
 
@@ -757,9 +780,10 @@ public class SessionDetailFragment extends Fragment implements
      */
     private void setupJoinTab() {
         // Join content comes from existing layout
-        // Use green tab indicator to match "Join Meeting" button color
+        // Use lighter green tint (#66BB6A) for better text readability
+        int greenColor = 0xFF66BB6A;
         mTabHost.addTab(mTabHost.newTabSpec(TAG_JOIN)
-                .setIndicator(buildIndicator(R.string.session_join, R.drawable.tab_indicator_green))
+                .setIndicator(buildIndicator(R.string.session_join, R.drawable.tab_indicator, greenColor))
                 .setContent(R.id.tab_session_join));
     }
 
