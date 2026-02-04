@@ -9,14 +9,14 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
-        debug {
-            // Enable code coverage for debug builds
-            testCoverageEnabled true
-        }
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
             // signingConfig signingConfigs.release  // Commented out - no signing config defined
+        }
+        debug {
+            enableUnitTestCoverage true
+            enableAndroidTestCoverage true
         }
     }
     productFlavors {
@@ -38,7 +38,7 @@ dependencies {
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     // AndroidX Activity library for proper predictive back gesture support (Android 13+)
     // Required for OnBackPressedCallback to work correctly with swipe gestures
-    implementation 'androidx.activity:activity:1.9.2'
+    implementation 'androidx.activity:activity:1.12.3'
     implementation "org.commonmark:commonmark:0.21.0"
     // GeckoView for better WebView compatibility
     implementation "org.mozilla.geckoview:geckoview:145.0.20251118022223"
