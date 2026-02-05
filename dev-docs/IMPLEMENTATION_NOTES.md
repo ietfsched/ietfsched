@@ -2,7 +2,9 @@
 
 ## Overview
 
-This document provides technical details about the major features and improvements implemented in the IETF Schedule Android app. The work includes dynamic meeting detection, UX improvements, code modernization, and bug fixes.
+This document provides technical details about the major features and
+improvements implemented in the IETF Schedule Android app. The work includes
+dynamic meeting detection, UX improvements, code modernization, and bug fixes.
 
 ---
 
