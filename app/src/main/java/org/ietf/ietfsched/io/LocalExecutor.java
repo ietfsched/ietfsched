@@ -280,16 +280,17 @@ public class LocalExecutor {
 	 * Build a map of session start times per day.
 	 * This is used to assign session numbers (I, II, III) chronologically.
 	 * 
-	 * Uses a heuristic: only time slots with many parallel meetings (5+) are numbered.
-	 * Regular session blocks have 20-50 parallel WG meetings.
-	 * Special events typically have 1-3 parallel meetings.
+	 * Uses a heuristic: time slots with 2+ parallel session meetings are numbered
+	 * (e.g. "Fri Session I"). Regular session blocks have many parallel WG meetings;
+	 * special events typically have 1. Using 2+ avoids showing one arbitrary session
+	 * name (e.g. "SRv6 Operations") when a slot has 2-4 sessions.
 	 */
 	private void buildSessionTimesMap(ArrayList<Meeting> meetings) {
 		mDaySessionTimes.clear();
 		
 		// Count parallel meetings per start time, excluding special events
 		HashMap<Long, Integer> parallelCounts = new HashMap<>();
-		final int MIN_PARALLEL_MEETINGS = 5;
+		final int MIN_PARALLEL_MEETINGS = 2;
 		
 		for (Meeting m : meetings) {
 			if (!m.typeSession.toLowerCase(Locale.ROOT).contains("session")) {
@@ -300,7 +301,8 @@ public class LocalExecutor {
 			// Skip special events - they shouldn't be numbered as sessions
 			if (containsAny(titleLower, "break", "breakfast", "registration", "office hours", 
 					"plenary", "hackathon", "reception", "social", "education", "outreach", 
-					"tutorial", "newcomer", "noc", "helpdesk", "help desk")) {
+					"tutorial", "newcomer", "noc", "helpdesk", "help desk",
+					"host speaker", "systers")) {
 				continue;
 			}
 			
