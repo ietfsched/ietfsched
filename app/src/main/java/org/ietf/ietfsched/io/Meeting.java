@@ -63,6 +63,8 @@ class Meeting {
 	String[] slides; // The list of slides urls.
 	String[] drafts; // The list of Internet drafts (stored as "draft-name|||url", where draft-name is the raw identifier like "draft-ietf-6man-enhanced-vpn-vtn-id")
 	String sessionResUri; // Session detail API URI for fetching materials
+	/** True if this session is a Birds of a Feather (BoF). From API is_bof. */
+	boolean isBof;
 
 	/**
 	 * Sets the current meeting number. Must be called before creating Meeting objects.
@@ -150,6 +152,8 @@ class Meeting {
 				// session_res_uri is optional
 				this.sessionResUri = null;
 			}
+			// Birds of a Feather flag (optional; default false)
+			this.isBof = mJSON.optBoolean("is_bof", false);
 		} catch (JSONException e) {
 			throw new UnScheduledMeetingException(
 					String.format(Locale.ROOT, "Event(%s) is missing JSON element: %s", title, e.toString()));

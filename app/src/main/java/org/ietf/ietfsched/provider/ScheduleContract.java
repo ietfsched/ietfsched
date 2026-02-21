@@ -122,6 +122,8 @@ public class ScheduleContract {
         String SESSION_NOTES_URL = "session_notes_url";
         /** User-specific flag indicating starred status. */
         String SESSION_STARRED = "session_starred";
+        /** Whether this session is a Birds of a Feather (BoF) session. From API is_bof. */
+        String SESSION_IS_BOF = "session_is_bof";
     }
 
     interface SpeakersColumns {

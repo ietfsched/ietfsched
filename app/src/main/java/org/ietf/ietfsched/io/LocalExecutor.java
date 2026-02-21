@@ -53,7 +53,7 @@ public class LocalExecutor {
     private ContentResolver mResolver;
 	private final String mAuthority = ScheduleContract.CONTENT_AUTHORITY;
 	private final HashSet<String> blockRefs = new HashSet<>();
-	
+
 	// Map of (day -> sorted list of session start times) for assigning session numbers (I, II, III)
 	private final HashMap<String, ArrayList<Long>> mDaySessionTimes = new HashMap<>();
 
@@ -111,7 +111,7 @@ public class LocalExecutor {
 	private ArrayList<ContentProviderOperation> transform(ArrayList<Meeting> meetings, long versionBuild) throws Exception {
 		// First pass: build map of session start times per day for numbering (I, II, III)
 		buildSessionTimesMap(meetings);
-		
+
 		final ArrayList<ContentProviderOperation> batch = Lists.newArrayList();
 		for (int i = 0; i < meetings.size(); i++) {
 			Meeting m = meetings.get(i);
@@ -448,7 +448,8 @@ public class LocalExecutor {
 			if (starred != -1) {
 				builder.withValue(Sessions.SESSION_STARRED, starred);
 			}
-			
+			builder.withValue(Sessions.SESSION_IS_BOF, m.isBof ? 1 : 0);
+
 			return builder.build();
 		}
 		catch (Exception e) {
