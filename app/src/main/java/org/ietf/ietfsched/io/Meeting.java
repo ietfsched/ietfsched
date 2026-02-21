@@ -177,7 +177,7 @@ class Meeting {
 			}
 		}
 		// Handle an unknown group/area a bit more gracefully.
-		if (group == "Unknown") {
+		if ("Unknown".equals(group)) {
 			group = title;
 		}
 
