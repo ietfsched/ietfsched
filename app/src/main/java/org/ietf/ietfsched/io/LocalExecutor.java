@@ -404,23 +404,16 @@ public class LocalExecutor {
 			// Use the times for start/end as presented from the JSON, in UTC.
 			startTime = ParserUtils.parseTime(m.startHour);
 			endTime = ParserUtils.parseTime(m.endHour);
-			// Build title from area and group only when set and not "Unknown"
+			// Build title from area and group only when set, not "Unknown", and not duplicating title
 			ArrayList<String> titleParts = new ArrayList<>();
-			if (!m.area.isEmpty() && !"Unknown".equals(m.area)) {
+			if (!m.area.isEmpty() && !"Unknown".equals(m.area) && !m.area.equals(m.title)) {
 				titleParts.add(m.area);
 			}
-			// Skip group when it equals title (Meeting uses title as fallback when API has no group)
 			if (!m.group.isEmpty() && !"Unknown".equals(m.group) && !m.group.equals(m.title)) {
 				titleParts.add(m.group);
 			}
 			titleParts.add(m.title);
 			title = TextUtils.join(" - ", titleParts);
-			// Collapse "X - X" (doubled) to "X" in case group/name were same from API or fallback
-			int dash = title.indexOf(" - ");
-			if (dash > 0 && dash + 3 < title.length()
-					&& title.substring(0, dash).equals(title.substring(dash + 3))) {
-				title = title.substring(0, dash);
-			}
 			roomId = Rooms.generateRoomId(m.location);
 			
 			sessionId = Sessions.generateSessionId(m.key);
