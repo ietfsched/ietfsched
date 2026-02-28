@@ -485,6 +485,11 @@ public class SessionDetailFragment extends Fragment implements
             mTitle.setText(mTitleString);
             mSubtitle.setText(subtitle);
 
+            final View bofLabel = mRootView.findViewById(R.id.session_bof_label);
+            if (bofLabel != null) {
+                bofLabel.setVisibility(cursor.getInt(SessionsQuery.IS_BOF) != 0 ? View.VISIBLE : View.GONE);
+            }
+
             mUrl = cursor.getString(SessionsQuery.SESSION_URL);
             if (TextUtils.isEmpty(mUrl)) {
                 mUrl = "";
@@ -842,6 +847,7 @@ public class SessionDetailFragment extends Fragment implements
                 ScheduleContract.Sessions.SESSION_RES_URI,
                 ScheduleContract.Sessions.SESSION_FEEDBACK_URL,
                 ScheduleContract.Sessions.SESSION_NOTES_URL,
+                ScheduleContract.Sessions.SESSION_IS_BOF,
                 ScheduleContract.Sessions.ROOM_ID,
                 ScheduleContract.Rooms.ROOM_NAME,
         };
@@ -863,8 +869,9 @@ public class SessionDetailFragment extends Fragment implements
         int RES_URI = 14;
         int FEEDBACK_URL = 15;
         int NOTES_URL = 16;
-        int ROOM_ID = 17;
-        int ROOM_NAME = 18;
+        int IS_BOF = 17;
+        int ROOM_ID = 18;
+        int ROOM_NAME = 19;
 
         int[] LINKS_INDICES = {
                 SESSION_URL,

@@ -393,6 +393,10 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
             final String sessionId = cursor.getString(SessionsQuery.SESSION_ID);
             setupStarButton(view, sessionId, starred);
 
+            // Show BoF label for Birds of a Feather sessions
+            final View bofLabel = view.findViewById(R.id.session_bof_label);
+            bofLabel.setVisibility(cursor.getInt(SessionsQuery.IS_BOF) != 0 ? View.VISIBLE : View.GONE);
+
             // Possibly indicate that the session has occurred in the past.
             UIUtils.setSessionTitleColor(blockEnd, titleView, subtitleView);
         }
@@ -464,6 +468,10 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
             final boolean starred = cursor.getInt(SearchQuery.STARRED) != 0;
             final String sessionId = cursor.getString(SearchQuery.SESSION_ID);
             setupStarButton(view, sessionId, starred);
+
+            // Show BoF label for Birds of a Feather sessions
+            final View bofLabel = view.findViewById(R.id.session_bof_label);
+            bofLabel.setVisibility(cursor.getInt(SearchQuery.IS_BOF) != 0 ? View.VISIBLE : View.GONE);
         }
     }
 
@@ -523,6 +531,7 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
                 ScheduleContract.Sessions.SESSION_ID,
                 ScheduleContract.Sessions.SESSION_TITLE,
                 ScheduleContract.Sessions.SESSION_STARRED,
+                ScheduleContract.Sessions.SESSION_IS_BOF,
                 ScheduleContract.Blocks.BLOCK_START,
                 ScheduleContract.Blocks.BLOCK_END,
                 ScheduleContract.Rooms.ROOM_NAME,
@@ -532,9 +541,10 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
         int SESSION_ID = 1;
         int TITLE = 2;
         int STARRED = 3;
-        int BLOCK_START = 4;
-        int BLOCK_END = 5;
-        int ROOM_NAME = 6;
+        int IS_BOF = 4;
+        int BLOCK_START = 5;
+        int BLOCK_END = 6;
+        int ROOM_NAME = 7;
     }
 
     /** {@link org.ietf.ietfsched.provider.ScheduleContract.Sessions} search query
@@ -548,6 +558,7 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
                 ScheduleContract.Sessions.SESSION_TITLE,
                 ScheduleContract.Sessions.SEARCH_SNIPPET,
                 ScheduleContract.Sessions.SESSION_STARRED,
+                ScheduleContract.Sessions.SESSION_IS_BOF,
         };
 
         int _ID = 0;
@@ -555,5 +566,6 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
         int TITLE = 2;
         int SEARCH_SNIPPET = 3;
         int STARRED = 4;
+        int IS_BOF = 5;
     }
 }

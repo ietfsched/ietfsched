@@ -50,8 +50,9 @@ public class ScheduleDatabase extends SQLiteOpenHelper {
     private static final int VER_SESSION_NOTES_URL_SLUG = 28;
     private static final int VER_SESSION_DRAFTS_URL = 29;
     private static final int VER_SESSION_RES_URI = 30;
+    private static final int VER_SESSION_IS_BOF = 31;
 
-    private static final int DATABASE_VERSION = VER_SESSION_RES_URI;
+    private static final int DATABASE_VERSION = VER_SESSION_IS_BOF;
 
     interface Tables {
         String BLOCKS = "blocks";
@@ -180,6 +181,7 @@ public class ScheduleDatabase extends SQLiteOpenHelper {
                 + SessionsColumns.SESSION_FEEDBACK_URL + " TEXT,"
                 + SessionsColumns.SESSION_NOTES_URL + " TEXT,"
                 + SessionsColumns.SESSION_STARRED + " INTEGER NOT NULL DEFAULT 0,"
+                + SessionsColumns.SESSION_IS_BOF + " INTEGER NOT NULL DEFAULT 0,"
                 + "UNIQUE (" + SessionsColumns.SESSION_ID + ") ON CONFLICT REPLACE)");
 
         db.execSQL("CREATE TABLE " + Tables.SESSIONS_TRACKS + " ("
@@ -261,7 +263,11 @@ public class ScheduleDatabase extends SQLiteOpenHelper {
                 db.execSQL("ALTER TABLE " + Tables.SESSIONS + " ADD COLUMN "
                         + SessionsColumns.SESSION_RES_URI + " TEXT DEFAULT ''");
                 // Fall through
-            // case VER_SESSION_RES_URI: // No further changes yet
+            case VER_SESSION_RES_URI:
+                // Add SESSION_IS_BOF column (Birds of a Feather)
+                db.execSQL("ALTER TABLE " + Tables.SESSIONS + " ADD COLUMN "
+                        + SessionsColumns.SESSION_IS_BOF + " INTEGER NOT NULL DEFAULT 0");
+                // Fall through
         }
 
         Log.d(TAG, "after upgrade logic, at version " + oldVersion);
