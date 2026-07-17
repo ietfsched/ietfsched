@@ -46,7 +46,26 @@ public class ParserUtils {
     public static final String BLOCK_TYPE_OFFICE_HOURS = "officehours";
     public static final String BLOCK_TYPE_NOC_HELPDESK = "nocHelpdesk";
     public static final String BLOCK_TYPE_HACKATHON = "hackathon";
+    /** Green-column side meetings; optional trailing 0/1 encodes room sub-column. */
+    public static final String BLOCK_TYPE_SIDE_MEETING = "sidemeeting";
     public static final String BLOCK_TYPE_UNKNOWN = "unknown";
+
+    public static boolean isSideMeetingBlockType(String blockType) {
+        return blockType != null && blockType.startsWith(BLOCK_TYPE_SIDE_MEETING);
+    }
+
+    /** Room sub-column (0 or 1) encoded as trailing digit on sidemeeting block types. */
+    public static int sideMeetingSubColumn(String blockType) {
+        if (!isSideMeetingBlockType(blockType) || blockType.length() <= BLOCK_TYPE_SIDE_MEETING.length()) {
+            return 0;
+        }
+        char c = blockType.charAt(blockType.length() - 1);
+        return c == '1' ? 1 : 0;
+    }
+
+    public static boolean isSideMeetingSessionId(String sessionId) {
+        return sessionId != null && sessionId.startsWith("side-");
+    }
 
     /** Used to sanitize a string to be {@link Uri} safe. */
     private static final Pattern sSanitizePattern = Pattern.compile("[^a-z0-9-_]");

@@ -21,6 +21,7 @@ import org.ietf.ietfsched.io.LocalExecutor;
 import org.ietf.ietfsched.io.MeetingDetector;
 import org.ietf.ietfsched.io.MeetingMetadata;
 import org.ietf.ietfsched.io.RemoteExecutor;
+import org.ietf.ietfsched.io.SideMeetingImporter;
 import org.ietf.ietfsched.provider.ScheduleProvider;
 import org.ietf.ietfsched.util.MeetingPreferences;
 import org.ietf.ietfsched.util.ParserUtils;
@@ -64,7 +65,7 @@ public class SyncService extends IntentService {
 
     private static final String noteWellURL = "https://www.ietf.org/media/documents/note-well.md";
 	private static final int VERSION_NONE = 0;
-    private static final int VERSION_CURRENT = 47;
+    private static final int VERSION_CURRENT = 48;
 
     private LocalExecutor mLocalExecutor;
     private RemoteExecutor mRemoteExecutor;
@@ -156,8 +157,24 @@ public class SyncService extends IntentService {
 			// Attempt to Collect the JSON content from the source.
 			JSONObject agenda = mRemoteExecutor.executeJSONGet(aUrl);
 			Log.d(TAG, String.format("remote sync started for URL: %s", aUrl));
-			// Parse the JSON data retrieved locally.
-			mLocalExecutor.execute(agenda, meeting.number);
+
+			// Soft-fetch side meetings (short timeout); never fail the agenda sync on this.
+			JSONObject sideMeetings = null;
+			try {
+				sideMeetings = mRemoteExecutor.executeJSONGet(
+						SideMeetingImporter.SIDE_MEETINGS_URL,
+						SideMeetingImporter.CONNECT_TIMEOUT_MS,
+						SideMeetingImporter.READ_TIMEOUT_MS);
+				if (sideMeetings == null || sideMeetings.length() == 0) {
+					Log.w(TAG, "Side meetings fetch returned empty data");
+					sideMeetings = null;
+				}
+			} catch (Exception sideErr) {
+				Log.w(TAG, "Side meetings fetch failed (continuing without them): " + sideErr.getMessage());
+				sideMeetings = null;
+			}
+
+			mLocalExecutor.execute(agenda, meeting.number, sideMeetings);
 			prefs.edit().putString(Prefs.LAST_ETAG, remoteEtag).apply();
 			prefs.edit().putInt(Prefs.LOCAL_VERSION, VERSION_CURRENT).apply();
 			Log.d(TAG, "remote sync finished");

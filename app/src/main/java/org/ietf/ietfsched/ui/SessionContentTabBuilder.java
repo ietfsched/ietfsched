@@ -49,6 +49,14 @@ public class SessionContentTabBuilder {
      * Updates the Content tab with Internet drafts and presentation slides.
      */
     public void updateContentTab(Cursor cursor, int pdfUrlIndex, int draftsUrlIndex) {
+        updateContentTab(cursor, pdfUrlIndex, draftsUrlIndex, -1);
+    }
+
+    /**
+     * Updates the Content tab. When {@code abstractIndex} &gt;= 0 and abstract text is present,
+     * it is shown above slides/drafts (used for side meetings).
+     */
+    public void updateContentTab(Cursor cursor, int pdfUrlIndex, int draftsUrlIndex, int abstractIndex) {
         // Find the included view first, then find the container inside it
         View includedView = mRootView.findViewById(R.id.tab_session_summary);
         ViewGroup container = null;
@@ -77,6 +85,22 @@ public class SessionContentTabBuilder {
         if (cursor == null) {
             Log.e(TAG, "updateContentTab: cursor is null!");
             return;
+        }
+
+        if (abstractIndex >= 0) {
+            String abstractText = cursor.getString(abstractIndex);
+            if (!TextUtils.isEmpty(abstractText)) {
+                TextView abstractView = new TextView(mFragment.getActivity());
+                abstractView.setText(abstractText);
+                abstractView.setTextAppearance(mFragment.getActivity(), android.R.style.TextAppearance_Medium);
+                abstractView.setPadding(
+                        mFragment.getResources().getDimensionPixelSize(R.dimen.body_padding_medium),
+                        mFragment.getResources().getDimensionPixelSize(R.dimen.body_padding_medium),
+                        mFragment.getResources().getDimensionPixelSize(R.dimen.body_padding_medium),
+                        mFragment.getResources().getDimensionPixelSize(R.dimen.body_padding_medium));
+                container.addView(abstractView);
+                hasContent = true;
+            }
         }
 
         // First, add Presentation Slides section

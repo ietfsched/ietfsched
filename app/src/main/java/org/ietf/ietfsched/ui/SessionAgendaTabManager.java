@@ -390,7 +390,37 @@ public class SessionAgendaTabManager {
     }
     
     /**
-     * Show loading message.
+     * Show plain text (e.g. side-meeting description) in the Agenda WebView.
+     * Newlines become &lt;br&gt;; HTML in the source is escaped.
+     */
+    public void showPlainText(String text) {
+        initializeWebView();
+        if (mWebView == null) {
+            return;
+        }
+        String body = text == null ? "" : android.text.TextUtils.htmlEncode(text).replace("\n", "<br>");
+        String html = "<!DOCTYPE html>" +
+            "<html><head>" +
+            "<meta name='viewport' content='width=device-width, initial-scale=1'>" +
+            "<style>" +
+            "body { " +
+            "  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; " +
+            "  font-size: 16px; " +
+            "  line-height: 1.45; " +
+            "  padding: 16px; " +
+            "  color: #222; " +
+            "  white-space: normal; " +
+            "}" +
+            "</style>" +
+            "</head><body>" +
+            body +
+            "</body></html>";
+        mCurrentUrl = null;
+        mWebView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+    }
+
+    /**
+     * Show loading or status message.
      */
     private void showLoadingMessage(String message) {
         if (mWebView == null) {

@@ -27,6 +27,7 @@ import org.ietf.ietfsched.util.FractionalTouchDelegate;
 import org.ietf.ietfsched.util.GeckoRuntimeHelper;
 import org.ietf.ietfsched.util.GeckoViewHelper;
 import org.ietf.ietfsched.util.NotifyingAsyncQueryHandler;
+import org.ietf.ietfsched.util.ParserUtils;
 import org.ietf.ietfsched.util.UIUtils;
 
 import android.content.BroadcastReceiver;
@@ -126,6 +127,8 @@ public class SessionDetailFragment extends Fragment implements
     private boolean mSpeakersCursor = false;
     private boolean mHasSummaryContent = false;
     private boolean mPendingStarredUpdate = false; // Track if a starred update is in progress
+    /** Ignore Join/side-meeting tab side-effects until TabHost setup has settled. */
+    private boolean mTabHostReady = false;
 
 
     @Override
@@ -253,6 +256,22 @@ public class SessionDetailFragment extends Fragment implements
             @Override
             public void onTabChanged(String tabId) {
                 mCurrentTabTag = tabId;
+                if (!mTabHostReady) {
+                    return;
+                }
+                final boolean isSideMeeting = ParserUtils.isSideMeetingSessionId(mSessionId);
+
+                // Side meetings: Content/Notes disabled; Join opens external URL only on explicit user tap.
+                if (isSideMeeting && (TAG_CONTENT.equals(tabId) || TAG_NOTES.equals(tabId))) {
+                    mTabHost.setCurrentTabByTag(TAG_AGENDA);
+                    return;
+                }
+                if (isSideMeeting && TAG_JOIN.equals(tabId)) {
+                    openSideMeetingJoinExternally();
+                    mTabHost.setCurrentTabByTag(TAG_AGENDA);
+                    return;
+                }
+
                 // Fetch drafts on-demand when Content tab is opened
                 if (TAG_CONTENT.equals(tabId) && mDraftFetcher != null && mSessionId != null) {
                     mDraftFetcher.fetchDraftsOnDemand();
@@ -271,8 +290,9 @@ public class SessionDetailFragment extends Fragment implements
                         }
                     });
                 }
-                // Handle Agenda tab (WebView) - trigger update if needed
-                if (TAG_AGENDA.equals(tabId) && mAgendaTabManager != null && mUrl != null) {
+                // Handle Agenda tab (WebView) - for normal sessions only (side meetings use plain text)
+                if (TAG_AGENDA.equals(tabId) && mAgendaTabManager != null && mUrl != null
+                        && !ParserUtils.isSideMeetingSessionId(mSessionId)) {
                     mTabHost.post(new Runnable() {
                         @Override
                         public void run() {
@@ -302,6 +322,7 @@ public class SessionDetailFragment extends Fragment implements
         final View starParent = mRootView.findViewById(R.id.header_session);
         FractionalTouchDelegate.setupDelegate(starParent, mStarred, new RectF(0.6f, 0f, 1f, 0.8f));
 
+        // Keep existing tab order (unchanged for normal sessions).
         setupAgendaTab();
         setupJoinTab();
         setupContentTab();
@@ -312,6 +333,14 @@ public class SessionDetailFragment extends Fragment implements
         
         // Initialize helper classes after views are created
         initializeHelpers();
+
+        // Allow Join / side-meeting tab actions only after setup settles.
+        mTabHost.post(new Runnable() {
+            @Override
+            public void run() {
+                mTabHostReady = true;
+            }
+        });
 
         return mRootView;
     }
@@ -398,7 +427,10 @@ public class SessionDetailFragment extends Fragment implements
             Log.w(TAG, "updateContentTab: ContentTabBuilder not initialized");
             return;
         }
-        mContentTabBuilder.updateContentTab(cursor, SessionsQuery.PDF_URL, SessionsQuery.DRAFTS_URL);
+        // Side-meeting description lives under Agenda, not Content.
+        int abstractIndex = ParserUtils.isSideMeetingSessionId(mSessionId) ? -1 : SessionsQuery.ABSTRACT;
+        mContentTabBuilder.updateContentTab(cursor, SessionsQuery.PDF_URL, SessionsQuery.DRAFTS_URL,
+                abstractIndex);
     }
 
 
@@ -489,6 +521,12 @@ public class SessionDetailFragment extends Fragment implements
             if (bofLabel != null) {
                 bofLabel.setVisibility(cursor.getInt(SessionsQuery.IS_BOF) != 0 ? View.VISIBLE : View.GONE);
             }
+            final View sideLabel = mRootView.findViewById(R.id.session_side_label);
+            final boolean isSideMeeting = ParserUtils.isSideMeetingSessionId(mSessionId);
+            if (sideLabel != null) {
+                sideLabel.setVisibility(isSideMeeting ? View.VISIBLE : View.GONE);
+            }
+            setSideMeetingTabsGrayed(isSideMeeting);
 
             mUrl = cursor.getString(SessionsQuery.SESSION_URL);
             if (TextUtils.isEmpty(mUrl)) {
@@ -517,23 +555,54 @@ public class SessionDetailFragment extends Fragment implements
             if (mSharedGeckoView == null) {
                 createSharedGeckoView();
             }
-            if (mNotesTabManager != null && mTitleString != null) {
-                mNotesTabManager.updateNotesTab(mTitleString, mSharedGeckoView);
-                // Initialize with shared GeckoView if not already initialized
-                if (mSharedGeckoView != null) {
-                    mNotesTabManager.initializeGeckoView(mSharedGeckoView);
+            if (!isSideMeeting) {
+                if (mNotesTabManager != null && mTitleString != null) {
+                    mNotesTabManager.updateNotesTab(mTitleString, mSharedGeckoView);
+                    if (mSharedGeckoView != null) {
+                        mNotesTabManager.initializeGeckoView(mSharedGeckoView);
+                    }
                 }
-            }
-            if (mJoinTabManager != null && mTitleString != null) {
-                mJoinTabManager.updateJoinTab(mTitleString, mSharedGeckoView);
-                // Initialize with shared GeckoView if not already initialized
-                if (mSharedGeckoView != null) {
-                    mJoinTabManager.initializeGeckoView(mSharedGeckoView);
+                if (mJoinTabManager != null && mTitleString != null) {
+                    mJoinTabManager.updateJoinTab(mTitleString, mSharedGeckoView);
+                    if (mSharedGeckoView != null) {
+                        mJoinTabManager.initializeGeckoView(mSharedGeckoView);
+                    }
                 }
             }
 
         } finally {
             cursor.close();
+        }
+    }
+
+    /** Gray out Content and Notes for side meetings. Agenda shows description; Join stays active. */
+    private void setSideMeetingTabsGrayed(boolean grayed) {
+        if (mTabHost == null) return;
+        android.widget.TabWidget widget = mTabHost.getTabWidget();
+        if (widget == null) return;
+        // Existing tab order: Agenda(0), Join(1), Content(2), Notes(3)
+        for (int index : new int[]{2, 3}) {
+            if (index >= widget.getChildCount()) continue;
+            View tab = widget.getChildAt(index);
+            tab.setEnabled(!grayed);
+            tab.setAlpha(grayed ? 0.4f : 1f);
+            tab.setClickable(!grayed);
+        }
+    }
+
+    private void openSideMeetingJoinExternally() {
+        if (TextUtils.isEmpty(mUrl)) {
+            android.widget.Toast.makeText(getActivity(),
+                    "No join link available for this side meeting.",
+                    android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(mUrl));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
+            startActivity(intent);
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to open side meeting join URL: " + mUrl, e);
         }
     }
 
@@ -794,10 +863,16 @@ public class SessionDetailFragment extends Fragment implements
 
     /**
      * Updates the Agenda tab with the agenda URL.
+     * For side meetings, SESSION_URL is the Join link — show description here instead.
      */
     private void updateAgendaTab(Cursor cursor) {
         if (mAgendaTabManager == null) {
             Log.w(TAG, "updateAgendaTab: AgendaTabManager not initialized");
+            return;
+        }
+        if (ParserUtils.isSideMeetingSessionId(mSessionId)) {
+            String description = cursor.getString(SessionsQuery.ABSTRACT);
+            mAgendaTabManager.showPlainText(description != null ? description : "");
             return;
         }
         String agendaUrl = cursor.getString(SessionsQuery.SESSION_URL);

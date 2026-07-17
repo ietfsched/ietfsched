@@ -48,9 +48,16 @@ public class BlockView extends Button {
     private final long mEndTime;
     private final boolean mContainsStarred;
     private final int mColumn;
+    private final int mSubColumn;
+    private boolean mHalfWidth;
 
     public BlockView(Context context, String blockId, String title, long startTime,
             long endTime, boolean containsStarred, int column) {
+        this(context, blockId, title, startTime, endTime, containsStarred, column, 0);
+    }
+
+    public BlockView(Context context, String blockId, String title, long startTime,
+            long endTime, boolean containsStarred, int column, int subColumn) {
         super(context);
 
         mBlockId = blockId;
@@ -59,6 +66,8 @@ public class BlockView extends Button {
         mEndTime = endTime;
         mContainsStarred = containsStarred;
         mColumn = column;
+        mSubColumn = subColumn;
+        mHalfWidth = false;
 
         setText(mTitle);
         
@@ -115,5 +124,17 @@ public class BlockView extends Button {
 
     public int getColumn() {
         return mColumn;
+    }
+
+    public int getSubColumn() {
+        return mSubColumn;
+    }
+
+    public boolean isHalfWidth() {
+        return mHalfWidth;
+    }
+
+    public void setHalfWidth(boolean halfWidth) {
+        mHalfWidth = halfWidth;
     }
 }
