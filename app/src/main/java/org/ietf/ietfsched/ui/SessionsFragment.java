@@ -19,6 +19,7 @@ import org.ietf.ietfsched.R;
 import org.ietf.ietfsched.provider.ScheduleContract;
 import org.ietf.ietfsched.util.ActivityHelper;
 import org.ietf.ietfsched.util.NotifyingAsyncQueryHandler;
+import org.ietf.ietfsched.util.ParserUtils;
 import org.ietf.ietfsched.util.UIUtils;
 
 import android.content.Context;
@@ -397,6 +398,12 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
             final View bofLabel = view.findViewById(R.id.session_bof_label);
             bofLabel.setVisibility(cursor.getInt(SessionsQuery.IS_BOF) != 0 ? View.VISIBLE : View.GONE);
 
+            final View sideLabel = view.findViewById(R.id.session_side_label);
+            if (sideLabel != null) {
+                sideLabel.setVisibility(
+                        ParserUtils.isSideMeetingSessionId(sessionId) ? View.VISIBLE : View.GONE);
+            }
+
             // Possibly indicate that the session has occurred in the past.
             UIUtils.setSessionTitleColor(blockEnd, titleView, subtitleView);
         }
@@ -472,6 +479,12 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
             // Show BoF label for Birds of a Feather sessions
             final View bofLabel = view.findViewById(R.id.session_bof_label);
             bofLabel.setVisibility(cursor.getInt(SearchQuery.IS_BOF) != 0 ? View.VISIBLE : View.GONE);
+
+            final View sideLabel = view.findViewById(R.id.session_side_label);
+            if (sideLabel != null) {
+                sideLabel.setVisibility(
+                        ParserUtils.isSideMeetingSessionId(sessionId) ? View.VISIBLE : View.GONE);
+            }
         }
     }
 

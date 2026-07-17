@@ -76,6 +76,13 @@ public class LocalExecutor {
 	}
 
 	public void execute(JSONObject stream, int meetingNumber) throws Exception {
+		execute(stream, meetingNumber, null);
+	}
+
+	/**
+	 * Import agenda JSON, optionally merging side-meeting ops into the same sync batch/purge.
+	 */
+	public void execute(JSONObject stream, int meetingNumber, JSONObject sideMeetingsData) throws Exception {
 		if (stream != null) {
 			// Set the meeting number for Meeting objects to use when building URLs
 			Meeting.setMeetingNumber(meetingNumber);
@@ -84,17 +91,21 @@ public class LocalExecutor {
 			if (meetings.size() == 0) {
 				throw new IOException("Cannot decode inputStream. Not an agenda ? ");
 			}
-			executeBuild(meetings);
+			executeBuild(meetings, meetingNumber, sideMeetingsData);
 		}
 		else {
 			throw new IOException("Invalid inputStream."); 
 		}
 	}
 
-	private void executeBuild(ArrayList<Meeting> meetings) {
+	private void executeBuild(ArrayList<Meeting> meetings, int meetingNumber, JSONObject sideMeetingsData) {
 		final long versionBuild = System.currentTimeMillis();
 		try {
 			ArrayList<ContentProviderOperation> batch = transform(meetings, versionBuild);
+			if (sideMeetingsData != null) {
+				batch.addAll(SideMeetingImporter.buildOperations(
+						sideMeetingsData, meetingNumber, versionBuild, mResolver));
+			}
 			mResolver.applyBatch(mAuthority, batch);
 			ArrayList<ContentProviderOperation> batchClean = purge(versionBuild);
 			mResolver.applyBatch(mAuthority, batchClean);
@@ -115,6 +126,10 @@ public class LocalExecutor {
 		final ArrayList<ContentProviderOperation> batch = Lists.newArrayList();
 		for (int i = 0; i < meetings.size(); i++) {
 			Meeting m = meetings.get(i);
+			// Registration is low-value clutter; omit entirely.
+			if (isRegistration(m)) {
+				continue;
+			}
 			ContentProviderOperation cp = createBlock(m, versionBuild); 
 			if (cp != null) {
 				batch.add(cp);
@@ -139,6 +154,11 @@ public class LocalExecutor {
 			}
 		}
 		return batch;
+	}
+
+	private static boolean isRegistration(Meeting m) {
+		String titleLower = m.title.toLowerCase(Locale.ROOT);
+		return m.typeSession.contains("Registration") || titleLower.contains("registration");
 	}
 	
 	private ContentProviderOperation createBlock(Meeting m, long versionBuild) throws Exception {
@@ -181,9 +201,9 @@ public class LocalExecutor {
 		}
 		else if (titleLower.contains("hackathon")){
 			title = m.title;
-			// Hackathon Results Presentations go in green column to avoid overlap with main Hackathon
+			// Hackathon Results Presentations → yellow (former green) to avoid overlap with main Hackathon
 			if (titleLower.contains("results") || titleLower.contains("presentations")) {
-				blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
+				blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
 			} else {
 				blockType = ParserUtils.BLOCK_TYPE_HACKATHON;
 			}
@@ -201,20 +221,12 @@ public class LocalExecutor {
 			boolean isStaffOfficeHours = isStaffGroup || containsAny(titleLower, "coordinator", "liaison");
 			
 			if (isStaffOfficeHours) {
-				// Map AD office hours to NOC column (yellow) to reduce overlap with other green blocks
-				if (titleLower.contains("ad office hours")) {
-					blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
-				} else {
-					blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
-				}
+				// All staff/AD office hours → yellow (green reserved for side meetings)
+				blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
 				title = m.title;
 			}
 		}
-		// Check typeSession patterns
-		else if (m.typeSession.contains("Registration") || titleLower.contains("registration")) {
-			title = ParserUtils.BLOCK_TITLE_REGISTRATION;
-			blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
-		}
+		// Registration handled by isRegistration() skip in transform()
 		else if (m.typeSession.contains("None")) {
 			title = "...";
 			blockType = ParserUtils.BLOCK_TYPE_SESSION;
@@ -240,13 +252,13 @@ public class LocalExecutor {
 					"happy hour", "game night", "networking")) {
 				blockType = ParserUtils.BLOCK_TYPE_FOOD;
 			} 
-			// Administrative/educational/special programs → Green
+			// Administrative/educational/special programs → yellow (green = side meetings)
 			else if (containsAny(titleLower, "education", "outreach", "tutorial", "newcomer", 
 					"new participant", "tools", "chairs", "forum", "program", "series", "sprint", 
 					"hotrfc", "lightning talk", "office hours")) {
-				blockType = ParserUtils.BLOCK_TYPE_OFFICE_HOURS;
+				blockType = ParserUtils.BLOCK_TYPE_NOC_HELPDESK;
 			} 
-			// Other special sessions (evening WG sessions, side meetings) → keep as Red
+			// Other special sessions (evening WG sessions) → keep as Red
 			else {
 				blockType = ParserUtils.BLOCK_TYPE_SESSION;
 			}

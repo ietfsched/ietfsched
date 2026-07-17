@@ -153,6 +153,10 @@ public class ScheduleFragment extends Fragment implements
         map.put(ParserUtils.BLOCK_TYPE_FOOD, 0);
         map.put(ParserUtils.BLOCK_TYPE_SESSION, 1);
         map.put(ParserUtils.BLOCK_TYPE_HACKATHON, 1);
+        map.put(ParserUtils.BLOCK_TYPE_SIDE_MEETING, 2);
+        map.put(ParserUtils.BLOCK_TYPE_SIDE_MEETING + "0", 2);
+        map.put(ParserUtils.BLOCK_TYPE_SIDE_MEETING + "1", 2);
+        // Legacy officehours (if any remain in DB) still render in green until next sync
         map.put(ParserUtils.BLOCK_TYPE_OFFICE_HOURS, 2);
         map.put(ParserUtils.BLOCK_TYPE_NOC_HELPDESK, 3);
         map.put(ParserUtils.BLOCK_TYPE_UNKNOWN, 99); // Unknown should not appear.
@@ -454,10 +458,14 @@ public class ScheduleFragment extends Fragment implements
         // Clear out any existing sessions before inserting again
         day.blocksView.removeAllBlocks();
 
+        final ArrayList<BlockView> sideBlocks = new ArrayList<>();
         try {
             while (cursor.moveToNext()) {
                 final String type = cursor.getString(BlocksQuery.BLOCK_TYPE);
-                final Integer column = sTypeColumnMap.get(type);
+                Integer column = sTypeColumnMap.get(type);
+                if (column == null && ParserUtils.isSideMeetingBlockType(type)) {
+                    column = 2;
+                }
                 
                 final String blockId = cursor.getString(BlocksQuery.BLOCK_ID);
                 final String title = cursor.getString(BlocksQuery.BLOCK_TITLE);
@@ -471,9 +479,10 @@ public class ScheduleFragment extends Fragment implements
                 final long start = cursor.getLong(BlocksQuery.BLOCK_START);
                 final long end = cursor.getLong(BlocksQuery.BLOCK_END);
                 final boolean containsStarred = cursor.getInt(BlocksQuery.CONTAINS_STARRED) != 0;
+                final int subColumn = ParserUtils.sideMeetingSubColumn(type);
 
                 final BlockView blockView = new BlockView(getActivity(), blockId, title, start, end,
-                        containsStarred, column);
+                        containsStarred, column, subColumn);
 
                 final int sessionsCount = cursor.getInt(BlocksQuery.SESSIONS_COUNT);
                 if (sessionsCount > 0) {
@@ -486,10 +495,28 @@ public class ScheduleFragment extends Fragment implements
                     buttonDrawable.getDrawable(2).setAlpha(DISABLED_BLOCK_ALPHA);
                 }
 
+                if (ParserUtils.isSideMeetingBlockType(type)) {
+                    sideBlocks.add(blockView);
+                }
                 day.blocksView.addBlock(blockView);
             }
         } finally {
             cursor.close();
+        }
+
+        // Side meetings: full green width when alone; half-width when time ranges overlap.
+        for (int i = 0; i < sideBlocks.size(); i++) {
+            BlockView a = sideBlocks.get(i);
+            boolean overlaps = false;
+            for (int j = 0; j < sideBlocks.size(); j++) {
+                if (i == j) continue;
+                BlockView b = sideBlocks.get(j);
+                if (a.getStartTime() < b.getEndTime() && b.getStartTime() < a.getEndTime()) {
+                    overlaps = true;
+                    break;
+                }
+            }
+            a.setHalfWidth(overlaps);
         }
     }
 
@@ -497,11 +524,17 @@ public class ScheduleFragment extends Fragment implements
     public void onClick(View view) {
         if (view instanceof BlockView) {
             final String blockId = ((BlockView) view).getBlockId();
-            final Uri sessionsUri = ScheduleContract.Blocks.buildSessionsUri(blockId);
-
-            final Intent intent = new Intent(Intent.ACTION_VIEW, sessionsUri);
-            intent.putExtra(SessionsFragment.EXTRA_SCHEDULE_TIME_STRING,
-                    ((BlockView) view).getBlockTimeString());
+            final Intent intent;
+            // Side meetings are 1:1 with a session (same id) — skip the redundant list step.
+            if (ParserUtils.isSideMeetingSessionId(blockId)) {
+                final Uri sessionUri = ScheduleContract.Sessions.buildSessionUri(blockId);
+                intent = new Intent(Intent.ACTION_VIEW, sessionUri);
+            } else {
+                final Uri sessionsUri = ScheduleContract.Blocks.buildSessionsUri(blockId);
+                intent = new Intent(Intent.ACTION_VIEW, sessionsUri);
+                intent.putExtra(SessionsFragment.EXTRA_SCHEDULE_TIME_STRING,
+                        ((BlockView) view).getBlockTimeString());
+            }
             ((BaseActivity) getActivity()).openActivityOrFragment(intent);
         }
     }

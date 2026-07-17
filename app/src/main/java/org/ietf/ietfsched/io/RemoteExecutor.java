@@ -117,11 +117,26 @@ public class RemoteExecutor {
 
 	// Get a JSON object from a remote server.
 	public JSONObject executeJSONGet(String urlString) throws Exception {
+		return executeJSONGet(urlString, 0, 0);
+	}
+
+	/**
+	 * GET JSON with optional connect/read timeouts (milliseconds).
+	 * Pass 0 for a timeout to keep the platform default.
+	 */
+	public JSONObject executeJSONGet(String urlString, int connectTimeoutMs, int readTimeoutMs)
+			throws Exception {
 		URL url;
 		HttpURLConnection urlConnection = null;
 		try {
 			url = new URI(urlString).toURL();
 			urlConnection = (HttpsURLConnection) url.openConnection();
+			if (connectTimeoutMs > 0) {
+				urlConnection.setConnectTimeout(connectTimeoutMs);
+			}
+			if (readTimeoutMs > 0) {
+				urlConnection.setReadTimeout(readTimeoutMs);
+			}
 
 			int status = urlConnection.getResponseCode();
 			if (status == HttpsURLConnection.HTTP_OK) {

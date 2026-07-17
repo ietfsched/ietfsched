@@ -122,8 +122,17 @@ public class BlocksLayout extends ViewGroup {
                 final long endTime = blockView.getEndTime();
                 final int top = rulerView.getTimeVerticalOffset(startTime, i, true);
                 final int bottom = rulerView.getTimeVerticalOffset(endTime, i, false);
-                final int left = headerWidth + (blockView.getColumn() * columnWidth);
-                final int right = left + columnWidth;
+                final int columnLeft = headerWidth + (blockView.getColumn() * columnWidth);
+                final int left;
+                final int right;
+                if (blockView.isHalfWidth()) {
+                    final int half = columnWidth / 2;
+                    left = columnLeft + (blockView.getSubColumn() * half);
+                    right = left + half;
+                } else {
+                    left = columnLeft;
+                    right = left + columnWidth;
+                }
                 child.layout(left, top, right, bottom);
             }
         }
