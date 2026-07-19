@@ -322,20 +322,23 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
     }
 
     /**
-     * Build a title search that also matches BoF / Side badges for exact token queries.
-     * "bof" → SESSION_IS_BOF; "side" → session_id side-* (see ParserUtils.isSideMeetingSessionId).
+     * Build a title search that also matches BoF / Side badges for keyword prefixes.
+     * Prefixes of "bof" (e.g. bo, bof) → SESSION_IS_BOF;
+     * prefixes of "side" (e.g. si, sid, side) → session_id side-*.
      */
     private static String[] buildSessionSearchSelection(CharSequence constraint) {
         String q = constraint.toString().trim();
         String like = "%" + q + "%";
-        if (q.equalsIgnoreCase("bof")) {
+        String lower = q.toLowerCase(java.util.Locale.US);
+        // Require length >= 2 so a lone "b"/"s" does not pull every badge.
+        if (lower.length() >= 2 && "bof".startsWith(lower)) {
             return new String[] {
                     "(" + ScheduleContract.Sessions.SESSION_TITLE + " LIKE ? OR "
                             + ScheduleContract.Sessions.SESSION_IS_BOF + "=1)",
                     like
             };
         }
-        if (q.equalsIgnoreCase("side")) {
+        if (lower.length() >= 2 && "side".startsWith(lower)) {
             return new String[] {
                     "(" + ScheduleContract.Sessions.SESSION_TITLE + " LIKE ? OR "
                             + ScheduleContract.Sessions.SESSION_ID + " LIKE 'side-%')",
