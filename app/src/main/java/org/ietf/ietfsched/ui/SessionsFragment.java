@@ -322,6 +322,33 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
     }
 
     /**
+     * Build a title search that also matches BoF / Side badges for exact token queries.
+     * "bof" → SESSION_IS_BOF; "side" → session_id side-* (see ParserUtils.isSideMeetingSessionId).
+     */
+    private static String[] buildSessionSearchSelection(CharSequence constraint) {
+        String q = constraint.toString().trim();
+        String like = "%" + q + "%";
+        if (q.equalsIgnoreCase("bof")) {
+            return new String[] {
+                    "(" + ScheduleContract.Sessions.SESSION_TITLE + " LIKE ? OR "
+                            + ScheduleContract.Sessions.SESSION_IS_BOF + "=1)",
+                    like
+            };
+        }
+        if (q.equalsIgnoreCase("side")) {
+            return new String[] {
+                    "(" + ScheduleContract.Sessions.SESSION_TITLE + " LIKE ? OR "
+                            + ScheduleContract.Sessions.SESSION_ID + " LIKE 'side-%')",
+                    like
+            };
+        }
+        return new String[] {
+                ScheduleContract.Sessions.SESSION_TITLE + " LIKE ?",
+                like
+        };
+    }
+
+    /**
      * {@link CursorAdapter} that renders a {@link SessionsQuery}.
      */
     private class SessionsAdapter extends CursorAdapter {
@@ -340,13 +367,12 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
                             null, null,
                             ScheduleContract.Sessions.DEFAULT_SORT);
                     } else {
-                        // Filter by session title
-                        String selection = ScheduleContract.Sessions.SESSION_TITLE + " LIKE ?";
-                        String[] selectionArgs = new String[] {"%" + constraint.toString() + "%"};
+                        // Filter by session title (and bof/side badge tokens)
+                        String[] sel = buildSessionSearchSelection(constraint);
                         return getActivity().getContentResolver().query(
                             ScheduleContract.Sessions.CONTENT_URI,
                             SessionsQuery.PROJECTION,
-                            selection, selectionArgs,
+                            sel[0], new String[] { sel[1] },
                             ScheduleContract.Sessions.DEFAULT_SORT);
                     }
                 }
@@ -428,13 +454,12 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
                             null, null,
                             ScheduleContract.Sessions.DEFAULT_SORT);
                     } else {
-                        // Filter search results by session title
-                        String selection = ScheduleContract.Sessions.SESSION_TITLE + " LIKE ?";
-                        String[] selectionArgs = new String[] {"%" + constraint.toString() + "%"};
+                        // Filter search results by session title (and bof/side badge tokens)
+                        String[] sel = buildSessionSearchSelection(constraint);
                         return getActivity().getContentResolver().query(
                             ScheduleContract.Sessions.CONTENT_URI,
                             SearchQuery.PROJECTION,
-                            selection, selectionArgs,
+                            sel[0], new String[] { sel[1] },
                             ScheduleContract.Sessions.DEFAULT_SORT);
                     }
                 }
