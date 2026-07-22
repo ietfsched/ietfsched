@@ -634,6 +634,35 @@ protected void onCreate(Bundle savedInstanceState) {
 
 ---
 
+## Known issues / debug notes
+
+### #40 — Pebble vs IETF app chooser (not Join tab)
+
+**Observed:** Android “Open with Pebble or IETF app” when navigating to a session.
+
+**Root cause (logcat + `pm query-activities`, Jul 2026):** Implicit `ACTION_VIEW` on `content://org.ietf.ietfsched/sessions/{id}` from `SessionsFragment.onListItemClick` and `ScheduleFragment` (side meetings). Phone path calls `startActivity` without a component. Android matches both:
+
+- `SessionDetailActivity` (correct; mime `vnd.android.cursor.item/vnd.ietfsched.session`)
+- `coredevices.coreapp` / Pebble (over-broad `ACTION_VIEW` + `content://` filter)
+
+Join tab loads Meetecho in GeckoView directly — no chooser in logcat.
+
+**Fix (deferred):** Explicit `SessionDetailActivity` intent for in-app session navigation.
+
+Firefox chooser on Agenda https links is separate (`SessionAgendaTabManager` external `ACTION_VIEW`).
+
+### #44 — Join tab GeckoView session hijack / reload
+
+**Observed:** Join login redirected to HedgeDoc; resume reloaded Meetecho and lost Datatracker state.
+
+**Root cause:** Single shared `GeckoView` for Join and Notes; `onResume` / `updateNotesTab` re-attached Notes session; `updateJoinTab` “ensuring load” reloaded Meetecho URL on resume.
+
+**Fix on `ys-join-room`:** Only init/load GeckoView for the active tab; no Join refresh on resume; load Join URL only when changed or never loaded (`getCurrentUrl() == null`).
+
+**Post-login "Success" stuck page:** Datatracker OAuth uses `window.open` + `window.opener` handoff. Fix: real OAuth popup `GeckoSession` (`GeckoViewHelper.setOAuthPopupsEnabled`) instead of loading auth in the main session or reloading Meetecho after callback.
+
+---
+
 ## References
 
 ### IETF Resources

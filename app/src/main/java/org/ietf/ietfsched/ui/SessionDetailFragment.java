@@ -153,8 +153,18 @@ public class SessionDetailFragment extends Fragment implements
     @Override
     public void onResume() {	
         super.onResume();
-        if (mNotesTabManager != null && mTitleString != null) {
-            mNotesTabManager.updateNotesTab(mTitleString, mSharedGeckoView);
+        // Only refresh Notes on resume (package install can affect embedded browser).
+        // Join: reattach GeckoView only — never reload Meetecho or dismiss OAuth mid-login.
+        String currentTab = mTabHost != null ? mTabHost.getCurrentTabTag() : null;
+        if (TAG_NOTES.equals(currentTab) && mNotesTabManager != null && mSharedGeckoView != null) {
+            switchGeckoViewTab(TAG_NOTES);
+            if (mTitleString != null) {
+                mNotesTabManager.updateNotesTab(mTitleString, mSharedGeckoView);
+            }
+        }
+        if (TAG_JOIN.equals(currentTab) && mJoinTabManager != null && mSharedGeckoView != null) {
+            switchGeckoViewTab(TAG_JOIN);
+            mJoinTabManager.initializeGeckoView(mSharedGeckoView);
         }
 
         // Start listening for time updates to adjust "now" bar. TIME_TICK is
@@ -284,7 +294,9 @@ public class SessionDetailFragment extends Fragment implements
                         public void run() {
                             handleGeckoViewTabChange(tabId);
                             // After switching, trigger update to ensure URL loads if it was stored but not loaded
-                            if (TAG_JOIN.equals(tabId) && mJoinTabManager != null && mTitleString != null) {
+                            if (TAG_NOTES.equals(tabId) && mNotesTabManager != null && mTitleString != null) {
+                                mNotesTabManager.updateNotesTab(mTitleString, mSharedGeckoView);
+                            } else if (TAG_JOIN.equals(tabId) && mJoinTabManager != null && mTitleString != null) {
                                 mJoinTabManager.updateJoinTab(mTitleString, mSharedGeckoView);
                             }
                         }
@@ -558,14 +570,24 @@ public class SessionDetailFragment extends Fragment implements
             if (!isSideMeeting) {
                 if (mNotesTabManager != null && mTitleString != null) {
                     mNotesTabManager.updateNotesTab(mTitleString, mSharedGeckoView);
-                    if (mSharedGeckoView != null) {
-                        mNotesTabManager.initializeGeckoView(mSharedGeckoView);
-                    }
                 }
-                if (mJoinTabManager != null && mTitleString != null) {
+                String currentTab = mTabHost != null ? mTabHost.getCurrentTabTag() : null;
+                GeckoViewHelper joinHelper = mGeckoViewHelpers.get(TAG_JOIN);
+                boolean joinTabActive = TAG_JOIN.equals(currentTab);
+                boolean joinOAuthInProgress = joinTabActive && joinHelper != null
+                        && joinHelper.isOAuthPopupOpen();
+                boolean joinHasContent = joinTabActive && joinHelper != null
+                        && joinHelper.hasMainSessionContent();
+                if (mJoinTabManager != null && mTitleString != null && !joinOAuthInProgress && !joinHasContent) {
                     mJoinTabManager.updateJoinTab(mTitleString, mSharedGeckoView);
-                    if (mSharedGeckoView != null) {
-                        mJoinTabManager.initializeGeckoView(mSharedGeckoView);
+                }
+                if (isGeckoViewTab(currentTab) && !joinOAuthInProgress) {
+                    GeckoViewHelper activeHelper = mGeckoViewHelpers.get(currentTab);
+                    boolean joinAlreadyAttached = joinTabActive && joinHelper != null
+                            && mSharedGeckoView != null
+                            && mSharedGeckoView.getSession() == joinHelper.getGeckoSession();
+                    if (!joinAlreadyAttached) {
+                        switchGeckoViewTab(currentTab);
                     }
                 }
             }
@@ -701,6 +723,11 @@ public class SessionDetailFragment extends Fragment implements
      */
     private void switchGeckoViewTab(String activeTabId) {
         Log.d(TAG, "switchGeckoViewTab: Switching to tab " + activeTabId + " using singleton GeckoView");
+
+        GeckoViewHelper joinHelper = mGeckoViewHelpers.get(TAG_JOIN);
+        if (joinHelper != null && !TAG_JOIN.equals(activeTabId)) {
+            joinHelper.dismissOAuthPopupIfOpen();
+        }
         
         // Ensure shared GeckoView exists
         if (mSharedGeckoView == null) {
@@ -744,6 +771,12 @@ public class SessionDetailFragment extends Fragment implements
         GeckoViewHelper activeHelper = mGeckoViewHelpers.get(activeTabId);
         if (activeHelper == null) {
             Log.w(TAG, "switchGeckoViewTab: No helper found for active tab " + activeTabId);
+            return;
+        }
+
+        if (TAG_JOIN.equals(activeTabId) && activeHelper.isOAuthPopupOpen()) {
+            Log.d(TAG, "switchGeckoViewTab: OAuth popup in progress, keeping popup session");
+            activeHelper.initialize(mSharedGeckoView);
             return;
         }
         
@@ -893,8 +926,9 @@ public class SessionDetailFragment extends Fragment implements
     private BroadcastReceiver mPackageChangesReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (mNotesTabManager != null && mTitleString != null) {
-                mNotesTabManager.updateNotesTab(mTitleString);
+            if (TAG_NOTES.equals(mTabHost != null ? mTabHost.getCurrentTabTag() : null)
+                    && mNotesTabManager != null && mTitleString != null) {
+                mNotesTabManager.updateNotesTab(mTitleString, mSharedGeckoView);
             }
         }
     };
@@ -1005,29 +1039,23 @@ public class SessionDetailFragment extends Fragment implements
     private void handleGeckoViewTabChange(String tabId) {
         String expectedUrl = mGeckoViewTabUrls.get(tabId);
         String initialUrl = mGeckoViewInitialUrls.get(tabId);
-        
-        // If URL has changed (e.g., different session) or initialUrl is null, re-initialize GeckoView
-        // Otherwise, preserve navigation state
-        if (expectedUrl != null && (initialUrl == null || !expectedUrl.equals(initialUrl))) {
-            Log.d(TAG, "handleGeckoViewTabChange: URL changed for GeckoView tab " + tabId + " (expected=" + expectedUrl + ", initial=" + initialUrl + "), re-initializing");
-            reinitializeGeckoView(tabId);
-            // Load the new URL
-            GeckoViewHelper helper = mGeckoViewHelpers.get(tabId);
-            if (helper != null) {
-                Log.d(TAG, "handleGeckoViewTabChange: Loading new URL for GeckoView tab " + tabId + ": " + expectedUrl);
-                helper.loadUrl(expectedUrl);
-                mGeckoViewInitialUrls.put(tabId, expectedUrl);
-            }
-        } else if (expectedUrl == null) {
+
+        if (expectedUrl == null) {
             // No URL stored yet, trigger update to construct and load URL
             Log.d(TAG, "handleGeckoViewTabChange: No URL stored for GeckoView tab " + tabId + ", triggering update");
             ensureSharedGeckoViewInContainer(tabId);
             updateTabManagerForTab(tabId);
-        } else {
-            // URL unchanged, preserve navigation state - ensure correct GeckoView is active
-            Log.d(TAG, "handleGeckoViewTabChange: URL unchanged for GeckoView tab " + tabId + " (URL=" + expectedUrl + "), preserving navigation state");
-            switchGeckoViewTab(tabId);
+            return;
         }
+
+        if (initialUrl != null && !expectedUrl.equals(initialUrl)) {
+            Log.d(TAG, "handleGeckoViewTabChange: URL changed for GeckoView tab " + tabId
+                    + " (expected=" + expectedUrl + ", initial=" + initialUrl + "), re-initializing");
+            reinitializeGeckoView(tabId);
+        }
+
+        // Always attach the shared GeckoView to this tab's container before loading.
+        switchGeckoViewTab(tabId);
     }
     
     /**
@@ -1056,16 +1084,10 @@ public class SessionDetailFragment extends Fragment implements
     private void updateTabManagerForTab(String tabId) {
         if (TAG_NOTES.equals(tabId) && mNotesTabManager != null && mTitleString != null) {
             mNotesTabManager.updateNotesTab(mTitleString, mSharedGeckoView);
-            if (mSharedGeckoView != null) {
-                mNotesTabManager.initializeGeckoView(mSharedGeckoView);
-            }
         } else if (TAG_AGENDA.equals(tabId) && mAgendaTabManager != null && mUrl != null) {
             mAgendaTabManager.updateAgendaTab(mUrl);
         } else if (TAG_JOIN.equals(tabId) && mJoinTabManager != null && mTitleString != null) {
             mJoinTabManager.updateJoinTab(mTitleString, mSharedGeckoView);
-            if (mSharedGeckoView != null) {
-                mJoinTabManager.initializeGeckoView(mSharedGeckoView);
-            }
         }
     }
     
