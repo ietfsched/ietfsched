@@ -162,9 +162,16 @@ public class SessionDetailFragment extends Fragment implements
                 mNotesTabManager.updateNotesTab(mTitleString, mSharedGeckoView);
             }
         }
-        if (TAG_JOIN.equals(currentTab) && mJoinTabManager != null && mSharedGeckoView != null) {
+        if (TAG_JOIN.equals(currentTab) && mJoinTabManager != null) {
+            GeckoViewHelper joinHelper = mGeckoViewHelpers.get(TAG_JOIN);
+            if (joinHelper != null) {
+                joinHelper.resumeOAuthTimers();
+            }
             switchGeckoViewTab(TAG_JOIN);
-            mJoinTabManager.initializeGeckoView(mSharedGeckoView);
+            mJoinTabManager.initializeDedicatedJoinGeckoViews();
+            if (mTitleString != null) {
+                mJoinTabManager.updateJoinTab(mTitleString, null);
+            }
         }
 
         // Start listening for time updates to adjust "now" bar. TIME_TICK is
@@ -179,6 +186,10 @@ public class SessionDetailFragment extends Fragment implements
 
     @Override
     public void onPause() {
+        GeckoViewHelper joinHelper = mGeckoViewHelpers.get(TAG_JOIN);
+        if (joinHelper != null) {
+            joinHelper.pauseOAuthTimers();
+        }
         super.onPause();
         getActivity().unregisterReceiver(mPackageChangesReceiver);
     }
@@ -379,6 +390,8 @@ public class SessionDetailFragment extends Fragment implements
             mSharedGeckoView.setLayoutParams(new android.widget.FrameLayout.LayoutParams(
                 android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
                 android.widget.FrameLayout.LayoutParams.MATCH_PARENT));
+            // Default SurfaceView: shared Notes/Join view is reparented between tab containers;
+            // TextureView goes black after that. OAuth popup uses TextureView + hides this view.
             mSharedGeckoView.setFocusable(true);
             mSharedGeckoView.setFocusableInTouchMode(true);
             mSharedGeckoView.setClickable(true);
@@ -728,6 +741,15 @@ public class SessionDetailFragment extends Fragment implements
         if (joinHelper != null && !TAG_JOIN.equals(activeTabId)) {
             joinHelper.dismissOAuthPopupIfOpen();
         }
+
+        // Join has dedicated TextureView main+popup (lab pattern) — do not move the shared
+        // Notes SurfaceView into the Join container.
+        if (TAG_JOIN.equals(activeTabId)) {
+            if (mJoinTabManager != null) {
+                mJoinTabManager.initializeDedicatedJoinGeckoViews();
+            }
+            return;
+        }
         
         // Ensure shared GeckoView exists
         if (mSharedGeckoView == null) {
@@ -737,6 +759,12 @@ public class SessionDetailFragment extends Fragment implements
         if (mSharedGeckoView == null) {
             Log.e(TAG, "switchGeckoViewTab: Failed to create shared GeckoView");
             return;
+        }
+
+        // If shared view was left in Join from an older build, pull it out.
+        ViewGroup joinContainer = getContainerForTab(TAG_JOIN);
+        if (joinContainer != null && mSharedGeckoView.getParent() == joinContainer) {
+            joinContainer.removeView(mSharedGeckoView);
         }
         
         // Step 1: Get target container for active tab

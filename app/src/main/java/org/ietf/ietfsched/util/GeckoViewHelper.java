@@ -22,8 +22,11 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import androidx.fragment.app.Fragment;
 import org.mozilla.geckoview.AllowOrDeny;
+import org.mozilla.geckoview.BasicSelectionActionDelegate;
 import org.mozilla.geckoview.GeckoResult;
 import org.mozilla.geckoview.GeckoRuntime;
 import org.mozilla.geckoview.GeckoSession;
@@ -35,20 +38,21 @@ import org.mozilla.geckoview.GeckoView;
  */
 public class GeckoViewHelper {
     private static final String TAG = "GeckoViewHelper";
-    /** Safety net if the Success page never calls {@code window.close()}. */
-    private static final long OAUTH_POPUP_SAFETY_DISMISS_MS = 15000;
-    /** Time for oauth2callback JS / cookie commit before returning to Meetecho. */
-    private static final long OAUTH_CALLBACK_DISMISS_MS = 2500;
 
     private final Fragment mFragment;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private GeckoView mGeckoView;
-    /** Overlay for OAuth popup — main {@link #mGeckoView} keeps the Meetecho session for {@code window.opener}. */
-    private GeckoView mOAuthPopupView;
     /** Primary session (Meetecho page, notes, etc.). */
     private GeckoSession mGeckoSession;
-    /** OAuth popup while Datatracker login runs; parent keeps Meetecho for {@code window.opener}. */
+    /** OAuth popup while Datatracker login runs; parent stays on {@link #mGeckoView}. */
     private GeckoSession mPopupSession;
+    /**
+     * OAuth popup GeckoView. Prefer a layout sibling of the main Join view (lab pattern).
+     * If unset, falls back to an activity-content overlay (legacy).
+     */
+    private GeckoView mOAuthPopupView;
+    /** True when {@link #mOAuthPopupView} comes from Join layout — do not remove from parent. */
+    private boolean mOAuthPopupViewFromLayout;
     private boolean mCanGoBack = false;
     private boolean mIsDeep;
     private boolean mOAuthPopupsEnabled;
@@ -71,14 +75,8 @@ public class GeckoViewHelper {
         void onPageLoadComplete(String uri);
     }
 
-    /** Fired after OAuth popup closes following a successful oauth2callback. */
-    public interface OAuthPopupDismissCallback {
-        void onOAuthPopupDismissed();
-    }
-
     private LoadErrorCallback mLoadErrorCallback;
     private PageLoadCallback mPageLoadCallback;
-    private OAuthPopupDismissCallback mOAuthPopupDismissCallback;
 
     public GeckoViewHelper(Fragment fragment, boolean isDeep) {
         mFragment = fragment;
@@ -93,10 +91,6 @@ public class GeckoViewHelper {
         mPageLoadCallback = callback;
     }
 
-    public void setOAuthPopupDismissCallback(OAuthPopupDismissCallback callback) {
-        mOAuthPopupDismissCallback = callback;
-    }
-
     /**
      * When enabled, {@code window.open} opens a popup {@link GeckoSession} so OAuth can use
      * {@code window.opener} to hand the auth token back to the Meetecho page.
@@ -105,14 +99,31 @@ public class GeckoViewHelper {
         mOAuthPopupsEnabled = enabled;
     }
 
+    /**
+     * Lab pattern: use a TextureView GeckoView that is a sibling of the main Join view.
+     * Call before {@link #initialize(GeckoView)}.
+     */
+    public void setOAuthPopupGeckoView(GeckoView popupView) {
+        mOAuthPopupView = popupView;
+        mOAuthPopupViewFromLayout = popupView != null;
+        if (popupView != null) {
+            popupView.setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW);
+            popupView.setVisibility(View.GONE);
+        }
+    }
+
     public void initialize(GeckoView geckoView) {
+        if (geckoView != null && mOAuthPopupsEnabled) {
+            // Join OAuth lab pattern: TextureView main (sibling of TextureView popup).
+            geckoView.setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW);
+        }
         if (mGeckoView == geckoView && mGeckoSession != null) {
             if (geckoView.getSession() != mGeckoSession) {
                 Log.d(TAG, "initialize: Reattaching main session to shared GeckoView");
                 geckoView.setSession(mGeckoSession);
             }
             if (mPopupSession != null) {
-                attachOAuthPopupToOverlay(mPopupSession);
+                showOAuthPopupSession(mPopupSession);
             }
             return;
         }
@@ -125,7 +136,7 @@ public class GeckoViewHelper {
             geckoView.setSession(mGeckoSession);
             geckoView.bringToFront();
             if (mPopupSession != null) {
-                attachOAuthPopupToOverlay(mPopupSession);
+                showOAuthPopupSession(mPopupSession);
             }
             return;
         }
@@ -168,47 +179,96 @@ public class GeckoViewHelper {
         applyDelegates(popup, true);
         mPopupSession = popup;
         mOAuthCallbackSeen = false;
+        // Keep Meetecho on the main GeckoView (attached) for window.opener handoff.
+        // Show the popup in the activity content root (same window) so Paste/ActionMode works.
         mHandler.post(new Runnable() {
             @Override
             public void run() {
                 if (mPopupSession == popup) {
-                    attachOAuthPopupToOverlay(popup);
+                    showOAuthPopupSession(popup);
                 }
             }
         });
         return popup;
     }
 
-    private void attachOAuthPopupToOverlay(GeckoSession popup) {
-        if (mGeckoView == null || mFragment.getActivity() == null) {
-            Log.w(TAG, "attachOAuthPopupToOverlay: main GeckoView not ready");
+    /**
+     * Show the OAuth popup. Lab pattern: TextureView sibling of main, parent stays visible
+     * and attached for {@code window.opener}. Fallback: activity-content overlay.
+     */
+    private void showOAuthPopupSession(GeckoSession popup) {
+        android.app.Activity activity = mFragment.getActivity();
+        if (popup == null || activity == null) {
+            Log.w(TAG, "showOAuthPopupSession: activity or popup not ready");
             return;
         }
-        android.view.ViewGroup container = null;
-        if (mGeckoView.getParent() instanceof android.view.ViewGroup) {
-            container = (android.view.ViewGroup) mGeckoView.getParent();
+        // Parent must remain attached and visible (lab) for opener handoff.
+        if (mGeckoView != null && mGeckoSession != null && mGeckoView.getSession() != mGeckoSession) {
+            Log.d(TAG, "showOAuthPopupSession: ensuring Meetecho parent stays on main GeckoView");
+            mGeckoView.setSession(mGeckoSession);
         }
-        if (container == null) {
-            Log.w(TAG, "attachOAuthPopupToOverlay: no parent container");
-            return;
+        if (mGeckoView != null) {
+            mGeckoView.setVisibility(View.VISIBLE);
         }
-        if (mOAuthPopupView == null) {
-            mOAuthPopupView = new GeckoView(mFragment.getActivity());
-            mOAuthPopupView.setLayoutParams(new android.widget.FrameLayout.LayoutParams(
-                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
-                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT));
-            container.addView(mOAuthPopupView);
+
+        if (mOAuthPopupView == null || !mOAuthPopupViewFromLayout) {
+            // Legacy fallback — not used by Join's dedicated layout.
+            ViewGroup content = activity.findViewById(android.R.id.content);
+            if (content == null) {
+                Log.w(TAG, "showOAuthPopupSession: android.R.id.content missing");
+                return;
+            }
+            if (mOAuthPopupView == null) {
+                mOAuthPopupView = new GeckoView(activity);
+                mOAuthPopupView.setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW);
+                mOAuthPopupView.setLayoutParams(new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT));
+                mOAuthPopupView.setClickable(true);
+                mOAuthPopupView.setFocusable(true);
+                mOAuthPopupView.setFocusableInTouchMode(true);
+                content.addView(mOAuthPopupView);
+                mOAuthPopupViewFromLayout = false;
+            }
         }
-        Log.d(TAG, "attachOAuthPopupToOverlay: showing popup overlay (main session stays on shared GeckoView)");
+
+        popup.setSelectionActionDelegate(new BasicSelectionActionDelegate(activity, true));
+
         mOAuthPopupView.setVisibility(View.VISIBLE);
-        mOAuthPopupView.setSession(popup);
+        if (mOAuthPopupView.getSession() != popup) {
+            Log.d(TAG, "showOAuthPopupSession: attaching popup session"
+                    + (mOAuthPopupViewFromLayout ? " to Join sibling" : " to content overlay"));
+            mOAuthPopupView.setSession(popup);
+        }
         mOAuthPopupView.bringToFront();
+        mOAuthPopupView.requestFocus();
+        Log.d(TAG, "showOAuthPopupSession: OAuth popup visible (layoutSibling="
+                + mOAuthPopupViewFromLayout + ")");
     }
 
-    private void detachOAuthPopupOverlay() {
-        if (mOAuthPopupView != null) {
-            // Do not call setSession(null) — GeckoView throws if Owner is null.
-            mOAuthPopupView.setVisibility(View.GONE);
+    private void dismissOAuthOverlay() {
+        if (mOAuthPopupView == null) {
+            return;
+        }
+        Log.d(TAG, "dismissOAuthOverlay: hiding OAuth popup (layoutSibling="
+                + mOAuthPopupViewFromLayout + ")");
+        mOAuthPopupView.setVisibility(View.GONE);
+        try {
+            if (mOAuthPopupView.getSession() != null) {
+                mOAuthPopupView.releaseSession();
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "dismissOAuthOverlay: releaseSession failed", e);
+        }
+        if (!mOAuthPopupViewFromLayout) {
+            ViewGroup parent = (ViewGroup) mOAuthPopupView.getParent();
+            if (parent != null) {
+                parent.removeView(mOAuthPopupView);
+            }
+            mOAuthPopupView = null;
+        }
+        if (mGeckoView != null) {
+            mGeckoView.setVisibility(View.VISIBLE);
         }
     }
 
@@ -315,10 +375,6 @@ public class GeckoViewHelper {
             public void onPageStop(GeckoSession s, boolean success) {
                 String url = isPopup ? mPopupCurrentUrl : mCurrentUrl;
                 Log.d(TAG, "onPageStop: popup=" + isPopup + " success=" + success + " url=" + url);
-                if (isPopup && success && isOAuthCallbackComplete(url)) {
-                    scheduleOAuthCallbackDismiss();
-                    requestPopupClose();
-                }
                 if (!success) {
                     // Transient failures during redirects/reloads are common; only surface a
                     // user-visible error when navigation has fully stopped on the failed URL.
@@ -355,6 +411,7 @@ public class GeckoViewHelper {
                     return;
                 }
                 Log.d(TAG, "onCloseRequest: OAuth popup closed, url=" + mPopupCurrentUrl);
+                // Page called window.close() after opener handoff — do not reload Meetecho.
                 dismissOAuthPopup(false);
             }
 
@@ -371,53 +428,46 @@ public class GeckoViewHelper {
         }
         mPopupCurrentUrl = url;
         Log.d(TAG, "updatePopupLocation: " + url);
+        if (looksLikeCloudflareChallenge(url)) {
+            Log.w(TAG, "OAuth popup hit Cloudflare challenge URL (COOP may sever window.opener): " + url);
+        }
         if (isOAuthCallbackComplete(url)) {
             mOAuthCallbackSeen = true;
-            scheduleOAuthCallbackDismiss();
-        } else {
-            mHandler.removeCallbacks(mDismissOAuthPopupRunnable);
+        }
+        // Do not auto-dismiss or inject javascript: — that interrupts Meetecho's handoff.
+    }
+
+    /**
+     * No-op retained for SessionDetailFragment lifecycle hooks. Auto-dismiss timers were
+     * removed; they interrupted OAuth and killed mid-login when backgrounded.
+     */
+    public void pauseOAuthTimers() {
+        if (mPopupSession != null) {
+            Log.d(TAG, "pauseOAuthTimers: OAuth overlay left open while backgrounded");
         }
     }
 
-    private void scheduleOAuthCallbackDismiss() {
-        mHandler.removeCallbacks(mDismissOAuthPopupRunnable);
-        mHandler.postDelayed(mDismissOAuthPopupRunnable, OAUTH_CALLBACK_DISMISS_MS);
-    }
-
-    /** oauth2callback pages often never call {@code window.close()} in embedded GeckoView. */
-    private void requestPopupClose() {
-        if (mPopupSession == null) {
-            return;
-        }
-        mHandler.postDelayed(() -> {
-            if (mPopupSession == null) {
-                return;
-            }
-            evaluateJavaScript(mPopupSession,
-                    "try { if (window.opener && !window.opener.closed) { window.opener.focus(); }"
-                            + " window.close(); } catch (e) { console.log('oauth close:', e); }");
-        }, 500);
-    }
-
-    private void evaluateJavaScript(GeckoSession session, String js) {
-        if (session == null) {
-            return;
-        }
-        String[] methodNames = {"evaluateJavascript", "evaluateJavaScript", "evaluateJS", "executeScript", "evaluate"};
-        for (String methodName : methodNames) {
-            try {
-                java.lang.reflect.Method method = session.getClass().getMethod(methodName, String.class);
-                method.invoke(session, js);
-                return;
-            } catch (NoSuchMethodException e) {
-                continue;
-            } catch (Exception e) {
-                Log.w(TAG, "evaluateJavaScript: Failed to call " + methodName, e);
-            }
+    public void resumeOAuthTimers() {
+        if (mPopupSession != null) {
+            Log.d(TAG, "resumeOAuthTimers: ensuring OAuth overlay is showing");
+            showOAuthPopupSession(mPopupSession);
         }
     }
 
-    /** Final Meetecho callback path — not redirect_uri mentions in query params. */
+    private static boolean looksLikeCloudflareChallenge(String url) {
+        if (url == null) {
+            return false;
+        }
+        String lower = url.toLowerCase(java.util.Locale.ROOT);
+        return lower.contains("challenges.cloudflare.com")
+                || lower.contains("cdn-cgi/challenge")
+                || lower.contains("cdn-cgi/challenge-platform");
+    }
+
+    /**
+     * Meetecho OIDC success surfaces: gatekeeper oauth2callback, or the
+     * {@code auth.conf.meetecho.com/ietf-new} redirect_uri (before the gatekeeper hop).
+     */
     private static boolean isOAuthCallbackComplete(String uri) {
         if (uri == null) {
             return false;
@@ -426,10 +476,16 @@ public class GeckoViewHelper {
             Uri parsed = Uri.parse(uri);
             String host = parsed.getHost();
             String path = parsed.getPath();
-            if (host == null || path == null || !path.contains("oauth2callback")) {
+            if (host == null) {
                 return false;
             }
-            return host.endsWith("meetecho.com") || host.endsWith("meetecho.ietf.org");
+            String hostLower = host.toLowerCase(java.util.Locale.ROOT);
+            String pathLower = path != null ? path.toLowerCase(java.util.Locale.ROOT) : "";
+            if (pathLower.contains("oauth2callback")
+                    && (hostLower.endsWith("meetecho.com") || hostLower.endsWith("meetecho.ietf.org"))) {
+                return true;
+            }
+            return hostLower.equals("auth.conf.meetecho.com") && pathLower.contains("/ietf-new");
         } catch (Exception e) {
             return false;
         }
@@ -459,63 +515,37 @@ public class GeckoViewHelper {
         return false;
     }
 
-    private void scheduleOAuthSafetyDismiss() {
-        mHandler.removeCallbacks(mDismissOAuthPopupRunnable);
-        mHandler.postDelayed(mDismissOAuthPopupRunnable, OAUTH_POPUP_SAFETY_DISMISS_MS);
-    }
-
-    private final Runnable mDismissOAuthPopupRunnable = new Runnable() {
-        @Override
-        public void run() {
-            Log.d(TAG, "OAuth popup callback timeout — reloading Meetecho (window.close did not fire)");
-            dismissOAuthPopup(true);
-        }
-    };
-
     /**
-     * Return to Meetecho parent session.
-     *
-     * @param reloadMeetecho If true, caller reloads Meetecho (cookie fallback when {@code window.close}
-     *                       never ran). If false, trust {@code window.opener} handoff — reloading would
-     *                       reset the parent page and show the login gate again.
+     * Close the OAuth overlay and popup session. Never reloads Meetecho — the opener handoff
+     * already updated the parent session in memory.
      */
     public void dismissOAuthPopup(boolean reloadMeetecho) {
-        mHandler.removeCallbacks(mDismissOAuthPopupRunnable);
         if (mPopupSession == null) {
+            dismissOAuthOverlay();
             return;
         }
         boolean oauthCompleted = mOAuthCallbackSeen;
-        Log.d(TAG, "dismissOAuthPopup: returning to main session, oauthCompleted="
-                + oauthCompleted + ", reloadMeetecho=" + reloadMeetecho);
+        Log.d(TAG, "dismissOAuthPopup: closing overlay, oauthCompleted="
+                + oauthCompleted + ", reloadMeetecho=" + reloadMeetecho + " (ignored)");
         GeckoSession popup = mPopupSession;
         mPopupSession = null;
         mPopupCurrentUrl = null;
         mOAuthCallbackSeen = false;
         try {
+            popup.setSelectionActionDelegate(null);
+        } catch (Exception e) {
+            Log.w(TAG, "dismissOAuthPopup: clearing selection delegate", e);
+        }
+        dismissOAuthOverlay();
+        try {
             popup.close();
         } catch (Exception e) {
             Log.w(TAG, "dismissOAuthPopup: error closing popup", e);
-        }
-        detachOAuthPopupOverlay();
-        if (mGeckoView != null && mGeckoSession != null && mGeckoView.getSession() != mGeckoSession) {
-            mGeckoView.setSession(mGeckoSession);
-        }
-        if (oauthCompleted && reloadMeetecho && mOAuthPopupDismissCallback != null) {
-            mOAuthPopupDismissCallback.onOAuthPopupDismissed();
         }
     }
 
     public void dismissOAuthPopup() {
         dismissOAuthPopup(false);
-    }
-
-    /** Reload the main session without touching an OAuth popup (popup already dismissed). */
-    public void reloadMainUrl(String url) {
-        if (mGeckoSession == null || url == null) {
-            return;
-        }
-        Log.d(TAG, "reloadMainUrl: " + url);
-        mGeckoSession.loadUri(url);
     }
 
     public void dismissOAuthPopupIfOpen() {
@@ -652,11 +682,7 @@ public class GeckoViewHelper {
 
     public void cleanup() {
         dismissOAuthPopup();
-        if (mOAuthPopupView != null) {
-            android.view.ViewGroup parent = (android.view.ViewGroup) mOAuthPopupView.getParent();
-            if (parent != null) {
-                parent.removeView(mOAuthPopupView);
-            }
+        if (!mOAuthPopupViewFromLayout) {
             mOAuthPopupView = null;
         }
         if (mGeckoView != null) {

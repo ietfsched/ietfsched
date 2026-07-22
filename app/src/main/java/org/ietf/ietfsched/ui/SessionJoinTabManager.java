@@ -39,39 +39,43 @@ public class SessionJoinTabManager extends BaseGeckoViewTabManager {
         super(fragment, rootView, tabHost, geckoViewHelpers, geckoViewTabUrls, geckoViewInitialUrls,
                 TAB_JOIN, true); // Join tab is deep - navigation stays within GeckoView
         // Meetecho Datatracker login uses window.open + window.opener token handoff.
+        // Do not reload Meetecho after OAuth ? that wipes the in-memory handoff.
         mGeckoViewHelper.setOAuthPopupsEnabled(true);
-        mGeckoViewHelper.setOAuthPopupDismissCallback(new GeckoViewHelper.OAuthPopupDismissCallback() {
-            @Override
-            public void onOAuthPopupDismissed() {
-                reloadMeetechoAfterOAuth();
-            }
-        });
     }
 
-    private void reloadMeetechoAfterOAuth() {
-        boolean joinTabActive = mTabHost != null && TAB_JOIN.equals(mTabHost.getCurrentTabTag());
-        if (!joinTabActive) {
-            Log.d(TAG, "reloadMeetechoAfterOAuth: Join tab not active, skipping reload");
-            return;
-        }
-        String meetechoUrl = mGeckoViewTabUrls.get(TAB_JOIN);
-        if (meetechoUrl == null) {
-            Log.w(TAG, "reloadMeetechoAfterOAuth: No Meetecho URL stored");
-            return;
-        }
-        Log.d(TAG, "reloadMeetechoAfterOAuth: " + meetechoUrl);
-        mGeckoViewHelper.reloadMainUrl(meetechoUrl);
+    /**
+     * Join uses dedicated lab-style TextureView siblings in {@code tab_session_join}, not the
+     * shared Notes SurfaceView.
+     */
+    public void initializeGeckoView(GeckoView unusedSharedGeckoView) {
+        initializeDedicatedJoinGeckoViews();
     }
 
-    public void initializeGeckoView(GeckoView sharedGeckoView) {
-        initializeGeckoView(sharedGeckoView, R.id.tab_session_join);
+    public void initializeDedicatedJoinGeckoViews() {
+        if (mRootView == null) {
+            Log.w(TAG, "initializeDedicatedJoinGeckoViews: mRootView is null");
+            return;
+        }
+        GeckoView main = mRootView.findViewById(R.id.join_gecko_main);
+        GeckoView popup = mRootView.findViewById(R.id.join_gecko_oauth_popup);
+        if (main == null || popup == null) {
+            Log.e(TAG, "initializeDedicatedJoinGeckoViews: join_gecko_main/popup missing from layout");
+            return;
+        }
+        // Same backends as DebugOAuthActivity ? fixed siblings, never reparented.
+        main.setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW);
+        popup.setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW);
+        mGeckoViewHelper.setOAuthPopupGeckoView(popup);
+        mGeckoViewHelper.initialize(main);
+        Log.d(TAG, "initializeDedicatedJoinGeckoViews: main+popup TextureView ready");
     }
 
     public void updateJoinTab(String titleString, GeckoView sharedGeckoView) {
         Log.d(TAG, "updateJoinTab: titleString=" + titleString + ", mRootView=" + (mRootView != null));
         if (titleString == null) {
             Log.w(TAG, "updateJoinTab: titleString is null, showing loading message");
-            loadLoadingMessage(sharedGeckoView, R.id.tab_session_join,
+            initializeDedicatedJoinGeckoViews();
+            loadLoadingMessage(null, R.id.tab_session_join,
                     "Join information is being downloaded. Please check back in a moment or use the Refresh button.");
             return;
         }
@@ -105,8 +109,7 @@ public class SessionJoinTabManager extends BaseGeckoViewTabManager {
                 return;
             }
 
-            GeckoView sharedView = resolveSharedGeckoView(sharedGeckoView);
-            initializeGeckoView(sharedView);
+            initializeDedicatedJoinGeckoViews();
 
             if (mGeckoViewHelper.getGeckoView() == null || mGeckoViewHelper.getGeckoSession() == null) {
                 Log.w(TAG, "updateJoinTab: GeckoView not initialized");
@@ -132,7 +135,8 @@ public class SessionJoinTabManager extends BaseGeckoViewTabManager {
             mGeckoViewTabUrls.remove(TAB_JOIN);
             mGeckoViewInitialUrls.remove(TAB_JOIN);
             if (joinTabActive) {
-                loadLoadingMessage(sharedGeckoView, R.id.tab_session_join,
+                initializeDedicatedJoinGeckoViews();
+                loadLoadingMessage(null, R.id.tab_session_join,
                         "Join information is being downloaded. Please check back in a moment or use the Refresh button.");
             }
         }
@@ -140,20 +144,6 @@ public class SessionJoinTabManager extends BaseGeckoViewTabManager {
 
     public void updateJoinTab(String titleString) {
         updateJoinTab(titleString, null);
-    }
-
-    private GeckoView resolveSharedGeckoView(GeckoView sharedGeckoView) {
-        if (sharedGeckoView != null) {
-            return sharedGeckoView;
-        }
-        ViewGroup container = (ViewGroup) mRootView.findViewById(R.id.tab_session_join);
-        if (container != null && container.getChildCount() > 0) {
-            View child = container.getChildAt(0);
-            if (child instanceof GeckoView) {
-                return (GeckoView) child;
-            }
-        }
-        return null;
     }
 
     private String extractGroupAcronym(String titleString) {
