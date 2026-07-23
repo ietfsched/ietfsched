@@ -19,7 +19,6 @@ package org.ietf.ietfsched.ui;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 import androidx.fragment.app.Fragment;
 import org.ietf.ietfsched.R;
 import org.ietf.ietfsched.util.GeckoViewHelper;
@@ -32,9 +31,6 @@ import org.mozilla.geckoview.GeckoView;
 public class SessionJoinTabManager extends BaseGeckoViewTabManager {
     private static final String TAG = "SessionJoinTabManager";
     private static final String TAB_JOIN = "join";
-
-    private TextView mReloadButton;
-    private String mMeetechoEntryUrl;
 
     public SessionJoinTabManager(Fragment fragment, ViewGroup rootView, android.widget.TabHost tabHost,
             java.util.Map<String, GeckoViewHelper> geckoViewHelpers,
@@ -71,66 +67,16 @@ public class SessionJoinTabManager extends BaseGeckoViewTabManager {
         popup.setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW);
         mGeckoViewHelper.setOAuthPopupGeckoView(popup);
         mGeckoViewHelper.initialize(main);
-        ensureReloadButton();
         Log.d(TAG, "initializeDedicatedJoinGeckoViews: main+popup TextureView ready");
-    }
-
-    private void ensureReloadButton() {
-        if (mRootView == null) {
-            return;
-        }
-        if (mReloadButton == null) {
-            mReloadButton = mRootView.findViewById(R.id.join_reload_button);
-            if (mReloadButton != null) {
-                mReloadButton.setOnClickListener(v -> reloadMeetechoEntry());
-            }
-        }
-        updateReloadButtonVisibility();
-    }
-
-    private void updateReloadButtonVisibility() {
-        if (mReloadButton == null) {
-            return;
-        }
-        boolean joinTabActive = mTabHost != null && TAB_JOIN.equals(mTabHost.getCurrentTabTag());
-        boolean show = joinTabActive
-                && mMeetechoEntryUrl != null
-                && !mMeetechoEntryUrl.isEmpty()
-                && !mGeckoViewHelper.isOAuthPopupOpen();
-        mReloadButton.setVisibility(show ? View.VISIBLE : View.GONE);
-    }
-
-    /**
-     * Reload the Join entry URL (group landing). Prefer this over refreshing an error page
-     * after Meetecho disconnects; cookies usually keep the user signed in.
-     */
-    public void reloadMeetechoEntry() {
-        if (mMeetechoEntryUrl == null || mMeetechoEntryUrl.isEmpty()) {
-            Log.w(TAG, "reloadMeetechoEntry: no entry URL");
-            return;
-        }
-        if (mGeckoViewHelper.isOAuthPopupOpen()) {
-            Log.d(TAG, "reloadMeetechoEntry: OAuth popup open, ignoring");
-            return;
-        }
-        initializeDedicatedJoinGeckoViews();
-        if (mGeckoViewHelper.getGeckoView() == null || mGeckoViewHelper.getGeckoSession() == null) {
-            Log.w(TAG, "reloadMeetechoEntry: GeckoView not initialized");
-            return;
-        }
-        Log.d(TAG, "reloadMeetechoEntry: Loading " + mMeetechoEntryUrl);
-        mGeckoViewHelper.loadUrl(mMeetechoEntryUrl);
     }
 
     public void updateJoinTab(String titleString, GeckoView sharedGeckoView) {
         Log.d(TAG, "updateJoinTab: titleString=" + titleString + ", mRootView=" + (mRootView != null));
         if (titleString == null) {
             Log.w(TAG, "updateJoinTab: titleString is null, showing loading message");
-            mMeetechoEntryUrl = null;
             initializeDedicatedJoinGeckoViews();
-            updateReloadButtonVisibility();
             loadLoadingMessage(null, R.id.tab_session_join,
-                    "Join information is being downloaded. Please check back in a moment.");
+                    "Join information is being downloaded. Please check back in a moment or use the Refresh button.");
             return;
         }
 
@@ -146,7 +92,6 @@ public class SessionJoinTabManager extends BaseGeckoViewTabManager {
         if (groupAcronym != null && !groupAcronym.isEmpty()) {
             int meetingNumber = org.ietf.ietfsched.util.MeetingPreferences.getCurrentMeetingNumber(mFragment.getActivity());
             final String meetechoUrl = "https://meetings.conf.meetecho.com/onsite" + meetingNumber + "/?group=" + groupAcronym;
-            mMeetechoEntryUrl = meetechoUrl;
 
             String lastUrl = mGeckoViewTabUrls.get(TAB_JOIN);
             if (!meetechoUrl.equals(lastUrl)) {
@@ -161,7 +106,6 @@ public class SessionJoinTabManager extends BaseGeckoViewTabManager {
 
             if (!joinTabActive) {
                 Log.d(TAG, "updateJoinTab: Skipping init/load - Join tab not active");
-                updateReloadButtonVisibility();
                 return;
             }
 
@@ -174,7 +118,6 @@ public class SessionJoinTabManager extends BaseGeckoViewTabManager {
 
             if (mGeckoViewHelper.isOAuthPopupOpen()) {
                 Log.d(TAG, "updateJoinTab: OAuth in progress, preserving popup");
-                updateReloadButtonVisibility();
                 return;
             }
 
@@ -187,18 +130,15 @@ public class SessionJoinTabManager extends BaseGeckoViewTabManager {
             } else {
                 Log.d(TAG, "updateJoinTab: Preserving loaded session at " + mGeckoViewHelper.getCurrentUrl());
             }
-            updateReloadButtonVisibility();
         } else {
             Log.w(TAG, "updateJoinTab: groupAcronym is null or empty");
-            mMeetechoEntryUrl = null;
             mGeckoViewTabUrls.remove(TAB_JOIN);
             mGeckoViewInitialUrls.remove(TAB_JOIN);
             if (joinTabActive) {
                 initializeDedicatedJoinGeckoViews();
                 loadLoadingMessage(null, R.id.tab_session_join,
-                        "Join information is being downloaded. Please check back in a moment.");
+                        "Join information is being downloaded. Please check back in a moment or use the Refresh button.");
             }
-            updateReloadButtonVisibility();
         }
     }
 
