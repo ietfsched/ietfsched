@@ -117,6 +117,7 @@ public class SyncService extends IntentService {
 		
 		// Save meeting info for UI to use
 		MeetingPreferences.saveCurrentMeeting(context, meeting);
+		MeetingPreferences.saveNextMeeting(context, detector.getCachedNextUpcomingMeeting());
 		
 		// Update UIUtils with meeting timezone and dates
 		UIUtils.setConferenceTimeZone(meeting.timezone);

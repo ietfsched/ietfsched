@@ -44,7 +44,7 @@ public class HomeScreenTest extends BaseTest {
         onView(withId(R.id.home_btn_starred))
                 .check(ViewAssertions.matches(isDisplayed()));
         
-        // Verify "Now Playing" section is visible at bottom
+        // Verify meeting status strip is visible at bottom
         onView(withId(R.id.fragment_now_playing))
                 .check(ViewAssertions.matches(isDisplayed()));
     }

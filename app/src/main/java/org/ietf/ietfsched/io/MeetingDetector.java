@@ -27,6 +27,7 @@ public class MeetingDetector {
     private static final long CACHE_JITTER_MAX = 5 * 60 * 1000; // 5 minutes randomization
     
     private static MeetingMetadata sCachedMeeting = null;
+    private static MeetingMetadata sCachedNextUpcoming = null;
     private static long sCacheTimestamp = 0;
     
     private final RemoteExecutor remoteExecutor;
@@ -34,6 +35,14 @@ public class MeetingDetector {
     
     public MeetingDetector(RemoteExecutor executor) {
         this.remoteExecutor = executor;
+    }
+
+    /**
+     * Nearest upcoming IETF meeting from the last detection (may be null).
+     * Not gated on agenda availability — used for the home "See you at …" bar.
+     */
+    public MeetingMetadata getCachedNextUpcomingMeeting() {
+        return sCachedNextUpcoming;
     }
     
     /**
@@ -68,15 +77,35 @@ public class MeetingDetector {
         
         // Find current or next meeting
         MeetingMetadata selectedMeeting = selectMeeting(meetings, now);
+        sCachedNextUpcoming = findNearestUpcoming(meetings, now);
         
         if (selectedMeeting != null) {
             sCachedMeeting = selectedMeeting;
             sCacheTimestamp = now;
             if (DEBUG) Log.d(TAG, "Selected meeting: IETF " + selectedMeeting.number + 
                 " (" + selectedMeeting.city + "), agenda=" + selectedMeeting.agendaAvailable);
+            if (DEBUG && sCachedNextUpcoming != null) {
+                Log.d(TAG, "Next upcoming: IETF " + sCachedNextUpcoming.number +
+                        " (" + sCachedNextUpcoming.city + ")");
+            }
         }
         
         return selectedMeeting;
+    }
+
+    /**
+     * Nearest meeting with start time strictly after {@code now} (agenda not required).
+     */
+    private static MeetingMetadata findNearestUpcoming(List<MeetingMetadata> meetings, long now) {
+        MeetingMetadata upcoming = null;
+        for (MeetingMetadata meeting : meetings) {
+            if (meeting.startMillis > now) {
+                if (upcoming == null || meeting.startMillis < upcoming.startMillis) {
+                    upcoming = meeting;
+                }
+            }
+        }
+        return upcoming;
     }
     
     /**

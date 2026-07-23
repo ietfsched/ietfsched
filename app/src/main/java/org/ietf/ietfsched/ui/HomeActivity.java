@@ -19,6 +19,7 @@ package org.ietf.ietfsched.ui;
 import org.ietf.ietfsched.R;
 import org.ietf.ietfsched.service.SyncService;
 import org.ietf.ietfsched.util.DetachableResultReceiver;
+import org.ietf.ietfsched.util.MeetingPreferences;
 
 import android.app.Activity;
 import android.app.BackgroundServiceStartNotAllowedException;
@@ -55,6 +56,9 @@ public class HomeActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Restore meeting dates/city for the home status bar before first draw.
+        MeetingPreferences.applySavedMeetingToUiUtils(this);
 
         setContentView(R.layout.activity_home);
         getActivityHelper().setupActionBar(null, 0);
@@ -164,6 +168,16 @@ public class HomeActivity extends BaseActivity {
 		return mSyncStatusUpdaterFragment != null ? mSyncStatusUpdaterFragment.mSyncing : false;
 		}
 
+    void refreshWhatsOnBar() {
+        Fragment f = getSupportFragmentManager().findFragmentById(R.id.fragment_now_playing);
+        if (f == null) {
+            f = getSupportFragmentManager().findFragmentById(R.id.fragment_whats_on);
+        }
+        if (f instanceof WhatsOnFragment) {
+            ((WhatsOnFragment) f).refreshStatus();
+        }
+    }
+
     /**
      * A non-UI fragment, retained across configuration changes, that updates its activity's UI
      * when sync status changes.
@@ -204,6 +218,7 @@ public class HomeActivity extends BaseActivity {
                     Toast.makeText(activity, "Schedule updated", Toast.LENGTH_SHORT).show();
                     // Reset manual refresh flag
                     activity.mIsManualRefresh = false;
+                    activity.refreshWhatsOnBar();
                     break;
                 }
                 case SyncService.STATUS_ERROR: {
