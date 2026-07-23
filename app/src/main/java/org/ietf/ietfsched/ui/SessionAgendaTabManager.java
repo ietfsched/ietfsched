@@ -163,7 +163,9 @@ public class SessionAgendaTabManager {
         if (agendaUrl == null || agendaUrl.isEmpty()) {
             initializeWebView();
             if (mWebView != null) {
-                showLoadingMessage("Agenda is being downloaded. Please check back in a moment or use the Refresh button.");
+                // No URL from Datatracker — not a transient download; show final state (#37).
+                mCurrentUrl = "";
+                showStatusMessage(mFragment.getString(R.string.agenda_unavailable));
             }
             return;
         }
@@ -216,10 +218,11 @@ public class SessionAgendaTabManager {
                         (content != null ? content.length() : 0) + " contentType=" + result.contentType);
 
                 if (content == null || content.isEmpty()) {
-                    Log.w(TAG, "fetchAndLoadAgenda: Empty content, loading URL directly");
+                    // Empty body — not a transient download (#37).
+                    Log.w(TAG, "fetchAndLoadAgenda: Empty content");
                     runOnUi(() -> {
                         if (mWebView != null) {
-                            mWebView.loadUrl(agendaUrl);
+                            showStatusMessage(mFragment.getString(R.string.agenda_unavailable));
                         }
                     });
                     return;
@@ -254,7 +257,7 @@ public class SessionAgendaTabManager {
                 Log.e(TAG, "Failed to fetch agenda", e);
                 runOnUi(() -> {
                     if (mWebView != null) {
-                        mWebView.loadUrl(agendaUrl);
+                        showErrorMessage();
                     }
                 });
             }
@@ -488,9 +491,9 @@ public class SessionAgendaTabManager {
     }
 
     /**
-     * Show loading or status message.
+     * Show status or placeholder message in the Agenda WebView.
      */
-    private void showLoadingMessage(String message) {
+    private void showStatusMessage(String message) {
         if (mWebView == null) {
             return;
         }
@@ -521,8 +524,7 @@ public class SessionAgendaTabManager {
             return;
         }
         
-        String errorMessage = "Unable to load agenda. Please check your internet connection and try again.";
-        showLoadingMessage(errorMessage);
+        showStatusMessage(mFragment.getString(R.string.agenda_load_error));
     }
     
     /**
