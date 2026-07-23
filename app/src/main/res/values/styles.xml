@@ -143,8 +143,7 @@
     <!-- What's On section in Home activity -->
 
     <style name="WhatsOnItemBase">
-        <item name="android:layout_width">0dp</item>
-        <item name="android:layout_weight">1</item>
+        <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">fill_parent</item>
         <item name="android:textSize">@dimen/text_size_small</item>
         <item name="android:textStyle">bold</item>
@@ -153,6 +152,7 @@
         <item name="android:paddingLeft">@dimen/whats_on_item_padding</item>
         <item name="android:paddingRight">@dimen/whats_on_item_padding</item>
         <item name="android:gravity">center</item>
+        <item name="android:ellipsize">end</item>
     </style>
 
     <style name="WhatsOnStaticItem" parent="@style/WhatsOnItemBase">
