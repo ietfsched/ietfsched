@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/debug_oauth_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp">
+
+        <EditText
+            android:id="@+id/debug_oauth_url"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Meetecho URL"
+            android:inputType="textUri"
+            android:singleLine="true"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/debug_oauth_load"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Load" />
+
+        <Button
+            android:id="@+id/debug_oauth_clear_meetecho"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ClrMeet" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/debug_oauth_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="8dp"
+        android:paddingBottom="4dp"
+        android:text="Ready"
+        android:textSize="11sp" />
+
+    <FrameLayout
+        android:id="@+id/debug_oauth_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <org.mozilla.geckoview.GeckoView
+            android:id="@+id/debug_oauth_main"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <org.mozilla.geckoview.GeckoView
+            android:id="@+id/debug_oauth_popup"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+    </FrameLayout>
+</LinearLayout>

@@ -65,25 +65,8 @@ public class SessionNotesTabManager extends BaseGeckoViewTabManager {
             return;
         }
         
-        // Initialize GeckoView lazily (after view is attached)
-        // Use provided shared GeckoView if available, otherwise try to find it in container
-        GeckoView sharedView = sharedGeckoView;
-        if (sharedView == null) {
-            ViewGroup container = (ViewGroup) mRootView.findViewById(R.id.tab_session_notes);
-            if (container != null && container.getChildCount() > 0) {
-                View child = container.getChildAt(0);
-                if (child instanceof GeckoView) {
-                    sharedView = (GeckoView) child;
-                }
-            }
-        }
-        initializeGeckoView(sharedView);
-        
-        if (mGeckoViewHelper.getGeckoView() == null || mGeckoViewHelper.getGeckoSession() == null) {
-            Log.w(TAG, "updateNotesTab: GeckoView not initialized");
-            return;
-        }
-        
+        boolean notesTabActive = mTabHost != null && TAB_NOTES.equals(mTabHost.getCurrentTabTag());
+
         // Extract group acronym from session title
         String groupAcronym = extractGroupAcronym(titleString);
         
@@ -94,33 +77,49 @@ public class SessionNotesTabManager extends BaseGeckoViewTabManager {
             int meetingNumber = org.ietf.ietfsched.util.MeetingPreferences.getCurrentMeetingNumber(mFragment.getActivity());
             final String hedgedocUrl = "https://notes.ietf.org/notes-ietf-" + meetingNumber + "-" + groupAcronym + "?view";
             
-            // Only load if URL has changed AND Notes tab is currently active
-            boolean notesTabActive = mTabHost != null && TAB_NOTES.equals(mTabHost.getCurrentTabTag());
             String lastUrl = mGeckoViewTabUrls.get(TAB_NOTES);
-            boolean isFirstLoad = (lastUrl == null);
             if (!hedgedocUrl.equals(lastUrl)) {
-                Log.d(TAG, "updateNotesTab: URL changed, notesTabActive=" + notesTabActive + ", isFirstLoad=" + isFirstLoad);
-                // Only load if Notes tab is active or if this is the first load
-                if (notesTabActive || isFirstLoad) {
-                    Log.d(TAG, "updateNotesTab: Loading URL: " + hedgedocUrl);
-                    mGeckoViewHelper.loadUrl(hedgedocUrl);
-                    mGeckoViewTabUrls.put(TAB_NOTES, hedgedocUrl);
-                    // Track this as the initial URL for this tab
-                    mGeckoViewInitialUrls.put(TAB_NOTES, hedgedocUrl);
-                } else {
-                    Log.d(TAG, "updateNotesTab: Skipping load - Notes tab not active, will load when tab is opened");
-                    // Store URL for later loading when Notes tab is opened
-                    mGeckoViewTabUrls.put(TAB_NOTES, hedgedocUrl);
-                }
+                Log.d(TAG, "updateNotesTab: URL changed, notesTabActive=" + notesTabActive);
+                mGeckoViewTabUrls.put(TAB_NOTES, hedgedocUrl);
             } else {
                 Log.d(TAG, "updateNotesTab: URL unchanged, skipping reload: " + hedgedocUrl);
             }
+
+            // Never attach the Notes GeckoSession while another tab owns the shared GeckoView.
+            if (!notesTabActive) {
+                Log.d(TAG, "updateNotesTab: Skipping init/load - Notes tab not active");
+                return;
+            }
+
+            // Initialize GeckoView lazily (after view is attached)
+            GeckoView sharedView = resolveSharedGeckoView(sharedGeckoView);
+            initializeGeckoView(sharedView);
+
+            if (mGeckoViewHelper.getGeckoView() == null || mGeckoViewHelper.getGeckoSession() == null) {
+                Log.w(TAG, "updateNotesTab: GeckoView not initialized");
+                return;
+            }
+
+            if (!hedgedocUrl.equals(lastUrl)) {
+                Log.d(TAG, "updateNotesTab: Loading URL: " + hedgedocUrl);
+                mGeckoViewHelper.loadUrl(hedgedocUrl);
+                mGeckoViewInitialUrls.put(TAB_NOTES, hedgedocUrl);
+            } else if (!mGeckoViewHelper.hasMainSessionContent()) {
+                // URL was stored while another tab owned the shared GeckoView — load on first visit.
+                Log.d(TAG, "updateNotesTab: Loading initial URL: " + hedgedocUrl);
+                mGeckoViewHelper.loadUrl(hedgedocUrl);
+                mGeckoViewInitialUrls.put(TAB_NOTES, hedgedocUrl);
+            } else {
+                Log.d(TAG, "updateNotesTab: Preserving loaded session");
+            }
         } else {
-            Log.w(TAG, "updateNotesTab: groupAcronym is null or empty, showing loading message");
-            loadLoadingMessage(sharedGeckoView, R.id.tab_session_notes,
-                    "Notes are being downloaded. Please check back in a moment or use the Refresh button.");
+            Log.w(TAG, "updateNotesTab: groupAcronym is null or empty");
             mGeckoViewTabUrls.remove(TAB_NOTES);
             mGeckoViewInitialUrls.remove(TAB_NOTES);
+            if (notesTabActive) {
+                loadLoadingMessage(sharedGeckoView, R.id.tab_session_notes,
+                        "Notes are being downloaded. Please check back in a moment or use the Refresh button.");
+            }
         }
     }
     
@@ -131,6 +130,20 @@ public class SessionNotesTabManager extends BaseGeckoViewTabManager {
         updateNotesTab(titleString, null);
     }
     
+    private GeckoView resolveSharedGeckoView(GeckoView sharedGeckoView) {
+        if (sharedGeckoView != null) {
+            return sharedGeckoView;
+        }
+        ViewGroup container = (ViewGroup) mRootView.findViewById(R.id.tab_session_notes);
+        if (container != null && container.getChildCount() > 0) {
+            View child = container.getChildAt(0);
+            if (child instanceof GeckoView) {
+                return (GeckoView) child;
+            }
+        }
+        return null;
+    }
+
     private String extractGroupAcronym(String titleString) {
         // Title format: "{area} - {group} - {title}" or " -{group} - {title}" if area is empty
         // We need to extract the group (middle part)

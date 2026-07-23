@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Debug-only OAuth / GeckoView lab. Launch:
+         adb shell am start -n org.ietf.ietfsched/.ui.DebugOAuthActivity -->
+    <application>
+        <activity
+            android:name="org.ietf.ietfsched.ui.DebugOAuthActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:label="Gecko OAuth Lab"
+            android:hardwareAccelerated="true"
+            android:configChanges="orientation|screenSize|keyboard|keyboardHidden" />
+    </application>
+</manifest>
