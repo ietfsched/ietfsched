@@ -876,7 +876,7 @@ public class SessionDetailFragment extends Fragment implements
             return;
         }
         String agendaUrl = cursor.getString(SessionsQuery.SESSION_URL);
-        // Always call updateAgendaTab - it will show loading message if URL is null/empty
+        // Empty URL → Agenda unavailable (not a perpetual loading placeholder).
         mAgendaTabManager.updateAgendaTab(agendaUrl != null ? agendaUrl : "");
     }
 
