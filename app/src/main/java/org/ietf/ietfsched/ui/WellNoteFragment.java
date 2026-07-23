@@ -25,10 +25,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import org.mozilla.geckoview.GeckoView;
 
-import org.commonmark.parser.Parser;
-import org.commonmark.renderer.html.HtmlRenderer;
 import org.ietf.ietfsched.service.SyncService;
 import org.ietf.ietfsched.util.GeckoViewHelper;
+import org.ietf.ietfsched.util.MarkdownHtml;
 
 
 /**
@@ -112,11 +111,8 @@ public class WellNoteFragment extends Fragment {
             }
         }
         
-        // Convert markdown to HTML
-        Parser parser = Parser.builder().build();
-        HtmlRenderer renderer = HtmlRenderer.builder().build();
-        org.commonmark.node.Node document = parser.parse(markdownText);
-        String htmlContent = renderer.render(document);
+        // Convert markdown to HTML (bare URLs become links via AutolinkExtension)
+        String htmlContent = MarkdownHtml.render(markdownText);
         
         // Wrap HTML with basic styling
         String styledHtml = "<!DOCTYPE html>" +
