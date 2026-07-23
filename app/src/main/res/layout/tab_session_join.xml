@@ -16,6 +16,7 @@
 <!--
   Lab-faithful Join layout: dedicated main + OAuth popup GeckoViews (both TextureView in code).
   Not the Notes/Agenda shared SurfaceView — that reparents and cannot stack a TextureView popup.
+  Reload sits under the OAuth popup so login covers it.
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/tab_session_join"
@@ -26,6 +27,22 @@
         android:id="@+id/join_gecko_main"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
+
+    <TextView
+        android:id="@+id/join_reload_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="12dp"
+        android:background="@drawable/join_reload_button_bg"
+        android:clickable="true"
+        android:contentDescription="@string/join_reload"
+        android:elevation="4dp"
+        android:focusable="true"
+        android:text="@string/join_reload"
+        android:textColor="@color/accent_1"
+        android:textSize="14sp"
+        android:visibility="gone" />
 
     <org.mozilla.geckoview.GeckoView
         android:id="@+id/join_gecko_oauth_popup"
