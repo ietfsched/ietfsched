@@ -29,8 +29,10 @@ import android.content.Intent;
 import androidx.fragment.app.Fragment;
 import org.ietf.ietfsched.R;
 import org.ietf.ietfsched.io.RemoteExecutor;
+import org.ietf.ietfsched.util.MarkdownHtml;
 
 import java.io.UnsupportedEncodingException;
+import java.util.Locale;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
@@ -197,121 +199,183 @@ public class SessionAgendaTabManager {
     }
     
     /**
-     * Fetch agenda page and wrap with CSS if plain text, otherwise load directly.
+     * Fetch agenda page; use Content-Type when available (Datatracker materials).
+     * text/html → load URL; text/markdown → commonmark; text/plain → escaped pre-wrap.
      */
     private void fetchAndLoadAgenda(String agendaUrl) {
         Log.d(TAG, "fetchAndLoadAgenda: Fetching " + agendaUrl);
-        
-        // Fetch content in background thread
+
         new Thread(() -> {
             try {
                 RemoteExecutor executor = new RemoteExecutor();
-                String content = executor.executeGet(agendaUrl);
-                
-                Log.d(TAG, "fetchAndLoadAgenda: Fetch completed, content length=" + 
-                    (content != null ? content.length() : 0));
-                
-                if (content != null && !content.isEmpty()) {
-                    // Check if content is HTML or plain text
-                    boolean isHTML = isHtmlContent(content);
-                    
-                    if (isHTML) {
-                        // Already HTML - load directly without modification
-                        Log.d(TAG, "fetchAndLoadAgenda: Content is HTML, loading directly");
-                        if (mFragment.getActivity() != null) {
-                            mFragment.getActivity().runOnUiThread(() -> {
-                                if (mWebView != null) {
-                                    mWebView.loadUrl(agendaUrl);
-                                }
-                            });
-                        }
-                    } else {
-                        // Plain text - wrap with CSS, preserve newlines, and convert URLs to links
-                        Log.d(TAG, "fetchAndLoadAgenda: Content is plain text, wrapping with CSS");
-                        
-                        // Convert URLs to HTML links, then escape remaining HTML special characters
-                        String contentWithLinks = convertUrlsToLinks(content);
-                        
-                        // Escape HTML special characters, but preserve <a> tags we just added
-                        String tempContent = contentWithLinks.replaceAll("<a href=\"([^\"]+)\">([^<]+)</a>", "___LINK_START___$1___LINK_MID___$2___LINK_END___");
-                        
-                        // Now escape HTML special characters
-                        String escapedContent = tempContent.replace("&", "&amp;")
-                                                          .replace("<", "&lt;")
-                                                          .replace(">", "&gt;");
-                        
-                        // Restore <a> tags after escaping
-                        escapedContent = escapedContent.replace("___LINK_START___", "<a href=\"")
-                                                      .replace("___LINK_MID___", "\">")
-                                                      .replace("___LINK_END___", "</a>");
-                        
-                        String css = 
-                            "body { " +
-                            "  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; " +
-                            "  font-size: 16px; " +
-                            "  line-height: 1.6; " +
-                            "  color: #333; " +
-                            "  padding: 16px; " +
-                            "  white-space: pre-wrap; " +
-                            "  word-wrap: break-word; " +
-                            "} " +
-                            "a { " +
-                            "  color: #0066cc; " +
-                            "  text-decoration: underline; " +
-                            "}";
-                        
-                        String wrappedHtml = "<!DOCTYPE html>" +
-                            "<html><head>" +
-                            "<meta name='viewport' content='width=device-width, initial-scale=1'>" +
-                            "<style>" + css + "</style>" +
-                            "</head><body>" +
-                            escapedContent +
-                            "</body></html>";
-                        
-                        // Load as data URI on main thread
-                        if (mFragment.getActivity() != null) {
-                            mFragment.getActivity().runOnUiThread(() -> {
-                                if (mWebView != null) {
-                                    try {
-                                        byte[] htmlBytes = wrappedHtml.getBytes("UTF-8");
-                                        String base64Html = android.util.Base64.encodeToString(htmlBytes, android.util.Base64.NO_WRAP);
-                                        String dataUri = "data:text/html;charset=utf-8;base64," + base64Html;
-                                        mWebView.loadUrl(dataUri);
-                                        Log.d(TAG, "fetchAndLoadAgenda: Loaded plain text as data URI");
-                                    } catch (UnsupportedEncodingException e) {
-                                        Log.e(TAG, "Failed to encode HTML", e);
-                                        // Fallback to direct URL load
-                                        mWebView.loadUrl(agendaUrl);
-                                    }
-                                }
-                            });
-                        }
-                    }
-                } else {
-                    // Empty content - try loading directly
+                RemoteExecutor.HttpGetResult result = executor.executeGetWithContentType(agendaUrl);
+                String content = result.body;
+                String mime = primaryMimeType(result.contentType);
+
+                Log.d(TAG, "fetchAndLoadAgenda: length=" +
+                        (content != null ? content.length() : 0) + " contentType=" + result.contentType);
+
+                if (content == null || content.isEmpty()) {
                     Log.w(TAG, "fetchAndLoadAgenda: Empty content, loading URL directly");
-                    if (mFragment.getActivity() != null) {
-                        mFragment.getActivity().runOnUiThread(() -> {
-                            if (mWebView != null) {
-                                mWebView.loadUrl(agendaUrl);
-                            }
-                        });
-                    }
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to fetch agenda", e);
-                // Fallback to direct URL load
-                if (mFragment.getActivity() != null) {
-                    mFragment.getActivity().runOnUiThread(() -> {
+                    runOnUi(() -> {
                         if (mWebView != null) {
                             mWebView.loadUrl(agendaUrl);
                         }
                     });
+                    return;
                 }
+
+                AgendaFormat format = classifyAgenda(mime, content);
+                Log.d(TAG, "fetchAndLoadAgenda: format=" + format);
+
+                if (format == AgendaFormat.HTML) {
+                    runOnUi(() -> {
+                        if (mWebView != null) {
+                            mWebView.loadUrl(agendaUrl);
+                        }
+                    });
+                    return;
+                }
+
+                final String wrappedHtml;
+                if (format == AgendaFormat.MARKDOWN) {
+                    // Links only via commonmark AutolinkExtension — do not run convertUrlsToLinks.
+                    wrappedHtml = wrapMarkdownAgendaHtml(content);
+                } else {
+                    wrappedHtml = wrapPlainTextAgendaHtml(content);
+                }
+
+                runOnUi(() -> {
+                    if (mWebView != null) {
+                        loadHtmlDataUri(wrappedHtml, agendaUrl);
+                    }
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to fetch agenda", e);
+                runOnUi(() -> {
+                    if (mWebView != null) {
+                        mWebView.loadUrl(agendaUrl);
+                    }
+                });
             }
         }).start();
     }
-    
+
+    private enum AgendaFormat {
+        HTML,
+        MARKDOWN,
+        PLAIN
+    }
+
+    private static String primaryMimeType(String contentType) {
+        if (contentType == null || contentType.isEmpty()) {
+            return null;
+        }
+        int semi = contentType.indexOf(';');
+        String primary = semi >= 0 ? contentType.substring(0, semi) : contentType;
+        return primary.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private AgendaFormat classifyAgenda(String mime, String content) {
+        if (mime != null) {
+            if (mime.equals("text/html") || mime.equals("application/xhtml+xml")) {
+                return AgendaFormat.HTML;
+            }
+            if (mime.equals("text/markdown") || mime.equals("text/x-markdown")) {
+                return AgendaFormat.MARKDOWN;
+            }
+            if (mime.equals("text/plain")) {
+                return AgendaFormat.PLAIN;
+            }
+        }
+        // No useful Content-Type: keep HTML sniff; otherwise treat as markdown (#45).
+        if (isHtmlContent(content)) {
+            return AgendaFormat.HTML;
+        }
+        return AgendaFormat.MARKDOWN;
+    }
+
+    private String wrapMarkdownAgendaHtml(String markdown) {
+        String htmlContent = MarkdownHtml.render(markdown);
+        String css =
+                "body { " +
+                "  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; " +
+                "  font-size: 16px; " +
+                "  line-height: 1.6; " +
+                "  color: #333; " +
+                "  padding: 16px; " +
+                "  word-wrap: break-word; " +
+                "} " +
+                "a { color: #0066cc; text-decoration: underline; } " +
+                "h1, h2, h3, h4 { margin-top: 1.2em; margin-bottom: 0.4em; } " +
+                "ul, ol { padding-left: 1.4em; } " +
+                "li { margin-bottom: 0.35em; } " +
+                "code, pre { font-family: ui-monospace, Consolas, monospace; font-size: 0.92em; } " +
+                "pre { overflow-x: auto; background: #f5f5f5; padding: 8px; }";
+        return "<!DOCTYPE html>" +
+                "<html><head>" +
+                "<meta name='viewport' content='width=device-width, initial-scale=1'>" +
+                "<style>" + css + "</style>" +
+                "</head><body>" +
+                htmlContent +
+                "</body></html>";
+    }
+
+    private String wrapPlainTextAgendaHtml(String content) {
+        String contentWithLinks = convertUrlsToLinks(content);
+        String tempContent = contentWithLinks.replaceAll(
+                "<a href=\"([^\"]+)\">([^<]+)</a>",
+                "___LINK_START___$1___LINK_MID___$2___LINK_END___");
+        String escapedContent = tempContent.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
+        escapedContent = escapedContent.replace("___LINK_START___", "<a href=\"")
+                .replace("___LINK_MID___", "\">")
+                .replace("___LINK_END___", "</a>");
+
+        String css =
+                "body { " +
+                "  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; " +
+                "  font-size: 16px; " +
+                "  line-height: 1.6; " +
+                "  color: #333; " +
+                "  padding: 16px; " +
+                "  white-space: pre-wrap; " +
+                "  word-wrap: break-word; " +
+                "} " +
+                "a { " +
+                "  color: #0066cc; " +
+                "  text-decoration: underline; " +
+                "}";
+
+        return "<!DOCTYPE html>" +
+                "<html><head>" +
+                "<meta name='viewport' content='width=device-width, initial-scale=1'>" +
+                "<style>" + css + "</style>" +
+                "</head><body>" +
+                escapedContent +
+                "</body></html>";
+    }
+
+    private void loadHtmlDataUri(String wrappedHtml, String fallbackUrl) {
+        try {
+            byte[] htmlBytes = wrappedHtml.getBytes("UTF-8");
+            String base64Html = android.util.Base64.encodeToString(htmlBytes, android.util.Base64.NO_WRAP);
+            String dataUri = "data:text/html;charset=utf-8;base64," + base64Html;
+            mWebView.loadUrl(dataUri);
+            Log.d(TAG, "fetchAndLoadAgenda: Loaded agenda as data URI");
+        } catch (UnsupportedEncodingException e) {
+            Log.e(TAG, "Failed to encode HTML", e);
+            mWebView.loadUrl(fallbackUrl);
+        }
+    }
+
+    private void runOnUi(Runnable action) {
+        if (mFragment.getActivity() != null) {
+            mFragment.getActivity().runOnUiThread(action);
+        }
+    }
+
     /**
      * Inject CSS into the loaded page (for data URIs).
      */
@@ -326,7 +390,8 @@ public class SessionAgendaTabManager {
     }
     
     /**
-     * Convert plain text URLs (starting with https://) to HTML anchor tags.
+     * Convert bare https URLs to anchors. Used only for {@link AgendaFormat#PLAIN}
+     * agendas — markdown uses {@link MarkdownHtml} / AutolinkExtension instead.
      */
     private String convertUrlsToLinks(String text) {
         if (text == null || text.isEmpty()) {

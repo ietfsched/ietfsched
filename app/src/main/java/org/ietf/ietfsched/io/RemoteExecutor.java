@@ -36,6 +36,17 @@ public class RemoteExecutor {
 
 	private static final String TAG = "RemoteExecutor HTTP";
 
+	/** Body and Content-Type from an HTTP GET (Content-Type may be null). */
+	public static final class HttpGetResult {
+		public final String body;
+		public final String contentType;
+
+		public HttpGetResult(String body, String contentType) {
+			this.body = body != null ? body : "";
+			this.contentType = contentType;
+		}
+	}
+
     public RemoteExecutor() { }
 
 
@@ -74,6 +85,13 @@ public class RemoteExecutor {
 
 	// Get a String object from a remote server.
 	public String executeGet(String urlString) throws Exception {
+		return executeGetWithContentType(urlString).body;
+	}
+
+	/**
+	 * GET text body and Content-Type (e.g. text/markdown from Datatracker materials).
+	 */
+	public HttpGetResult executeGetWithContentType(String urlString) throws Exception {
 		HttpsURLConnection urlConnection = null;
 		try {
 			URL url = new URI(urlString).toURL();
@@ -81,8 +99,9 @@ public class RemoteExecutor {
 
 			int status = urlConnection.getResponseCode();
 			Log.d(TAG, "executeGet: status=" + status + " for " + urlString);
-			
+
 			if (status == HttpsURLConnection.HTTP_OK) {
+				String contentType = urlConnection.getContentType();
 				StringBuilder result = new StringBuilder();
 				BufferedReader reader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
 				String line;
@@ -95,14 +114,9 @@ public class RemoteExecutor {
 						break;
 					}
 				}
-				if (urlConnection != null) {
-					urlConnection.disconnect();
-				}
-				return result.toString();
+				return new HttpGetResult(result.toString(), contentType);
 			} else {
-				// Log non-200 status codes
 				Log.w(TAG, "executeGet: Non-200 status " + status + " for " + urlString);
-				// For 503 or other errors, return null to indicate failure
 				if (status == 503 || status >= 500) {
 					throw new Exception("Server error: HTTP " + status);
 				}
@@ -112,7 +126,7 @@ public class RemoteExecutor {
 				urlConnection.disconnect();
 			}
 		}
-		return new String();
+		return new HttpGetResult("", null);
 	}
 
 	// Get a JSON object from a remote server.
