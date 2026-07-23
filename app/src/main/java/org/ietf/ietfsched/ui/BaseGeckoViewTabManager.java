@@ -21,9 +21,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import androidx.fragment.app.Fragment;
 import org.ietf.ietfsched.util.GeckoViewHelper;
+import org.ietf.ietfsched.util.MarkdownHtml;
 import org.mozilla.geckoview.GeckoView;
-import org.commonmark.parser.Parser;
-import org.commonmark.renderer.html.HtmlRenderer;
 
 /**
  * Base class for GeckoView tab managers with common functionality for loading messages and error handling.
@@ -168,11 +167,7 @@ public abstract class BaseGeckoViewTabManager {
      * @param markdownText The markdown text to load
      */
     private void loadMarkdownAsDataUri(String markdownText) {
-        // Convert markdown to HTML
-        Parser parser = Parser.builder().build();
-        HtmlRenderer renderer = HtmlRenderer.builder().build();
-        org.commonmark.node.Node document = parser.parse(markdownText);
-        String htmlContent = renderer.render(document);
+        String htmlContent = MarkdownHtml.render(markdownText);
         
         // Wrap HTML with basic styling
         String styledHtml = "<!DOCTYPE html>" +
