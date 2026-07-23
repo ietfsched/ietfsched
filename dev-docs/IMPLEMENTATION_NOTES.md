@@ -634,6 +634,18 @@ protected void onCreate(Bundle savedInstanceState) {
 
 ---
 
+## Known issues / debug notes
+
+### #40 — Pebble vs IETF app chooser (not Join tab)
+
+**Observed:** Android “Open with Pebble or IETF app” when navigating to a session.
+
+**Root cause:** Implicit `ACTION_VIEW` on `content://org.ietf.ietfsched/sessions/...` from `SessionsFragment` / `ScheduleFragment` / home Sessions. Android also matched Pebble (`coredevices.coreapp`) via an over-broad `content://` VIEW filter.
+
+**Fix (on `ys-40`):** Explicit `SessionDetailActivity` / `SessionsActivity` components for those navigations. Firefox chooser on Agenda `https://` links is separate and unchanged.
+
+---
+
 ## References
 
 ### IETF Resources

@@ -17,6 +17,7 @@ package org.ietf.ietfsched.ui;
 
 import org.ietf.ietfsched.R;
 import org.ietf.ietfsched.provider.ScheduleContract;
+import org.ietf.ietfsched.ui.phone.SessionDetailActivity;
 import org.ietf.ietfsched.util.ActivityHelper;
 import org.ietf.ietfsched.util.NotifyingAsyncQueryHandler;
 import org.ietf.ietfsched.util.ParserUtils;
@@ -232,7 +233,9 @@ public class SessionsFragment extends ListFragment implements NotifyingAsyncQuer
         }
 
         final Uri sessionUri = ScheduleContract.Sessions.buildSessionUri(sessionId);
-        final Intent intent = new Intent(Intent.ACTION_VIEW, sessionUri);
+        // Explicit component avoids chooser with apps that over-match content:// VIEW (#40).
+        final Intent intent = new Intent(Intent.ACTION_VIEW, sessionUri,
+                getActivity(), SessionDetailActivity.class);
         ((BaseActivity) getActivity()).openActivityOrFragment(intent);
 
         getListView().setItemChecked(position, true);
