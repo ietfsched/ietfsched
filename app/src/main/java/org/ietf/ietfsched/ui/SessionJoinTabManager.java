@@ -62,7 +62,7 @@ public class SessionJoinTabManager extends BaseGeckoViewTabManager {
             Log.e(TAG, "initializeDedicatedJoinGeckoViews: join_gecko_main/popup missing from layout");
             return;
         }
-        // Same backends as DebugOAuthActivity ? fixed siblings, never reparented.
+        // TextureView siblings, fixed in layout — never reparented.
         main.setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW);
         popup.setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW);
         mGeckoViewHelper.setOAuthPopupGeckoView(popup);
