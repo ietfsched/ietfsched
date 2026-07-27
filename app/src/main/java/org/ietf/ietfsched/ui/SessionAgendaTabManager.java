@@ -229,22 +229,9 @@ public class SessionAgendaTabManager {
                         // Plain text - wrap with CSS, preserve newlines, and convert URLs to links
                         Log.d(TAG, "fetchAndLoadAgenda: Content is plain text, wrapping with CSS");
                         
-                        // Convert URLs to HTML links, then escape remaining HTML special characters
-                        String contentWithLinks = convertUrlsToLinks(content);
-                        
-                        // Escape HTML special characters, but preserve <a> tags we just added
-                        String tempContent = contentWithLinks.replaceAll("<a href=\"([^\"]+)\">([^<]+)</a>", "___LINK_START___$1___LINK_MID___$2___LINK_END___");
-                        
-                        // Now escape HTML special characters
-                        String escapedContent = tempContent.replace("&", "&amp;")
-                                                          .replace("<", "&lt;")
-                                                          .replace(">", "&gt;");
-                        
-                        // Restore <a> tags after escaping
-                        escapedContent = escapedContent.replace("___LINK_START___", "<a href=\"")
-                                                      .replace("___LINK_MID___", "\">")
-                                                      .replace("___LINK_END___", "</a>");
-                        
+                        String escapedContent = escapePlainTextPreservingLinks(
+                                convertUrlsToLinks(content));
+
                         String css = 
                             "body { " +
                             "  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; " +
@@ -326,28 +313,43 @@ public class SessionAgendaTabManager {
     }
     
     /**
-     * Convert plain text URLs (starting with https://) to HTML anchor tags.
+     * Convert plain text http(s) URLs to HTML anchor tags.
      */
     private String convertUrlsToLinks(String text) {
         if (text == null || text.isEmpty()) {
             return text;
         }
-        
-        // Pattern to match URLs starting with https://
+
         Pattern urlPattern = Pattern.compile(
-            "(https://[\\w\\.\\-/:?#\\[\\]@!$&'()*+,;=]+)");
-        
+            "(https?://[\\w.\\-/:?#\\[\\]@!$&'()*+,;=%]+)");
+
         Matcher matcher = urlPattern.matcher(text);
         StringBuffer result = new StringBuffer();
-        
+
         while (matcher.find()) {
             String url = matcher.group(1);
-            // Replace with HTML anchor tag
-            matcher.appendReplacement(result, "<a href=\"" + url + "\">" + url + "</a>");
+            matcher.appendReplacement(result,
+                    Matcher.quoteReplacement("<a href=\"" + url + "\">" + url + "</a>"));
         }
         matcher.appendTail(result);
-        
+
         return result.toString();
+    }
+
+    /**
+     * Escape plain text for HTML while preserving &lt;a href&gt; tags from
+     * {@link #convertUrlsToLinks}.
+     */
+    private String escapePlainTextPreservingLinks(String contentWithLinks) {
+        String temp = contentWithLinks.replaceAll(
+                "<a href=\"([^\"]+)\">([^<]+)</a>",
+                "___LINK_START___$1___LINK_MID___$2___LINK_END___");
+        String escaped = temp.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
+        return escaped.replace("___LINK_START___", "<a href=\"")
+                .replace("___LINK_MID___", "\">")
+                .replace("___LINK_END___", "</a>");
     }
     
     /**
@@ -391,14 +393,15 @@ public class SessionAgendaTabManager {
     
     /**
      * Show plain text (e.g. side-meeting description) in the Agenda WebView.
-     * Newlines become &lt;br&gt;; HTML in the source is escaped.
+     * http(s) URLs become tappable links; newlines become &lt;br&gt;; other HTML is escaped.
      */
     public void showPlainText(String text) {
         initializeWebView();
         if (mWebView == null) {
             return;
         }
-        String body = text == null ? "" : android.text.TextUtils.htmlEncode(text).replace("\n", "<br>");
+        String raw = text == null ? "" : text;
+        String body = escapePlainTextPreservingLinks(convertUrlsToLinks(raw)).replace("\n", "<br>");
         String html = "<!DOCTYPE html>" +
             "<html><head>" +
             "<meta name='viewport' content='width=device-width, initial-scale=1'>" +
@@ -411,6 +414,7 @@ public class SessionAgendaTabManager {
             "  color: #222; " +
             "  white-space: normal; " +
             "}" +
+            "a { color: #0066cc; text-decoration: underline; }" +
             "</style>" +
             "</head><body>" +
             body +
