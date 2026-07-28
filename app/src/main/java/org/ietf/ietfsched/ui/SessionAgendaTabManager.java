@@ -325,16 +325,7 @@ public class SessionAgendaTabManager {
     }
 
     private String wrapPlainTextAgendaHtml(String content) {
-        String contentWithLinks = convertUrlsToLinks(content);
-        String tempContent = contentWithLinks.replaceAll(
-                "<a href=\"([^\"]+)\">([^<]+)</a>",
-                "___LINK_START___$1___LINK_MID___$2___LINK_END___");
-        String escapedContent = tempContent.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;");
-        escapedContent = escapedContent.replace("___LINK_START___", "<a href=\"")
-                .replace("___LINK_MID___", "\">")
-                .replace("___LINK_END___", "</a>");
+        String escapedContent = escapePlainTextPreservingLinks(convertUrlsToLinks(content));
 
         String css =
                 "body { " +
@@ -420,6 +411,22 @@ public class SessionAgendaTabManager {
 
         return result.toString();
     }
+
+    /**
+     * Escape plain text for HTML while preserving &lt;a href&gt; tags from
+     * {@link #convertUrlsToLinks}.
+     */
+    private String escapePlainTextPreservingLinks(String contentWithLinks) {
+        String temp = contentWithLinks.replaceAll(
+                "<a href=\"([^\"]+)\">([^<]+)</a>",
+                "___LINK_START___$1___LINK_MID___$2___LINK_END___");
+        String escaped = temp.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
+        return escaped.replace("___LINK_START___", "<a href=\"")
+                .replace("___LINK_MID___", "\">")
+                .replace("___LINK_END___", "</a>");
+    }
     
     /**
      * Check if content is HTML or plain text.
@@ -462,14 +469,15 @@ public class SessionAgendaTabManager {
     
     /**
      * Show plain text (e.g. side-meeting description) in the Agenda WebView.
-     * Newlines become &lt;br&gt;; HTML in the source is escaped.
+     * Newlines become &lt;br&gt;; http(s) URLs become links; other HTML is escaped.
      */
     public void showPlainText(String text) {
         initializeWebView();
         if (mWebView == null) {
             return;
         }
-        String body = text == null ? "" : android.text.TextUtils.htmlEncode(text).replace("\n", "<br>");
+        String raw = text == null ? "" : text;
+        String body = escapePlainTextPreservingLinks(convertUrlsToLinks(raw)).replace("\n", "<br>");
         String html = "<!DOCTYPE html>" +
             "<html><head>" +
             "<meta name='viewport' content='width=device-width, initial-scale=1'>" +
@@ -482,6 +490,7 @@ public class SessionAgendaTabManager {
             "  color: #222; " +
             "  white-space: normal; " +
             "}" +
+            "a { color: #0066cc; text-decoration: underline; }" +
             "</style>" +
             "</head><body>" +
             body +
