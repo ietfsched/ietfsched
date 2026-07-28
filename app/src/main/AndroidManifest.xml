@@ -103,7 +103,7 @@
         </activity>
 
         <activity android:name="org.ietf.ietfsched.ui.phone.SessionDetailActivity"
-            android:hardwareAccelerated="false"
+            android:hardwareAccelerated="true"
             android:exported="true"
             android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize"
             tools:ignore="Instantiatable">
