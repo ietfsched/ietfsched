@@ -18,7 +18,12 @@ package org.ietf.ietfsched.util;
 
 import android.content.Context;
 import android.util.Log;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import org.mozilla.geckoview.GeckoRuntime;
+import org.mozilla.geckoview.GeckoRuntimeSettings;
 
 /**
  * Helper class to manage a shared GeckoRuntime instance.
@@ -26,6 +31,7 @@ import org.mozilla.geckoview.GeckoRuntime;
  */
 public class GeckoRuntimeHelper {
     private static final String TAG = "GeckoRuntimeHelper";
+    private static final String CONFIG_FILE_NAME = "geckoview-runtime.yaml";
     private static GeckoRuntime sGeckoRuntime;
     
     /**
@@ -36,7 +42,18 @@ public class GeckoRuntimeHelper {
     public static synchronized GeckoRuntime getRuntime(Context context) {
         if (sGeckoRuntime == null) {
             try {
-                sGeckoRuntime = GeckoRuntime.create(context);
+                // Datatracker's Cloudflare challenge pages send COOP: same-origin, which
+                // severs window.opener and breaks Meetecho's popup OAuth handoff on fresh
+                // login. Disable COOP process-isolation so opener survives that challenge.
+                File configFile = writeRuntimeConfig(context);
+                GeckoRuntimeSettings.Builder builder = new GeckoRuntimeSettings.Builder()
+                        .consoleOutput(true)
+                        .aboutConfigEnabled(true);
+                if (configFile != null) {
+                    builder.configFilePath(configFile.getAbsolutePath());
+                    Log.d(TAG, "Using GeckoView config: " + configFile.getAbsolutePath());
+                }
+                sGeckoRuntime = GeckoRuntime.create(context, builder.build());
                 Log.d(TAG, "Created new GeckoRuntime instance");
             } catch (IllegalStateException e) {
                 // Runtime already exists - this means another fragment created it
@@ -49,6 +66,30 @@ public class GeckoRuntimeHelper {
             }
         }
         return sGeckoRuntime;
+    }
+
+    /**
+     * Writes a GeckoView automation config that turns off COOP/COEP browsing-context
+     * isolation. Format: https://firefox-source-docs.mozilla.org/mobile/android/geckoview/consumer/automation.html
+     */
+    private static File writeRuntimeConfig(Context context) {
+        try {
+            File dir = context.getFilesDir();
+            File configFile = new File(dir, CONFIG_FILE_NAME);
+            // YAML, not JSON — GeckoView only parses the automation YAML schema.
+            String yaml = "# ietfsched: keep window.opener across Datatracker CF challenge (COOP)\n"
+                    + "prefs:\n"
+                    + "  browser.tabs.remote.useCrossOriginOpenerPolicy: false\n"
+                    + "  browser.tabs.remote.useCrossOriginEmbedderPolicy: false\n";
+            try (OutputStreamWriter writer = new OutputStreamWriter(
+                    new FileOutputStream(configFile), StandardCharsets.UTF_8)) {
+                writer.write(yaml);
+            }
+            return configFile;
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to write GeckoView runtime config", e);
+            return null;
+        }
     }
     
     /**

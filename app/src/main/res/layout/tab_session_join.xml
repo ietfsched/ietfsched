@@ -13,10 +13,23 @@
   See the License for the specific language governing permissions and
   limitations under the License.
   -->
-<!-- GeckoView is created programmatically as a singleton and added to this container -->
+<!--
+  Lab-faithful Join layout: dedicated main + OAuth popup GeckoViews (both TextureView in code).
+  Not the Notes/Agenda shared SurfaceView — that reparents and cannot stack a TextureView popup.
+-->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/tab_session_join"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent">
-</FrameLayout>
 
+    <org.mozilla.geckoview.GeckoView
+        android:id="@+id/join_gecko_main"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <org.mozilla.geckoview.GeckoView
+        android:id="@+id/join_gecko_oauth_popup"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+</FrameLayout>
