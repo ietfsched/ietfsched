@@ -40,7 +40,7 @@ import java.time.temporal.ChronoUnit;
  * Home strip that shows meeting-aware status:
  * before → countdown to IETF-N in City;
  * during → Welcome to IETF-N in City;
- * after → See you at the next meeting (when known).
+ * after → See you at IETF-N in City when next meeting is known (else hide).
  */
 public class WhatsOnFragment extends Fragment {
 
@@ -119,7 +119,9 @@ public class WhatsOnFragment extends Fragment {
                 mStatusTextView.setText(getString(
                         R.string.whats_on_see_you_no_city, nextNumber));
             } else {
-                mStatusTextView.setText(R.string.whats_on_thank_you_title);
+                // No automated next meeting yet — skip the old generic thank-you.
+                mRootView.removeView(mStatusTextView);
+                mStatusTextView = null;
             }
         } else {
             if (number > 0 && !TextUtils.isEmpty(city)) {
