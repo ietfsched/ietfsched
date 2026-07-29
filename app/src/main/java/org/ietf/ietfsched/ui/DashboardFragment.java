@@ -20,6 +20,7 @@ package org.ietf.ietfsched.ui;
 import org.ietf.ietfsched.R;
 import org.ietf.ietfsched.provider.ScheduleContract;
 import org.ietf.ietfsched.ui.phone.ScheduleActivity;
+import org.ietf.ietfsched.ui.phone.SessionsActivity;
 import org.ietf.ietfsched.util.UIUtils;
 
 import android.content.Intent;
@@ -66,8 +67,11 @@ public class DashboardFragment extends Fragment {
 					return;
 					}
 				fireTrackerEvent("Sessions");
-				// Launch all sessions list directly (skip tracks screen)
-				final Intent intent = new Intent(Intent.ACTION_VIEW, ScheduleContract.Sessions.CONTENT_URI);
+				// Launch all sessions list directly (skip tracks screen).
+				// Explicit component avoids chooser with apps that over-match content:// VIEW (#40).
+				final Intent intent = new Intent(Intent.ACTION_VIEW,
+						ScheduleContract.Sessions.CONTENT_URI,
+						getActivity(), SessionsActivity.class);
 				intent.putExtra(Intent.EXTRA_TITLE, getString(R.string.title_sessions));
 				startActivity(intent);
 			}

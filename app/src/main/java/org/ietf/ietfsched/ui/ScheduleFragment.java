@@ -18,6 +18,8 @@ package org.ietf.ietfsched.ui;
 
 import org.ietf.ietfsched.R;
 import org.ietf.ietfsched.provider.ScheduleContract;
+import org.ietf.ietfsched.ui.phone.SessionDetailActivity;
+import org.ietf.ietfsched.ui.phone.SessionsActivity;
 import org.ietf.ietfsched.ui.widget.BlockView;
 import org.ietf.ietfsched.ui.widget.BlocksLayout;
 import org.ietf.ietfsched.ui.widget.ObservableScrollView;
@@ -526,12 +528,15 @@ public class ScheduleFragment extends Fragment implements
             final String blockId = ((BlockView) view).getBlockId();
             final Intent intent;
             // Side meetings are 1:1 with a session (same id) — skip the redundant list step.
+            // Explicit components avoid chooser with apps that over-match content:// VIEW (#40).
             if (ParserUtils.isSideMeetingSessionId(blockId)) {
                 final Uri sessionUri = ScheduleContract.Sessions.buildSessionUri(blockId);
-                intent = new Intent(Intent.ACTION_VIEW, sessionUri);
+                intent = new Intent(Intent.ACTION_VIEW, sessionUri,
+                        getActivity(), SessionDetailActivity.class);
             } else {
                 final Uri sessionsUri = ScheduleContract.Blocks.buildSessionsUri(blockId);
-                intent = new Intent(Intent.ACTION_VIEW, sessionsUri);
+                intent = new Intent(Intent.ACTION_VIEW, sessionsUri,
+                        getActivity(), SessionsActivity.class);
                 intent.putExtra(SessionsFragment.EXTRA_SCHEDULE_TIME_STRING,
                         ((BlockView) view).getBlockTimeString());
             }

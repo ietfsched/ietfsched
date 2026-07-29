@@ -647,9 +647,7 @@ protected void onCreate(Bundle savedInstanceState) {
 
 Join tab loads Meetecho in GeckoView directly — no chooser in logcat.
 
-**Fix (deferred):** Explicit `SessionDetailActivity` intent for in-app session navigation.
-
-Firefox chooser on Agenda https links is separate (`SessionAgendaTabManager` external `ACTION_VIEW`).
+**Fix (on `ys-40`):** Explicit `SessionDetailActivity` / `SessionsActivity` components for those navigations. Firefox chooser on Agenda https links is separate (`SessionAgendaTabManager` external `ACTION_VIEW`).
 
 ### #44 — Join tab GeckoView session hijack / reload
 
