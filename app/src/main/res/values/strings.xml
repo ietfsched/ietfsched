@@ -107,14 +107,28 @@
     <string name="share_template">Checking out \'<xliff:g id="title">%1$s</xliff:g>\' at <xliff:g id="hashtags">%2$s</xliff:g> <xliff:g id="url">%3$s</xliff:g></string>
 
     <plurals name="whats_on_countdown_title">
-        <item quantity="zero"><xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF meeting</item>
-        <item quantity="one"><xliff:g id="number_of_days">%1$s</xliff:g> day, <xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF meeting</item>
-        <item quantity="other"><xliff:g id="number_of_days">%1$s</xliff:g> days, <xliff:g id="remaining_time">%2$s</xliff:g>\nuntil IETF meeting</item>
+        <item quantity="one"><xliff:g id="number_of_days">%1$d</xliff:g> day until IETF meeting</item>
+        <item quantity="other"><xliff:g id="number_of_days">%1$d</xliff:g> days until IETF meeting</item>
     </plurals>
+
+    <plurals name="whats_on_countdown_to_meeting">
+        <item quantity="one"><xliff:g id="days">%1$d</xliff:g> day to IETF-<xliff:g id="number">%2$d</xliff:g> in <xliff:g id="city">%3$s</xliff:g></item>
+        <item quantity="other"><xliff:g id="days">%1$d</xliff:g> days to IETF-<xliff:g id="number">%2$d</xliff:g> in <xliff:g id="city">%3$s</xliff:g></item>
+    </plurals>
+    <plurals name="whats_on_countdown_to_meeting_no_city">
+        <item quantity="one"><xliff:g id="days">%1$d</xliff:g> day to IETF-<xliff:g id="number">%2$d</xliff:g></item>
+        <item quantity="other"><xliff:g id="days">%1$d</xliff:g> days to IETF-<xliff:g id="number">%2$d</xliff:g></item>
+    </plurals>
+
+    <string name="whats_on_welcome">Welcome to IETF-<xliff:g id="number">%1$d</xliff:g> in <xliff:g id="city">%2$s</xliff:g>!</string>
+    <string name="whats_on_welcome_no_city">Welcome to IETF-<xliff:g id="number">%1$d</xliff:g>!</string>
+    <string name="whats_on_welcome_generic">Welcome to the IETF meeting!</string>
+    <string name="whats_on_see_you">See you at IETF-<xliff:g id="number">%1$d</xliff:g> in <xliff:g id="city">%2$s</xliff:g>!</string>
+    <string name="whats_on_see_you_no_city">See you at IETF-<xliff:g id="number">%1$d</xliff:g>!</string>
 
     <string name="whats_on_stream_title">Realtime\nStream</string>
     <string name="whats_on_now_playing_title">Now Playing</string>
-	<string name="whats_on_thank_you_title">See you at the next IETF meeting</string>
+	<string name="whats_on_thank_you_title">See you at the next IETF meeting!</string>
     <string name="permission_write">Modify IETF schedule data</string>
     <string name="toast_now_not_visible">Press this button during an IETF meeting to show the current time.</string>
 

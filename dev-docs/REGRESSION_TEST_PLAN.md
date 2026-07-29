@@ -21,7 +21,7 @@ This document outlines the regression test plan for the IETF Schedule app using 
 **Tests**:
 - [x] Home screen displays correctly (`testHomeScreenDisplays`)
   - Verify all main buttons are visible: Schedule, Sessions, Starred
-  - Verify "Now Playing" section is visible at bottom
+  - Verify meeting status strip is visible at bottom (Welcome / countdown / See you)
 - [x] "Schedule" button navigates to schedule (`testScheduleButton`)
   - Click Schedule button
   - Verify ScheduleActivity is displayed
