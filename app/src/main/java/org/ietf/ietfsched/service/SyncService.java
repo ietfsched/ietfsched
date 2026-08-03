@@ -166,8 +166,9 @@ public class SyncService extends IntentService {
 			// Soft-fetch side meetings (short timeout); never fail the agenda sync on this.
 			JSONObject sideMeetings = null;
 			try {
+				String sideUrl = SideMeetingImporter.resolveScheduleUrl(mRemoteExecutor, meeting.number);
 				sideMeetings = mRemoteExecutor.executeJSONGet(
-						SideMeetingImporter.SIDE_MEETINGS_URL,
+						sideUrl,
 						SideMeetingImporter.CONNECT_TIMEOUT_MS,
 						SideMeetingImporter.READ_TIMEOUT_MS);
 				if (sideMeetings == null || sideMeetings.length() == 0) {
