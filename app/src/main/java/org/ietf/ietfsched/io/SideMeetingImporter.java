@@ -38,13 +38,15 @@ import java.util.Comparator;
 import java.util.HashMap;
 
 /**
- * Imports informal side-meeting bookings from https://sidemeetings.ietf.org/_data
- * into the same blocks/rooms/sessions tables used by the agenda sync.
+ * Imports side-meeting bookings from the official public schedule API
+ * ({@code https://sidemeetings.ietf.org/api/public/schedule}) into the same
+ * blocks/rooms/sessions tables used by the agenda sync.
  */
 public class SideMeetingImporter {
     private static final String TAG = "SideMeetingImporter";
-    public static final String SIDE_MEETINGS_URL = "https://sidemeetings.ietf.org/_data";
-    /** Short timeouts so a broken informal API never stalls agenda sync. */
+    public static final String SIDE_MEETINGS_URL =
+            "https://sidemeetings.ietf.org/api/public/schedule";
+    /** Short timeouts so a broken side-meetings API never stalls agenda sync. */
     public static final int CONNECT_TIMEOUT_MS = 4000;
     public static final int READ_TIMEOUT_MS = 6000;
 
@@ -67,7 +69,10 @@ public class SideMeetingImporter {
                 Log.w(TAG, "No meeting object in side meetings data");
                 return batch;
             }
-            String numberStr = meeting.optString("meetingNumber", "");
+            // Public API: meeting.num; legacy informal feed used meetingNumber.
+            String numberStr = firstNonEmpty(
+                    meeting.optString("num", ""),
+                    meeting.optString("meetingNumber", ""));
             int sideMeetingNumber;
             try {
                 sideMeetingNumber = Integer.parseInt(numberStr.trim());
@@ -81,7 +86,7 @@ public class SideMeetingImporter {
                 return batch;
             }
 
-            HashMap<Long, Integer> roomSubColumn = assignRoomSubColumns(sideData.optJSONArray("rooms"));
+            HashMap<String, Integer> roomSubColumn = assignRoomSubColumns(sideData.optJSONArray("rooms"));
             JSONArray bookings = sideData.optJSONArray("bookings");
             if (bookings == null || bookings.length() == 0) {
                 Log.i(TAG, "No side meeting bookings");
@@ -104,8 +109,8 @@ public class SideMeetingImporter {
         return batch;
     }
 
-    private static HashMap<Long, Integer> assignRoomSubColumns(JSONArray rooms) {
-        HashMap<Long, Integer> map = new HashMap<>();
+    private static HashMap<String, Integer> assignRoomSubColumns(JSONArray rooms) {
+        HashMap<String, Integer> map = new HashMap<>();
         if (rooms == null || rooms.length() == 0) {
             return map;
         }
@@ -117,14 +122,20 @@ public class SideMeetingImporter {
         Collections.sort(sorted, new Comparator<JSONObject>() {
             @Override
             public int compare(JSONObject a, JSONObject b) {
-                String ta = a.optString("title", a.optString("slug", ""));
-                String tb = b.optString("title", b.optString("slug", ""));
+                String ta = firstNonEmpty(
+                        a.optString("name", ""),
+                        a.optString("title", ""),
+                        a.optString("slug", ""));
+                String tb = firstNonEmpty(
+                        b.optString("name", ""),
+                        b.optString("title", ""),
+                        b.optString("slug", ""));
                 return ta.compareToIgnoreCase(tb);
             }
         });
         for (int i = 0; i < sorted.size(); i++) {
-            long id = sorted.get(i).optLong("id", -1);
-            if (id >= 0) {
+            String id = sorted.get(i).optString("id", "").trim();
+            if (!id.isEmpty()) {
                 map.put(id, Math.min(i, 1)); // at most two parallel rooms
             }
         }
@@ -132,17 +143,22 @@ public class SideMeetingImporter {
     }
 
     private static ContentProviderOperation[] buildBookingOps(
-            JSONObject booking, HashMap<Long, Integer> roomSubColumn,
+            JSONObject booking, HashMap<String, Integer> roomSubColumn,
             long versionBuild, ContentResolver resolver) {
         try {
-            long bookingId = booking.optLong("id", -1);
-            if (bookingId < 0) return null;
+            // Public API uses UUID strings; legacy feed used numeric ids.
+            String bookingId = booking.optString("id", "").trim();
+            if (bookingId.isEmpty()) return null;
 
             String title = booking.optString("title", "").trim();
             if (title.isEmpty()) return null;
 
-            String startIso = booking.optString("start", "");
-            String endIso = booking.optString("end", "");
+            String startIso = firstNonEmpty(
+                    booking.optString("startsAt", ""),
+                    booking.optString("start", ""));
+            String endIso = firstNonEmpty(
+                    booking.optString("endsAt", ""),
+                    booking.optString("end", ""));
             long startMillis = parseIsoMillis(startIso);
             long endMillis = parseIsoMillis(endIso);
             if (startMillis <= 0 || endMillis <= startMillis) {
@@ -151,7 +167,7 @@ public class SideMeetingImporter {
             }
 
             String roomName = booking.optString("roomName", "").trim();
-            long roomApiId = booking.optLong("roomId", -1);
+            String roomApiId = booking.optString("roomId", "").trim();
             int sub = roomSubColumn.containsKey(roomApiId) ? roomSubColumn.get(roomApiId) : 0;
             String blockType = ParserUtils.BLOCK_TYPE_SIDE_MEETING + sub;
 
@@ -161,7 +177,9 @@ public class SideMeetingImporter {
             String blockId = sessionId;
             String roomId = roomName.isEmpty() ? null : Rooms.generateRoomId(roomName);
 
-            String joinUrl = booking.optString("location", "").trim();
+            String joinUrl = firstNonEmpty(
+                    booking.optString("videoLinkUrl", ""),
+                    booking.optString("location", "")).trim();
             String description = booking.optString("description", "").trim();
             String organizer = booking.optString("organizerName", "").trim();
             String organizerEmail = booking.optString("organizerEmail", "").trim();
@@ -226,6 +244,16 @@ public class SideMeetingImporter {
             Log.w(TAG, "Skipping booking", e);
             return null;
         }
+    }
+
+    private static String firstNonEmpty(String... values) {
+        if (values == null) return "";
+        for (String v : values) {
+            if (v != null && !v.trim().isEmpty()) {
+                return v;
+            }
+        }
+        return "";
     }
 
     private static String joinAreas(JSONArray areas) {

@@ -2,7 +2,7 @@
 
 Status: **Implemented** (IETF 126)  
 Branch: `ys-side-meetings`  
-Data: [https://sidemeetings.ietf.org/](https://sidemeetings.ietf.org/) · informal API [https://sidemeetings.ietf.org/_data](https://sidemeetings.ietf.org/_data)
+Data: [https://sidemeetings.ietf.org/](https://sidemeetings.ietf.org/) · public API [https://sidemeetings.ietf.org/api/public/schedule](https://sidemeetings.ietf.org/api/public/schedule) (docs: [/api/docs](https://sidemeetings.ietf.org/api/docs))
 
 Local tooling (this workstation):
 
@@ -26,8 +26,8 @@ Show IETF **side meetings** in **Sessions** and on the **Schedule** grid by **re
 
 | Plan item | Status | Notes |
 |-----------|--------|-------|
-| Soft-fetch `/_data` with short timeout | Done | 4s connect / 6s read; agenda sync continues on failure |
-| Meeting-number guard vs `MeetingDetector` | Done | Skip import if `_data` ≠ active meeting |
+| Soft-fetch public schedule with short timeout | Done | 4s connect / 6s read; agenda sync continues on failure |
+| Meeting-number guard vs `MeetingDetector` | Done | Skip import if `meeting.num` ≠ active meeting |
 | Same `UPDATED` purge stamp as agenda | Done | `SideMeetingImporter` ops merged into `LocalExecutor` batch |
 | Preserve stars | Done | Same `querySessionStarred` pattern |
 | `side-{id}` session/block ids | Done | Prefix detection; no schema migration |
@@ -59,8 +59,8 @@ Show IETF **side meetings** in **Sessions** and on the **Schedule** grid by **re
 
 ### Sync
 
-1. After agenda JSON fetch, soft-GET `https://sidemeetings.ietf.org/_data`.
-2. `SideMeetingImporter.buildOperations(...)` only if meeting numbers match.
+1. After agenda JSON fetch, soft-GET `https://sidemeetings.ietf.org/api/public/schedule`.
+2. `SideMeetingImporter.buildOperations(...)` only if `meeting.num` matches.
 3. Ops applied in the **same** batch / purge as agenda (`LocalExecutor.execute(agenda, number, sideData)`).
 
 **Key files:** `SyncService.java`, `RemoteExecutor.java` (timeouts), `SideMeetingImporter.java`, `LocalExecutor.java`.
@@ -77,7 +77,7 @@ Show IETF **side meetings** in **Sessions** and on the **Schedule** grid by **re
 | `location` | `SESSION_URL` (Join external link) |
 | `areas[]` | `SESSION_KEYWORDS` |
 
-Room sub-column: rooms from `_data` sorted by title → index 0/1 → block type suffix.
+Room sub-column: rooms from schedule API sorted by `name` → index 0/1 → block type suffix.
 
 ### Schedule UX
 
@@ -141,9 +141,9 @@ Run on Pixel 8a (`adb` + scrcpy). Method: temporary code change → `assembleDeb
 | Case | How forced | Expected log | Observed |
 |------|------------|--------------|----------|
 | Meeting-number mismatch | Pass `meetingNumber + 999` into `SideMeetingImporter.buildOperations` | `Skipping side meetings: data is for IETF 126 but app meeting is …` then `remote sync finished` | Pass |
-| Bad / empty `/_data` | Point `SIDE_MEETINGS_URL` at a non-existent path | `Side meetings fetch returned empty data` then `remote sync finished` | Pass |
-| Connect timeout | Point URL at `https://192.0.2.1/_data` (TEST-NET blackhole) | `Side meetings fetch failed (continuing without them): … after 4000ms` then `remote sync finished` | Pass (~4s connect timeout) |
-| Happy path (restore) | Real `https://sidemeetings.ietf.org/_data` | `Prepared N ops for M side bookings` then `remote sync finished` | Pass (`117` ops / `39` bookings for IETF 126) |
+| Bad / empty schedule | Point `SIDE_MEETINGS_URL` at a non-existent path | `Side meetings fetch returned empty data` then `remote sync finished` | Pass |
+| Connect timeout | Point URL at `https://192.0.2.1/api/public/schedule` (TEST-NET blackhole) | `Side meetings fetch failed (continuing without them): … after 4000ms` then `remote sync finished` | Pass (~4s connect timeout) |
+| Happy path (restore) | Real `https://sidemeetings.ietf.org/api/public/schedule` | `Prepared N ops for M side bookings` then `remote sync finished` | Pass |
 
 Also verified earlier by hand on device: green column / half-width overlap, Side badge, detail tabs (Agenda text, Content+Notes grayed, Join external), schedule chip → detail directly.
 
