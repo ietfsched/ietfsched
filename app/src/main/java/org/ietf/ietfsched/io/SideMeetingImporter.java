@@ -46,11 +46,56 @@ public class SideMeetingImporter {
     private static final String TAG = "SideMeetingImporter";
     public static final String SIDE_MEETINGS_URL =
             "https://sidemeetings.ietf.org/api/public/schedule";
+    public static final String SIDE_MEETINGS_LIST_URL =
+            "https://sidemeetings.ietf.org/api/public/meetings";
     /** Short timeouts so a broken side-meetings API never stalls agenda sync. */
     public static final int CONNECT_TIMEOUT_MS = 4000;
     public static final int READ_TIMEOUT_MS = 6000;
 
     private SideMeetingImporter() {}
+
+    /**
+     * Resolve the schedule URL for {@code meetingNumber}. Prefers
+     * {@code /api/public/schedule?meetingId=} when the meetings list is available,
+     * otherwise falls back to the default (active) schedule endpoint.
+     */
+    public static String resolveScheduleUrl(RemoteExecutor executor, int meetingNumber) {
+        if (executor == null || meetingNumber <= 0) {
+            return SIDE_MEETINGS_URL;
+        }
+        try {
+            String body = executor.executeGet(SIDE_MEETINGS_LIST_URL);
+            if (body == null || body.trim().isEmpty()) {
+                return SIDE_MEETINGS_URL;
+            }
+            String trimmed = body.trim();
+            if (trimmed.charAt(0) != '[') {
+                Log.w(TAG, "Unexpected meetings list payload");
+                return SIDE_MEETINGS_URL;
+            }
+            JSONArray meetings = new JSONArray(trimmed);
+            for (int i = 0; i < meetings.length(); i++) {
+                JSONObject m = meetings.optJSONObject(i);
+                if (m == null) continue;
+                String numStr = firstNonEmpty(m.optString("num", ""), m.optString("meetingNumber", ""));
+                try {
+                    if (Integer.parseInt(numStr.trim()) != meetingNumber) continue;
+                } catch (NumberFormatException e) {
+                    continue;
+                }
+                String id = m.optString("id", "").trim();
+                if (!id.isEmpty()) {
+                    String url = SIDE_MEETINGS_URL + "?meetingId=" + id;
+                    Log.d(TAG, "Using schedule URL for IETF " + meetingNumber + ": " + url);
+                    return url;
+                }
+            }
+            Log.i(TAG, "No public meeting id for IETF " + meetingNumber + "; using default schedule");
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to resolve side-meeting schedule URL: " + e.getMessage());
+        }
+        return SIDE_MEETINGS_URL;
+    }
 
     /**
      * Build insert ops for side meetings. Returns empty list on any problem.
