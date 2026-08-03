@@ -113,9 +113,9 @@ TabHost setup can fire spurious changes; Join action is gated until `mTabHostRea
 ## Known limitations / non-goals
 
 - No in-app Join WebView / no blocking of Webex→Play Store redirects (explicitly declined).
-- No historical side meetings for other IETF numbers (`/_data` is current-meeting-oriented).
+- No historical side meetings for other IETF numbers (default schedule is the active meeting; optional `?meetingId=` later).
 - No ICS export, no request/edit flow.
-- No Espresso coverage yet (deferred while `/_data` is informal); no updates yet to `OVERVIEW.md` / `IMPLEMENTATION_NOTES.md`.
+- No Espresso coverage yet; no updates yet to `OVERVIEW.md` / `IMPLEMENTATION_NOTES.md`.
 - Windows ARM64: no Google Emulator package; device + scrcpy for UI work.
 
 ---
@@ -128,9 +128,9 @@ TabHost setup can fire spurious changes; Join action is gated until `mTabHostRea
 - [x] Agenda shows description; Content/Notes grayed; Join opens remote URL
 - [x] Schedule chip opens detail directly
 - [x] Registration omitted; former green items in yellow
-- [x] Soft-fail `/_data` without blocking agenda sync (device smoke tests below)
+- [x] Soft-fail public schedule without blocking agenda sync (device smoke tests below)
 - [ ] Dev-docs follow-up (`OVERVIEW`, `IMPLEMENTATION_NOTES`)
-- [ ] Espresso cases — **skipped for now** (informal `/_data` API; revisit when official)
+- [ ] Espresso cases — revisit with official API
 
 ---
 
