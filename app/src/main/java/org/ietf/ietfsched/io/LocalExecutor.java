@@ -130,6 +130,12 @@ public class LocalExecutor {
 			if (isRegistration(m)) {
 				continue;
 			}
+			// agenda.json has no session type/purpose, so all-day amenities such as
+			// "IETF Coffee Cart Hours" look like regular sessions and paint over the
+			// red column. Drop them until #55 (agenda-data API).
+			if (isCoffeeCart(m)) {
+				continue;
+			}
 			ContentProviderOperation cp = createBlock(m, versionBuild); 
 			if (cp != null) {
 				batch.add(cp);
@@ -159,6 +165,11 @@ public class LocalExecutor {
 	private static boolean isRegistration(Meeting m) {
 		String titleLower = m.title.toLowerCase(Locale.ROOT);
 		return m.typeSession.contains("Registration") || titleLower.contains("registration");
+	}
+
+	/** Temporary title exception; agenda.json does not expose type=other / purpose=social. */
+	private static boolean isCoffeeCart(Meeting m) {
+		return m.title.toLowerCase(Locale.ROOT).contains("coffee cart");
 	}
 	
 	private ContentProviderOperation createBlock(Meeting m, long versionBuild) throws Exception {
@@ -311,9 +322,9 @@ public class LocalExecutor {
 			
 			String titleLower = m.title.toLowerCase(Locale.ROOT);
 			// Skip special events - they shouldn't be numbered as sessions
-			if (containsAny(titleLower, "break", "breakfast", "registration", "office hours", 
-					"plenary", "hackathon", "reception", "social", "education", "outreach", 
-					"tutorial", "newcomer", "noc", "helpdesk", "help desk",
+			if (containsAny(titleLower, "break", "breakfast", "registration", "coffee cart",
+					"office hours", "plenary", "hackathon", "reception", "social", "education",
+					"outreach", "tutorial", "newcomer", "noc", "helpdesk", "help desk",
 					"host speaker", "systers")) {
 				continue;
 			}
